@@ -24,7 +24,7 @@ func Marshal(val interface{}) (interface{}, error) {
 		rootKeyName := Pluralize(Underscorize(reflect.TypeOf(val).Elem().Name()))
 		// Panic if empty string, i.e. passed []interface{}
 		if rootKeyName == "" {
-			panic("You passed a slice of interfaces []interface{}{...} to ToInterface. We cannot determine key names from that. Use []YourObjectName{...} instead.")
+			panic("You passed a slice of interfaces []interface{}{...} to Marshal. We cannot determine key names from that. Use []YourObjectName{...} instead.")
 		}
 		// We already have a slice, so just assign it
 		ctx.wrapper[rootKeyName] = val
