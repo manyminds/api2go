@@ -1,5 +1,7 @@
 # api2go
 
+[![GoDoc](https://godoc.org/github.com/univedo/api2go?status.svg)](https://godoc.org/github.com/univedo/api2go)
+
 A [JSON API](http://jsonapi.org) Implementation for Go
 
 ```go
