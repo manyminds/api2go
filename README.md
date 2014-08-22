@@ -1,4 +1,4 @@
 api2go
 ======
 
-JSONAPI.org Implementation for Go
+A [JSON API](http://jsonapi.org) Implementation for Go
