@@ -88,4 +88,45 @@ var _ = Describe("Marshalling", func() {
 			}))
 		})
 	})
+
+	Context("When marshaling compound objects", func() {
+		var (
+			post               Post
+			comment1, comment2 Comment
+		)
+
+		BeforeEach(func() {
+			comment1 = Comment{ID: 1, Text: "First!"}
+			comment2 = Comment{ID: 2, Text: "Second!"}
+			post = Post{ID: 1, Title: "Foobar", Comments: []Comment{comment1, comment2}}
+		})
+
+		It("marshals objects", func() {
+			i, err := Marshal(post)
+			Expect(err).To(BeNil())
+			Expect(i).To(Equal(map[string]interface{}{
+				"posts": []interface{}{
+					map[string]interface{}{
+						"id":    1,
+						"title": "Foobar",
+						"links": map[string][]interface{}{
+							"comments": []interface{}{1, 2},
+						},
+					},
+				},
+				"linked": map[string][]interface{}{
+					"comments": []interface{}{
+						map[string]interface{}{
+							"id":   1,
+							"text": "First!",
+						},
+						map[string]interface{}{
+							"id":   2,
+							"text": "Second!",
+						},
+					},
+				},
+			}))
+		})
+	})
 })

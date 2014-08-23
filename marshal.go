@@ -58,10 +58,37 @@ func Marshal(data interface{}) (interface{}, error) {
 // marshalStruct marshals a struct and places it in the context's wrapper
 func (ctx *marshalingContext) marshalStruct(val reflect.Value) error {
 	result := map[string]interface{}{}
+	linksMap := map[string][]interface{}{}
 
 	valType := val.Type()
 	for i := 0; i < val.NumField(); i++ {
-		result[underscorize(valType.Field(i).Name)] = val.Field(i).Interface()
+		field := val.Field(i)
+		fieldName := underscorize(valType.Field(i).Name)
+		if field.Kind() == reflect.Slice {
+			ids := []interface{}{}
+
+			// Treat nested objects
+			for i := 0; i < field.Len(); i++ {
+				if id := field.Index(i).FieldByName("ID"); id.IsValid() {
+					ids = append(ids, id.Interface())
+				} else {
+					// BUG(lucas): Maybe just silently ignore them?
+					panic("structs passed to Marshal need to contain ID fields")
+				}
+
+				if err := ctx.marshalStruct(field.Index(i)); err != nil {
+					return err
+				}
+			}
+
+			linksMap[fieldName] = ids
+		} else {
+			result[fieldName] = field.Interface()
+		}
+	}
+
+	if len(linksMap) > 0 {
+		result["links"] = linksMap
 	}
 
 	ctx.addValue(pluralize(underscorize(valType.Name())), result)
