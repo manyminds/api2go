@@ -1,8 +1,6 @@
-package api2go_test
+package api2go
 
 import (
-	"github.com/univedo/api2go"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -23,7 +21,7 @@ var _ = Describe("Marshalling", func() {
 		})
 
 		It("marshals single object", func() {
-			i, err := api2go.Marshal(firstPost)
+			i, err := Marshal(firstPost)
 			Expect(err).To(BeNil())
 			Expect(i).To(Equal(map[string]interface{}{
 				"simple_posts": []interface{}{
@@ -33,7 +31,7 @@ var _ = Describe("Marshalling", func() {
 		})
 
 		It("marshals collections object", func() {
-			i, err := api2go.Marshal([]SimplePost{firstPost, secondPost})
+			i, err := Marshal([]SimplePost{firstPost, secondPost})
 			Expect(err).To(BeNil())
 			Expect(i).To(Equal(map[string]interface{}{
 				"simple_posts": []SimplePost{
@@ -44,7 +42,7 @@ var _ = Describe("Marshalling", func() {
 		})
 
 		It("marshals empty collections", func() {
-			i, err := api2go.Marshal([]SimplePost{})
+			i, err := Marshal([]SimplePost{})
 			Expect(err).To(BeNil())
 			Expect(i).To(Equal(map[string]interface{}{
 				"simple_posts": []SimplePost{},
@@ -53,12 +51,12 @@ var _ = Describe("Marshalling", func() {
 
 		It("panics when passing interface{} slices", func() {
 			Expect(func() {
-				api2go.Marshal([]interface{}{})
+				Marshal([]interface{}{})
 			}).To(Panic())
 		})
 
 		It("marshals to JSON", func() {
-			json, err := api2go.MarshalToJSON([]SimplePost{firstPost})
+			json, err := MarshalToJSON([]SimplePost{firstPost})
 			Expect(err).To(BeNil())
 			Expect(json).To(Equal([]byte(`{"simple_posts":[{"Title":"First Post","Text":"Lipsum"}]}`)))
 		})

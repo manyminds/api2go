@@ -21,7 +21,7 @@ func Marshal(val interface{}) (interface{}, error) {
 
 	if reflect.TypeOf(val).Kind() == reflect.Slice {
 		// Using Elem() here to get the slice's element type
-		rootKeyName := Pluralize(Underscorize(reflect.TypeOf(val).Elem().Name()))
+		rootKeyName := pluralize(underscorize(reflect.TypeOf(val).Elem().Name()))
 		// Panic if empty string, i.e. passed []interface{}
 		if rootKeyName == "" {
 			panic("You passed a slice of interfaces []interface{}{...} to Marshal. We cannot determine key names from that. Use []YourObjectName{...} instead.")
@@ -29,7 +29,7 @@ func Marshal(val interface{}) (interface{}, error) {
 		// We already have a slice, so just assign it
 		ctx.wrapper[rootKeyName] = val
 	} else {
-		rootKeyName := Pluralize(Underscorize(reflect.TypeOf(val).Name()))
+		rootKeyName := pluralize(underscorize(reflect.TypeOf(val).Name()))
 		// We need to put single objects into a slice
 		ctx.wrapper[rootKeyName] = []interface{}{val}
 	}

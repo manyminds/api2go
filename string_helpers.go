@@ -12,14 +12,14 @@ var (
 	underscorizeCamelCaseRegex     = regexp.MustCompile("([a-z\\d])([A-Z])")
 )
 
-// Underscorize takes a camel-cased word and transforms it to a underscored version
-func Underscorize(word string) string {
+// underscorize takes a camel-cased word and transforms it to a underscored version
+func underscorize(word string) string {
 	word = underscorizeAbbreveationsRegex.ReplaceAllString(word, "${1}_${2}")
 	word = underscorizeCamelCaseRegex.ReplaceAllString(word, "${1}_${2}")
 	return string(bytes.ToLower([]byte(word)))
 }
 
-// Pluralize a noun
-func Pluralize(word string) string {
+// pluralize a noun
+func pluralize(word string) string {
 	return inflector.Pluralize(word)
 }

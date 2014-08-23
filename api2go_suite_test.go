@@ -1,4 +1,4 @@
-package api2go_test
+package api2go
 
 import (
 	. "github.com/onsi/ginkgo"

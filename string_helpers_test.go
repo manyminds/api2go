@@ -1,25 +1,23 @@
-package api2go_test
+package api2go
 
 import (
-	"github.com/univedo/api2go"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("StringHelpers", func() {
 	It("underscorizes", func() {
-		Expect(api2go.Underscorize("Post")).To(Equal("post"))
-		Expect(api2go.Underscorize("post")).To(Equal("post"))
-		Expect(api2go.Underscorize("SimplePost")).To(Equal("simple_post"))
-		Expect(api2go.Underscorize("simple_post")).To(Equal("simple_post"))
-		Expect(api2go.Underscorize("XML")).To(Equal("xml"))
-		Expect(api2go.Underscorize("XMLPost")).To(Equal("xml_post"))
+		Expect(underscorize("Post")).To(Equal("post"))
+		Expect(underscorize("post")).To(Equal("post"))
+		Expect(underscorize("SimplePost")).To(Equal("simple_post"))
+		Expect(underscorize("simple_post")).To(Equal("simple_post"))
+		Expect(underscorize("XML")).To(Equal("xml"))
+		Expect(underscorize("XMLPost")).To(Equal("xml_post"))
 	})
 
 	It("pluralizes", func() {
-		Expect(api2go.Pluralize("post")).To(Equal("posts"))
-		Expect(api2go.Pluralize("posts")).To(Equal("posts"))
-		Expect(api2go.Pluralize("category")).To(Equal("categories"))
+		Expect(pluralize("post")).To(Equal("posts"))
+		Expect(pluralize("posts")).To(Equal("posts"))
+		Expect(pluralize("category")).To(Equal("categories"))
 	})
 })
