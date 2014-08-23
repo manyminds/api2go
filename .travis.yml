@@ -6,3 +6,7 @@ go:
   - tip
 
 install: go get -t -d -v ./... && go build -v ./...
+
+notifications:
+  slack:
+    secure: OdP+maK3uhlYdaTjImPLnMeSxYcV2Kql/BjPW7uFzK4YVa2gkCDNqBGu8y4i47MbXCmXPutPOSOcIsjQ0Rgevr4fWjWBMXITqfZKF/UqrptIfQGP2T8LKm9TdhBCrtfW4EsBsTpOkgmQyWzihr0Zu1pwoeQ+HAesViuaSdriZGw=
