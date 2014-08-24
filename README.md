@@ -39,7 +39,21 @@ json, err := api2go.MarshalJSON(post)
 will yield
 
 ```json
-{"linked":{"comments":[{"id":1,"text":"First!"},{"id":2,"text":"Second!"}]},"posts":[{"id":1,"links":{"comments":[1,2]},"title":"Foobar"}]}
+{
+  "posts": [
+    {
+      "id": 1,
+      "links": {"comments": [1, 2]},
+      "title":"Foobar"
+    }
+  ],
+  "linked": {
+    "comments": [
+      {"id": 1, "text": "First!"},
+      {"id": 2, "text": "Second!"}
+    ]
+  }
+}
 ```
 
 ### Unmarshaling
