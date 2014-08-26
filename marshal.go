@@ -6,15 +6,15 @@ import (
 )
 
 type marshalingContext struct {
-	wrapper  map[string]interface{}
+	root     map[string]interface{}
 	rootName string
 }
 
 func makeContext(rootName string) *marshalingContext {
 	ctx := &marshalingContext{}
 	ctx.rootName = rootName
-	ctx.wrapper = map[string]interface{}{}
-	ctx.wrapper[rootName] = []interface{}{}
+	ctx.root = map[string]interface{}{}
+	ctx.root[rootName] = []interface{}{}
 	return ctx
 }
 
@@ -52,10 +52,10 @@ func Marshal(data interface{}) (interface{}, error) {
 		}
 	}
 
-	return ctx.wrapper, nil
+	return ctx.root, nil
 }
 
-// marshalStruct marshals a struct and places it in the context's wrapper
+// marshalStruct marshals a struct and places it in the context's root
 func (ctx *marshalingContext) marshalStruct(val reflect.Value) error {
 	result := map[string]interface{}{}
 	linksMap := map[string][]interface{}{}
@@ -64,6 +64,7 @@ func (ctx *marshalingContext) marshalStruct(val reflect.Value) error {
 	for i := 0; i < val.NumField(); i++ {
 		field := val.Field(i)
 		fieldName := underscorize(valType.Field(i).Name)
+
 		if field.Kind() == reflect.Slice {
 			ids := []interface{}{}
 
@@ -95,21 +96,21 @@ func (ctx *marshalingContext) marshalStruct(val reflect.Value) error {
 	return nil
 }
 
-// addValue adds an object to the context's wrapper
+// addValue adds an object to the context's root
 // `name` should be the pluralized and underscorized object type.
 func (ctx *marshalingContext) addValue(name string, val map[string]interface{}) {
 	if name == ctx.rootName {
 		// Root objects are placed directly into the root doc
 		// BUG(lucas): If an object links to its own type, linked objects must be placed into the linked map.
-		ctx.wrapper[name] = append(ctx.wrapper[name].([]interface{}), val)
+		ctx.root[name] = append(ctx.root[name].([]interface{}), val)
 	} else {
 		// Linked objects are placed in a map under the `linked` key
 		var linkedMap map[string][]interface{}
-		if ctx.wrapper["linked"] == nil {
+		if ctx.root["linked"] == nil {
 			linkedMap = map[string][]interface{}{}
-			ctx.wrapper["linked"] = linkedMap
+			ctx.root["linked"] = linkedMap
 		} else {
-			linkedMap = ctx.wrapper["linked"].(map[string][]interface{})
+			linkedMap = ctx.root["linked"].(map[string][]interface{})
 		}
 		if s := linkedMap[name]; s != nil {
 			linkedMap[name] = append(s, val)
