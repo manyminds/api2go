@@ -6,22 +6,22 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-type SimplePost struct {
-	Title, Text string
-}
-
-type Post struct {
-	ID       int
-	Title    string
-	Comments []Comment
-}
-
-type Comment struct {
-	ID   int
-	Text string
-}
-
 var _ = Describe("Marshalling", func() {
+	type SimplePost struct {
+		Title, Text string
+	}
+
+	type Comment struct {
+		ID   int
+		Text string
+	}
+
+	type Post struct {
+		ID       int
+		Title    string
+		Comments []Comment
+	}
+
 	Context("When marshaling simple objects", func() {
 		var (
 			firstPost, secondPost       SimplePost

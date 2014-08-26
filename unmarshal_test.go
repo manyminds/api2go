@@ -6,6 +6,21 @@ import (
 )
 
 var _ = Describe("Unmarshal", func() {
+	type SimplePost struct {
+		Title, Text string
+	}
+
+	type Comment struct {
+		ID   int
+		Text string
+	}
+
+	type Post struct {
+		ID       int
+		Title    string
+		Comments []Comment
+	}
+
 	Context("When unmarshaling simple objects", func() {
 		singleJSON := []byte(`{"simple_posts":[{"title":"First Post","text":"Lipsum"}]}`)
 		firstPost := SimplePost{Title: "First Post", Text: "Lipsum"}
