@@ -103,11 +103,11 @@ var _ = Describe("Marshalling", func() {
 			})
 
 			It("converts ints", func() {
-				type StringID struct{ ID int }
-				i, err := Marshal(StringID{ID: 1})
+				type IntID struct{ ID int }
+				i, err := Marshal(IntID{ID: 1})
 				Expect(err).To(BeNil())
 				Expect(i).To(Equal(map[string]interface{}{
-					"string_ids": []interface{}{
+					"int_ids": []interface{}{
 						map[string]interface{}{
 							"id": "1",
 						},
@@ -116,11 +116,11 @@ var _ = Describe("Marshalling", func() {
 			})
 
 			It("converts uints", func() {
-				type StringID struct{ ID uint }
-				i, err := Marshal(StringID{ID: 1})
+				type UintID struct{ ID uint }
+				i, err := Marshal(UintID{ID: 1})
 				Expect(err).To(BeNil())
 				Expect(i).To(Equal(map[string]interface{}{
-					"string_ids": []interface{}{
+					"uint_ids": []interface{}{
 						map[string]interface{}{
 							"id": "1",
 						},
