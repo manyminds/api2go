@@ -2,7 +2,9 @@ package api2go
 
 import (
 	"encoding/json"
+	"errors"
 	"reflect"
+	"strconv"
 )
 
 type marshalingContext struct {
@@ -66,12 +68,16 @@ func (ctx *marshalingContext) marshalStruct(val reflect.Value) error {
 		fieldName := underscorize(valType.Field(i).Name)
 
 		if field.Kind() == reflect.Slice {
+			// Nested objects
 			ids := []interface{}{}
 
-			// Treat nested objects
 			for i := 0; i < field.Len(); i++ {
-				if id := field.Index(i).FieldByName("ID"); id.IsValid() {
-					ids = append(ids, id.Interface())
+				if idVal := field.Index(i).FieldByName("ID"); idVal.IsValid() {
+					idString, err := toID(idVal)
+					if err != nil {
+						return err
+					}
+					ids = append(ids, idString)
 				} else {
 					// BUG(lucas): Maybe just silently ignore them?
 					panic("structs passed to Marshal need to contain ID fields")
@@ -83,6 +89,13 @@ func (ctx *marshalingContext) marshalStruct(val reflect.Value) error {
 			}
 
 			linksMap[fieldName] = ids
+		} else if fieldName == "id" {
+			// ID needs to be converted to string
+			id, err := toID(field)
+			if err != nil {
+				return err
+			}
+			result[fieldName] = id
 		} else {
 			result[fieldName] = field.Interface()
 		}
@@ -117,6 +130,20 @@ func (ctx *marshalingContext) addValue(name string, val map[string]interface{}) 
 		} else {
 			linkedMap[name] = []interface{}{val}
 		}
+	}
+}
+
+// toID converts a value to a ID string
+func toID(v reflect.Value) (string, error) {
+	switch v.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return strconv.FormatInt(v.Int(), 10), nil
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return strconv.FormatUint(v.Uint(), 10), nil
+	case reflect.String:
+		return v.String(), nil
+	default:
+		return "", errors.New("need int or string as type of ID")
 	}
 }
 

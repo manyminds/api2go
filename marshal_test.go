@@ -87,6 +87,47 @@ var _ = Describe("Marshalling", func() {
 				},
 			}))
 		})
+
+		Context("when converting IDs to string", func() {
+			It("leaves string", func() {
+				type StringID struct{ ID string }
+				i, err := Marshal(StringID{ID: "1"})
+				Expect(err).To(BeNil())
+				Expect(i).To(Equal(map[string]interface{}{
+					"string_ids": []interface{}{
+						map[string]interface{}{
+							"id": "1",
+						},
+					},
+				}))
+			})
+
+			It("converts ints", func() {
+				type StringID struct{ ID int }
+				i, err := Marshal(StringID{ID: 1})
+				Expect(err).To(BeNil())
+				Expect(i).To(Equal(map[string]interface{}{
+					"string_ids": []interface{}{
+						map[string]interface{}{
+							"id": "1",
+						},
+					},
+				}))
+			})
+
+			It("converts uints", func() {
+				type StringID struct{ ID uint }
+				i, err := Marshal(StringID{ID: 1})
+				Expect(err).To(BeNil())
+				Expect(i).To(Equal(map[string]interface{}{
+					"string_ids": []interface{}{
+						map[string]interface{}{
+							"id": "1",
+						},
+					},
+				}))
+			})
+		})
 	})
 
 	Context("When marshaling compound objects", func() {
@@ -107,21 +148,21 @@ var _ = Describe("Marshalling", func() {
 			Expect(i).To(Equal(map[string]interface{}{
 				"posts": []interface{}{
 					map[string]interface{}{
-						"id":    1,
+						"id":    "1",
 						"title": "Foobar",
 						"links": map[string][]interface{}{
-							"comments": []interface{}{1, 2},
+							"comments": []interface{}{"1", "2"},
 						},
 					},
 				},
 				"linked": map[string][]interface{}{
 					"comments": []interface{}{
 						map[string]interface{}{
-							"id":   1,
+							"id":   "1",
 							"text": "First!",
 						},
 						map[string]interface{}{
-							"id":   2,
+							"id":   "2",
 							"text": "Second!",
 						},
 					},
