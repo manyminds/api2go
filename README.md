@@ -42,15 +42,15 @@ will yield
 {
   "posts": [
     {
-      "id": 1,
-      "links": {"comments": [1, 2]},
+      "id": "1",
+      "links": {"comments": ["1", "2"]},
       "title":"Foobar"
     }
   ],
   "linked": {
     "comments": [
-      {"id": 1, "text": "First!"},
-      {"id": 2, "text": "Second!"}
+      {"id": "1", "text": "First!"},
+      {"id": "2", "text": "Second!"}
     ]
   }
 }
