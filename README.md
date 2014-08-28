@@ -3,7 +3,7 @@
 [![GoDoc](https://godoc.org/github.com/univedo/api2go?status.svg)](https://godoc.org/github.com/univedo/api2go)
 [![Build Status](https://travis-ci.org/univedo/api2go.svg?branch=master)](https://travis-ci.org/univedo/api2go)
 
-A [JSON API](http://jsonapi.org) Implementation for Go.
+A [JSON API](http://jsonapi.org) Implementation for Go, to be used e.g. as server for [Ember Data](https://github.com/emberjs/data).
 
 ```go
 import "github.com/univedo/api2go"
