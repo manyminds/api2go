@@ -126,7 +126,17 @@ func (ctx *marshalingContext) addValue(name string, val map[string]interface{}) 
 			linkedMap = ctx.root["linked"].(map[string][]interface{})
 		}
 		if s := linkedMap[name]; s != nil {
-			linkedMap[name] = append(s, val)
+			// check if already in linked list
+			alreadyLinked := false
+			for _, linked := range s {
+				m := reflect.ValueOf(linked).Interface().(map[string]interface{})
+				if val["id"] == m["id"] {
+					alreadyLinked = true
+				}
+			}
+			if !alreadyLinked {
+				linkedMap[name] = append(s, val)
+			}
 		} else {
 			linkedMap[name] = []interface{}{val}
 		}
