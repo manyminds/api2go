@@ -8,6 +8,14 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+type sourceAdapter struct {
+	findAll func() (interface{}, error)
+	findOne func(string) (interface{}, error)
+}
+
+func (a *sourceAdapter) FindAll() (interface{}, error)          { return a.findAll() }
+func (a *sourceAdapter) FindOne(id string) (interface{}, error) { return a.findOne(id) }
+
 var _ = Describe("RestHandler", func() {
 	Context("when handling requests", func() {
 		type Post struct {
@@ -16,11 +24,11 @@ var _ = Describe("RestHandler", func() {
 		}
 
 		var (
-			handler http.Handler
-			rec     *httptest.ResponseRecorder
-
 			post1    Post
 			post1Map map[string]interface{}
+
+			api *API
+			rec *httptest.ResponseRecorder
 		)
 
 		BeforeEach(func() {
@@ -29,23 +37,31 @@ var _ = Describe("RestHandler", func() {
 				"id":    "1",
 				"title": "Hello, World!",
 			}
+
+			adapter := &sourceAdapter{
+				findAll: func() (interface{}, error) {
+					return []Post{post1}, nil
+				},
+				findOne: func(id string) (interface{}, error) {
+					switch id {
+					case "1":
+						return post1, nil
+					default:
+						panic("unknown id " + id)
+					}
+				},
+			}
+
+			api = NewAPI()
+			api.AddResource("posts", adapter)
+
 			rec = httptest.NewRecorder()
-			handler = HandlerForResource("posts", func() interface{} {
-				return []Post{post1}
-			}, func(id string) interface{} {
-				switch id {
-				case "1":
-					return post1
-				default:
-					panic("unknown id " + id)
-				}
-			})
 		})
 
 		It("GETs collections", func() {
 			req, err := http.NewRequest("GET", "/posts", nil)
 			Expect(err).To(BeNil())
-			handler.ServeHTTP(rec, req)
+			api.Handler().ServeHTTP(rec, req)
 			Expect(rec.Code).To(Equal(http.StatusOK))
 			var result map[string]interface{}
 			Expect(json.Unmarshal(rec.Body.Bytes(), &result)).To(BeNil())
@@ -57,7 +73,7 @@ var _ = Describe("RestHandler", func() {
 		It("GETs single objects", func() {
 			req, err := http.NewRequest("GET", "/posts/1", nil)
 			Expect(err).To(BeNil())
-			handler.ServeHTTP(rec, req)
+			api.Handler().ServeHTTP(rec, req)
 			Expect(rec.Code).To(Equal(http.StatusOK))
 			var result map[string]interface{}
 			Expect(json.Unmarshal(rec.Body.Bytes(), &result)).To(BeNil())
