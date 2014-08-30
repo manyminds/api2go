@@ -1,6 +1,7 @@
 package api2go
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
@@ -33,10 +34,12 @@ func (api *API) AddResource(name string, source DataSource) {
 		objs, err := source.FindAll()
 		if err != nil {
 			w.WriteHeader(500)
+			log.Println(err)
 			return
 		}
 		json, err := MarshalToJSON(objs)
 		if err != nil {
+			log.Println(err)
 			w.WriteHeader(500)
 			return
 		}
@@ -48,11 +51,13 @@ func (api *API) AddResource(name string, source DataSource) {
 		obj, err := source.FindOne(ps.ByName("id"))
 		if err != nil {
 			w.WriteHeader(500)
+			log.Println(err)
 			return
 		}
 		json, err := MarshalToJSON(obj)
 		if err != nil {
 			w.WriteHeader(500)
+			log.Println(err)
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
