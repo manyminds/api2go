@@ -26,7 +26,7 @@ func Unmarshal(ctx unmarshalContext, values interface{}) error {
 	}
 
 	// Read models slice
-	rootName := pluralize(underscorize(structType.Name()))
+	rootName := pluralize(jsonify(structType.Name()))
 	var modelsInterface interface{}
 	if modelsInterface = ctx[rootName]; modelsInterface == nil {
 		return errors.New("Expected root document to include a '" + rootName + "' key but it didn't.")
@@ -45,10 +45,10 @@ func Unmarshal(ctx unmarshalContext, values interface{}) error {
 
 		val := reflect.New(structType).Elem()
 		for k, v := range attributes {
-			camelizedKey := camelize(k)
-			field := val.FieldByName(camelizedKey)
+			fieldName := dejsonify(k)
+			field := val.FieldByName(fieldName)
 			if !field.IsValid() {
-				return errors.New("Expected struct " + structType.Name() + " to have field " + camelizedKey)
+				return errors.New("Expected struct " + structType.Name() + " to have field " + fieldName)
 			}
 			field.Set(reflect.ValueOf(v))
 		}

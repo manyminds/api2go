@@ -44,7 +44,7 @@ will yield
     {
       "id": "1",
       "links": {"comments": ["1", "2"]},
-      "title":"Foobar"
+      "title": "Foobar"
     }
   ],
   "linked": {

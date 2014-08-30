@@ -22,11 +22,11 @@ var _ = Describe("Unmarshal", func() {
 	}
 
 	Context("When unmarshaling simple objects", func() {
-		singleJSON := []byte(`{"simple_posts":[{"title":"First Post","text":"Lipsum"}]}`)
+		singleJSON := []byte(`{"simplePosts":[{"title":"First Post","text":"Lipsum"}]}`)
 		firstPost := SimplePost{Title: "First Post", Text: "Lipsum"}
 		secondPost := SimplePost{Title: "Second Post", Text: "Foobar!"}
 		singlePostMap := map[string]interface{}{
-			"simple_posts": []interface{}{
+			"simplePosts": []interface{}{
 				map[string]interface{}{
 					"title": firstPost.Title,
 					"text":  firstPost.Text,
@@ -34,7 +34,7 @@ var _ = Describe("Unmarshal", func() {
 			},
 		}
 		multiplePostMap := map[string]interface{}{
-			"simple_posts": []interface{}{
+			"simplePosts": []interface{}{
 				map[string]interface{}{
 					"title": firstPost.Title,
 					"text":  firstPost.Text,
@@ -84,7 +84,7 @@ var _ = Describe("Unmarshal", func() {
 		It("errors on non-array root", func() {
 			var posts []SimplePost
 			err := Unmarshal(map[string]interface{}{
-				"simple_posts": 42,
+				"simplePosts": 42,
 			}, &posts)
 			Expect(err).ToNot(BeNil())
 		})
@@ -92,7 +92,7 @@ var _ = Describe("Unmarshal", func() {
 		It("errors on non-documents", func() {
 			var posts []SimplePost
 			err := Unmarshal(map[string]interface{}{
-				"simple_posts": []interface{}{42},
+				"simplePosts": []interface{}{42},
 			}, &posts)
 			Expect(err).ToNot(BeNil())
 		})
@@ -100,7 +100,7 @@ var _ = Describe("Unmarshal", func() {
 		It("errors with wrong keys", func() {
 			var posts []SimplePost
 			err := Unmarshal(map[string]interface{}{
-				"simple_posts": []interface{}{
+				"simplePosts": []interface{}{
 					map[string]interface{}{
 						"foobar": 42,
 					},

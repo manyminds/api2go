@@ -45,7 +45,7 @@ var _ = Describe("Marshalling", func() {
 			i, err := Marshal(firstPost)
 			Expect(err).To(BeNil())
 			Expect(i).To(Equal(map[string]interface{}{
-				"simple_posts": []interface{}{
+				"simplePosts": []interface{}{
 					firstPostMap,
 				},
 			}))
@@ -55,7 +55,7 @@ var _ = Describe("Marshalling", func() {
 			i, err := Marshal([]SimplePost{firstPost, secondPost})
 			Expect(err).To(BeNil())
 			Expect(i).To(Equal(map[string]interface{}{
-				"simple_posts": []interface{}{
+				"simplePosts": []interface{}{
 					firstPostMap,
 					secondPostMap,
 				},
@@ -66,7 +66,7 @@ var _ = Describe("Marshalling", func() {
 			i, err := Marshal([]SimplePost{})
 			Expect(err).To(BeNil())
 			Expect(i).To(Equal(map[string]interface{}{
-				"simple_posts": []interface{}{},
+				"simplePosts": []interface{}{},
 			}))
 		})
 
@@ -82,7 +82,7 @@ var _ = Describe("Marshalling", func() {
 			var m map[string]interface{}
 			Expect(json.Unmarshal(j, &m)).To(BeNil())
 			Expect(m).To(Equal(map[string]interface{}{
-				"simple_posts": []interface{}{
+				"simplePosts": []interface{}{
 					firstPostMap,
 				},
 			}))
@@ -94,7 +94,7 @@ var _ = Describe("Marshalling", func() {
 				i, err := Marshal(StringID{ID: "1"})
 				Expect(err).To(BeNil())
 				Expect(i).To(Equal(map[string]interface{}{
-					"string_ids": []interface{}{
+					"stringIDs": []interface{}{
 						map[string]interface{}{
 							"id": "1",
 						},
@@ -107,7 +107,7 @@ var _ = Describe("Marshalling", func() {
 				i, err := Marshal(IntID{ID: 1})
 				Expect(err).To(BeNil())
 				Expect(i).To(Equal(map[string]interface{}{
-					"int_ids": []interface{}{
+					"intIDs": []interface{}{
 						map[string]interface{}{
 							"id": "1",
 						},
@@ -120,7 +120,7 @@ var _ = Describe("Marshalling", func() {
 				i, err := Marshal(UintID{ID: 1})
 				Expect(err).To(BeNil())
 				Expect(i).To(Equal(map[string]interface{}{
-					"uint_ids": []interface{}{
+					"uintIDs": []interface{}{
 						map[string]interface{}{
 							"id": "1",
 						},

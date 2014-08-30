@@ -27,7 +27,7 @@ func Marshal(data interface{}) (interface{}, error) {
 	if reflect.TypeOf(data).Kind() == reflect.Slice {
 		// We were passed a slice
 		// Using Elem() here to get the slice's element type
-		rootName := pluralize(underscorize(reflect.TypeOf(data).Elem().Name()))
+		rootName := pluralize(jsonify(reflect.TypeOf(data).Elem().Name()))
 
 		// Panic if empty string, i.e. passed []interface{}
 		if rootName == "" {
@@ -45,7 +45,7 @@ func Marshal(data interface{}) (interface{}, error) {
 		}
 	} else {
 		// We were passed a single object
-		rootName := pluralize(underscorize(reflect.TypeOf(data).Name()))
+		rootName := pluralize(jsonify(reflect.TypeOf(data).Name()))
 		ctx = makeContext(rootName)
 
 		// Marshal the value
@@ -65,7 +65,7 @@ func (ctx *marshalingContext) marshalStruct(val reflect.Value) error {
 	valType := val.Type()
 	for i := 0; i < val.NumField(); i++ {
 		field := val.Field(i)
-		fieldName := underscorize(valType.Field(i).Name)
+		fieldName := jsonify(valType.Field(i).Name)
 
 		if field.Kind() == reflect.Slice {
 			// Nested objects
@@ -105,7 +105,7 @@ func (ctx *marshalingContext) marshalStruct(val reflect.Value) error {
 		result["links"] = linksMap
 	}
 
-	ctx.addValue(pluralize(underscorize(valType.Name())), result)
+	ctx.addValue(pluralize(jsonify(valType.Name())), result)
 	return nil
 }
 

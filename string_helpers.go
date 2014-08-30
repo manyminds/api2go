@@ -1,49 +1,72 @@
 package api2go
 
 import (
-	"regexp"
 	"strings"
 	"unicode"
 
 	"github.com/gedex/inflector"
 )
 
-var (
-	underscorizeAbbreveationsRegex = regexp.MustCompile("([A-Z]+)([A-Z][a-z])")
-	underscorizeCamelCaseRegex     = regexp.MustCompile("([a-z\\d])([A-Z])")
-	camelizeRegex                  = regexp.MustCompile(`_[a-z\d]`)
-	camelizeAbbrevs = []string{
-		"xml",
-		"id",
-		"json",
-	}
-)
-
-// underscorize takes a camel-cased word and transforms it to a underscored version
-func underscorize(word string) string {
-	word = underscorizeAbbreveationsRegex.ReplaceAllString(word, "${1}_${2}")
-	word = underscorizeCamelCaseRegex.ReplaceAllString(word, "${1}_${2}")
-	return strings.ToLower(word)
+// commonInitialisms, taken from
+// https://github.com/golang/lint/blob/3d26dc39376c307203d3a221bada26816b3073cf/lint.go#L482
+var commonInitialisms = map[string]bool{
+	"API":   true,
+	"ASCII": true,
+	"CPU":   true,
+	"CSS":   true,
+	"DNS":   true,
+	"EOF":   true,
+	"GUID":  true,
+	"HTML":  true,
+	"HTTP":  true,
+	"HTTPS": true,
+	"ID":    true,
+	"IP":    true,
+	"JSON":  true,
+	"LHS":   true,
+	"QPS":   true,
+	"RAM":   true,
+	"RHS":   true,
+	"RPC":   true,
+	"SLA":   true,
+	"SMTP":  true,
+	"SSH":   true,
+	"TLS":   true,
+	"TTL":   true,
+	"UI":    true,
+	"UID":   true,
+	"UUID":  true,
+	"URI":   true,
+	"URL":   true,
+	"UTF8":  true,
+	"VM":    true,
+	"XML":   true,
 }
 
-//camelize takes a underscored word and transforms it to a camel-cased version
-func camelize(word string) string {
-	if word == "" {
+// dejsonify returns a go struct key name from a JSON key name
+func dejsonify(s string) string {
+	if s == "" {
 		return ""
 	}
-	// Special abbreviations
-	for _, v := range camelizeAbbrevs {
-		word = strings.Replace(word, v, strings.ToUpper(v), -1)
+	if upper := strings.ToUpper(s); commonInitialisms[upper] {
+		return upper
 	}
-	// Capitalize first char
-	rs := []rune(word)
+	rs := []rune(s)
 	rs[0] = unicode.ToUpper(rs[0])
-	word = string(rs)
-	// Replace rest
-	word = camelizeRegex.ReplaceAllStringFunc(word, func(w string) string {
-		return strings.ToUpper(w[1:])
-	})
-	return word
+	return string(rs)
+}
+
+// jsonify returns a JSON formatted key name from a go struct field name
+func jsonify(s string) string {
+	if s == "" {
+		return ""
+	}
+	if commonInitialisms[s] {
+		return strings.ToLower(s)
+	}
+	rs := []rune(s)
+	rs[0] = unicode.ToLower(rs[0])
+	return string(rs)
 }
 
 // pluralize a noun

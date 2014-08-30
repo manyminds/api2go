@@ -6,28 +6,18 @@ import (
 )
 
 var _ = Describe("StringHelpers", func() {
-	It("underscorizes", func() {
-		Expect(underscorize("Post")).To(Equal("post"))
-		Expect(underscorize("post")).To(Equal("post"))
-		Expect(underscorize("SimplePost")).To(Equal("simple_post"))
-		Expect(underscorize("simple_post")).To(Equal("simple_post"))
-		Expect(underscorize("SimplePostComment")).To(Equal("simple_post_comment"))
-		Expect(underscorize("XML")).To(Equal("xml"))
-		Expect(underscorize("XMLPost")).To(Equal("xml_post"))
-		Expect(underscorize("XMLPostComment")).To(Equal("xml_post_comment"))
+	It("dejsonifies", func() {
+		Expect(dejsonify("Post")).To(Equal("Post"))
+		Expect(dejsonify("post")).To(Equal("Post"))
+		Expect(dejsonify("id")).To(Equal("ID"))
+		Expect(dejsonify("")).To(Equal(""))
 	})
 
-	It("camelizes", func() {
-		Expect(camelize("post")).To(Equal("Post"))
-		Expect(camelize("post")).To(Equal("Post"))
-		Expect(camelize("simple_post")).To(Equal("SimplePost"))
-		Expect(camelize("simple_post")).To(Equal("SimplePost"))
-		Expect(camelize("simple_post_comment")).To(Equal("SimplePostComment"))
-		Expect(camelize("xml")).To(Equal("XML"))
-		Expect(camelize("xml_post")).To(Equal("XMLPost"))
-		Expect(camelize("xml_post_comment")).To(Equal("XMLPostComment"))
-		Expect(camelize("id")).To(Equal("ID"))
-		Expect(camelize("json")).To(Equal("JSON"))
+	It("jsonifies", func() {
+		Expect(jsonify("Post")).To(Equal("post"))
+		Expect(jsonify("post")).To(Equal("post"))
+		Expect(jsonify("ID")).To(Equal("id"))
+		Expect(jsonify("")).To(Equal(""))
 	})
 
 	It("pluralizes", func() {
