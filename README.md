@@ -15,9 +15,10 @@ Take the simple structs:
 
 ```go
 type Post struct {
-	ID       int
-	Title    string
-	Comments []Comment
+	ID          int
+	Title       string
+	Comments    []Comment
+	CommentsIds []int
 }
 
 type Comment struct {
@@ -56,6 +57,8 @@ will yield
 }
 ```
 
+When marshaling, api2go will prefer to read from the `Comments` field over the `CommentsIDs` field (naming is important!). If `Comments` is empty, `CommentsIDs` will be used.
+
 ### Unmarshaling
 
 Recover the structure from above using
@@ -63,7 +66,10 @@ Recover the structure from above using
 ```go
 var posts []Post
 err := api2go.UnmarshalJSON(json, &posts)
+// posts[0] == Post{ID: 1, Title: "Foobar", CommentsIDs: []int{1, 2}}
 ```
+
+Note that when unmarshaling, api2go will always fill the `CommentsIDs` field, never the `Comments` field.
 
 ## Tests
 

@@ -10,15 +10,11 @@ var _ = Describe("Unmarshal", func() {
 		Title, Text string
 	}
 
-	type Comment struct {
-		ID   int
-		Text string
-	}
-
 	type Post struct {
-		ID       int
-		Title    string
-		Comments []Comment
+		ID          int
+		Title       string
+		CommentsIDs []int
+		LikesIDs    []string
 	}
 
 	Context("When unmarshaling simple objects", func() {
@@ -114,6 +110,46 @@ var _ = Describe("Unmarshal", func() {
 			err := UnmarshalJSON(singleJSON, &posts)
 			Expect(err).To(BeNil())
 			Expect(posts).To(Equal([]SimplePost{firstPost}))
+		})
+	})
+
+	Context("when unmarshaling objects with links", func() {
+		It("unmarshals into integer links", func() {
+			post := Post{ID: 1, CommentsIDs: []int{1}}
+			postMap := map[string]interface{}{
+				"posts": []interface{}{
+					map[string]interface{}{
+						"id":    "1",
+						"title": post.Title,
+						"links": map[string]interface{}{
+							"comments": []interface{}{"1"},
+						},
+					},
+				},
+			}
+			var posts []Post
+			err := Unmarshal(postMap, &posts)
+			Expect(err).To(BeNil())
+			Expect(posts).To(Equal([]Post{post}))
+		})
+
+		It("unmarshals into string links", func() {
+			post := Post{ID: 1, LikesIDs: []string{"1"}}
+			postMap := map[string]interface{}{
+				"posts": []interface{}{
+					map[string]interface{}{
+						"id":    "1",
+						"title": post.Title,
+						"links": map[string]interface{}{
+							"likes": []interface{}{"1"},
+						},
+					},
+				},
+			}
+			var posts []Post
+			err := Unmarshal(postMap, &posts)
+			Expect(err).To(BeNil())
+			Expect(posts).To(Equal([]Post{post}))
 		})
 	})
 })

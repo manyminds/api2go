@@ -17,9 +17,10 @@ var _ = Describe("Marshalling", func() {
 	}
 
 	type Post struct {
-		ID       int
-		Title    string
-		Comments []Comment
+		ID          int
+		Title       string
+		Comments    []Comment
+		CommentsIDs []int
 	}
 
 	Context("When marshaling simple objects", func() {
@@ -131,21 +132,14 @@ var _ = Describe("Marshalling", func() {
 	})
 
 	Context("When marshaling compound objects", func() {
-		var (
-			posts              []Post
-			comment1, comment2 Comment
-		)
-
-		BeforeEach(func() {
-			comment1 = Comment{ID: 1, Text: "First!"}
-			comment2 = Comment{ID: 2, Text: "Second!"}
+		It("marshals nested objects", func() {
+			comment1 := Comment{ID: 1, Text: "First!"}
+			comment2 := Comment{ID: 2, Text: "Second!"}
 			post1 := Post{ID: 1, Title: "Foobar", Comments: []Comment{comment1, comment2}}
 			post2 := Post{ID: 2, Title: "Foobarbarbar", Comments: []Comment{comment1, comment2}}
 
-			posts = append(posts, post1, post2)
-		})
+			posts := []Post{post1, post2}
 
-		It("marshals objects", func() {
 			i, err := Marshal(posts)
 			Expect(err).To(BeNil())
 			Expect(i).To(Equal(map[string]interface{}{
@@ -174,6 +168,49 @@ var _ = Describe("Marshalling", func() {
 						map[string]interface{}{
 							"id":   "2",
 							"text": "Second!",
+						},
+					},
+				},
+			}))
+		})
+
+		It("adds IDs", func() {
+			post := Post{ID: 1, Comments: []Comment{}, CommentsIDs: []int{1}}
+			i, err := Marshal(post)
+			Expect(err).To(BeNil())
+			Expect(i).To(Equal(map[string]interface{}{
+				"posts": []interface{}{
+					map[string]interface{}{
+						"id":    "1",
+						"title": "",
+						"links": map[string][]interface{}{
+							"comments": []interface{}{"1"},
+						},
+					},
+				},
+			}))
+		})
+
+		It("prefers nested structs when given both, structs and IDs", func() {
+			comment := Comment{ID: 1}
+			post := Post{ID: 1, Comments: []Comment{comment}, CommentsIDs: []int{2}}
+			i, err := Marshal(post)
+			Expect(err).To(BeNil())
+			Expect(i).To(Equal(map[string]interface{}{
+				"posts": []interface{}{
+					map[string]interface{}{
+						"id":    "1",
+						"title": "",
+						"links": map[string][]interface{}{
+							"comments": []interface{}{"1"},
+						},
+					},
+				},
+				"linked": map[string][]interface{}{
+					"comments": []interface{}{
+						map[string]interface{}{
+							"id":   "1",
+							"text": "",
 						},
 					},
 				},

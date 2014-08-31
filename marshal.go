@@ -5,6 +5,7 @@ import (
 	"errors"
 	"reflect"
 	"strconv"
+	"strings"
 )
 
 type marshalingContext struct {
@@ -65,39 +66,56 @@ func (ctx *marshalingContext) marshalStruct(val reflect.Value) error {
 	valType := val.Type()
 	for i := 0; i < val.NumField(); i++ {
 		field := val.Field(i)
-		fieldName := jsonify(valType.Field(i).Name)
+		keyName := jsonify(valType.Field(i).Name)
 
 		if field.Kind() == reflect.Slice {
-			// Nested objects
-			ids := []interface{}{}
+			// A slice indicates nested objects.
 
-			for i := 0; i < field.Len(); i++ {
-				if idVal := field.Index(i).FieldByName("ID"); idVal.IsValid() {
-					idString, err := toID(idVal)
-					if err != nil {
+			// First, check whether this is a slice of structs which we need to nest
+			if field.Type().Elem().Kind() == reflect.Struct {
+				ids := []interface{}{}
+				for i := 0; i < field.Len(); i++ {
+					if idVal := field.Index(i).FieldByName("ID"); idVal.IsValid() {
+						idString, err := toID(idVal)
+						if err != nil {
+							return err
+						}
+						ids = append(ids, idString)
+					} else {
+						panic("structs passed to Marshal need to contain ID fields")
+					}
+
+					if err := ctx.marshalStruct(field.Index(i)); err != nil {
 						return err
 					}
-					ids = append(ids, idString)
-				} else {
-					// BUG(lucas): Maybe just silently ignore them?
-					panic("structs passed to Marshal need to contain ID fields")
 				}
-
-				if err := ctx.marshalStruct(field.Index(i)); err != nil {
-					return err
+				linksMap[keyName] = ids
+			} else {
+				// Treat slices of non-struct type as lists of IDs
+				keyName = strings.TrimSuffix(keyName, "IDs")
+				// Don't overwrite any existing links, since they came from nested structs
+				if linksMap[keyName] == nil || len(linksMap[keyName]) == 0 {
+					ids := []interface{}{}
+					for i := 0; i < field.Len(); i++ {
+						id, err := toID(field.Index(i))
+						if err != nil {
+							return err
+						}
+						ids = append(ids, id)
+					}
+					linksMap[keyName] = ids
 				}
 			}
 
-			linksMap[fieldName] = ids
-		} else if fieldName == "id" {
+		} else if keyName == "id" {
 			// ID needs to be converted to string
 			id, err := toID(field)
 			if err != nil {
 				return err
 			}
-			result[fieldName] = id
+			result[keyName] = id
 		} else {
-			result[fieldName] = field.Interface()
+			result[keyName] = field.Interface()
 		}
 	}
 
