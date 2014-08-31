@@ -23,6 +23,10 @@ func makeContext(rootName string) *marshalingContext {
 
 // Marshal takes a struct (or slice of structs) and marshals them to a json encodable interface{} value
 func Marshal(data interface{}) (interface{}, error) {
+	if data == nil {
+		panic("nil passed to Marshal")
+	}
+
 	var ctx *marshalingContext
 
 	if reflect.TypeOf(data).Kind() == reflect.Slice {
