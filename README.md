@@ -18,7 +18,7 @@ type Post struct {
 	ID          int
 	Title       string
 	Comments    []Comment
-	CommentsIds []int
+	CommentsIDs []int
 }
 
 type Comment struct {
