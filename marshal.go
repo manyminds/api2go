@@ -126,6 +126,9 @@ func (ctx *marshalingContext) marshalStruct(val reflect.Value) error {
 				}
 				if id != "0" {
 					linksMap[keyName] = id
+					if err := ctx.marshalStruct(field); err != nil {
+						return err
+					}
 				}
 			}
 		} else {
