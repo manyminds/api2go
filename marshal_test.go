@@ -1,6 +1,7 @@
 package api2go
 
 import (
+	"database/sql"
 	"encoding/json"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -27,7 +28,7 @@ var _ = Describe("Marshalling", func() {
 		Comments    []Comment
 		CommentsIDs []int
 		Author      Author
-		AuthorID    int
+		AuthorID    sql.NullInt64
 	}
 
 	Context("When marshaling simple objects", func() {
@@ -199,7 +200,7 @@ var _ = Describe("Marshalling", func() {
 					map[string]interface{}{
 						"id":    "1",
 						"title": "",
-						"links": map[string][]interface{}{
+						"links": map[string]interface{}{
 							"comments": []interface{}{"1"},
 						},
 					},
@@ -217,7 +218,7 @@ var _ = Describe("Marshalling", func() {
 					map[string]interface{}{
 						"id":    "1",
 						"title": "",
-						"links": map[string][]interface{}{
+						"links": map[string]interface{}{
 							"comments": []interface{}{"1"},
 						},
 					},

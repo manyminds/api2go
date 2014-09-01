@@ -65,7 +65,7 @@ func Marshal(data interface{}) (interface{}, error) {
 // marshalStruct marshals a struct and places it in the context's root
 func (ctx *marshalingContext) marshalStruct(val reflect.Value) error {
 	result := map[string]interface{}{}
-	linksMap := map[string][]interface{}{}
+	linksMap := map[string]interface{}{}
 
 	valType := val.Type()
 	for i := 0; i < val.NumField(); i++ {
@@ -97,8 +97,9 @@ func (ctx *marshalingContext) marshalStruct(val reflect.Value) error {
 			} else {
 				// Treat slices of non-struct type as lists of IDs
 				keyName = strings.TrimSuffix(keyName, "IDs")
+				linksMapReflect := reflect.TypeOf(linksMap[keyName])
 				// Don't overwrite any existing links, since they came from nested structs
-				if linksMap[keyName] == nil || len(linksMap[keyName]) == 0 {
+				if linksMap[keyName] == nil || linksMapReflect.Kind() == reflect.Slice && len(linksMap[keyName].([]interface{})) == 0 {
 					ids := []interface{}{}
 					for i := 0; i < field.Len(); i++ {
 						id, err := toID(field.Index(i))
@@ -110,7 +111,6 @@ func (ctx *marshalingContext) marshalStruct(val reflect.Value) error {
 					linksMap[keyName] = ids
 				}
 			}
-
 		} else if keyName == "id" {
 			// ID needs to be converted to string
 			id, err := toID(field)
@@ -118,6 +118,16 @@ func (ctx *marshalingContext) marshalStruct(val reflect.Value) error {
 				return err
 			}
 			result[keyName] = id
+		} else if field.Type().Kind() == reflect.Struct {
+			if value := field.FieldByName("ID"); value.IsValid() {
+				id, err := toID(value)
+				if err != nil {
+					return err
+				}
+				if id != "0" {
+					linksMap[keyName] = id
+				}
+			}
 		} else {
 			result[keyName] = field.Interface()
 		}
