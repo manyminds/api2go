@@ -23,7 +23,7 @@ func makeContext(rootName string) *marshalingContext {
 
 // Marshal takes a struct (or slice of structs) and marshals them to a json encodable interface{} value
 func Marshal(data interface{}) (interface{}, error) {
-	if data == nil {
+	if data == nil || data == "" {
 		return nil, errors.New("Marshal only works with objects")
 	}
 
@@ -36,7 +36,7 @@ func Marshal(data interface{}) (interface{}, error) {
 
 		// Panic if empty string, i.e. passed []interface{}
 		if rootName == "" {
-			panic("You passed a slice of interfaces []interface{}{...} to Marshal. We cannot determine key names from that. Use []YourObjectName{...} instead.")
+			return nil, errors.New("You passed a slice of interfaces []interface{}{...} to Marshal. We cannot determine key names from that. Use []YourObjectName{...} instead.")
 		}
 		ctx = makeContext(rootName)
 
