@@ -52,35 +52,61 @@ func Unmarshal(ctx unmarshalContext, values interface{}) error {
 					return errors.New("expected links to be an object")
 				}
 				for linkName, linkVal := range linksMap {
-					linkList, ok := linkVal.([]interface{})
-					if !ok {
-						return errors.New("found non-array in links key")
-					}
+					linkList, isASlice := linkVal.([]interface{})
 					// Check for fields named 'FoobarsIDs' for key 'foobars'
 					structFieldName := dejsonify(linkName) + "IDs"
 					field := val.FieldByName(structFieldName)
 					if !field.IsValid() {
-						return errors.New("expected struct to have a " + structFieldName + " field")
+						// no slice, check for single relation
+						structFieldName = dejsonify(linkName) + "ID"
+						field = val.FieldByName(structFieldName)
 					}
+					if !field.IsValid() {
+						return errors.New("expected struct to have a " + structFieldName + " or " + structFieldName + "s field")
+					}
+					var kind reflect.Kind
 					if field.Kind() != reflect.Slice {
-						return errors.New("expected " + structFieldName + " to be a slice")
+						kind = field.Kind()
+					} else {
+						kind = field.Type().Elem().Kind()
 					}
-					switch field.Type().Elem().Kind() {
+					switch kind {
 					case reflect.String:
-						ids := []string{}
-						for _, id := range linkList {
-							idString, ok := id.(string)
+						if isASlice {
+							ids := []string{}
+							for _, id := range linkList {
+								idString, ok := id.(string)
+								if !ok {
+									return errors.New("expected " + linkName + " to contain string IDs")
+								}
+								ids = append(ids, idString)
+							}
+							field.Set(reflect.ValueOf(ids))
+						} else {
+							idString, ok := linkVal.(string)
 							if !ok {
 								return errors.New("expected " + linkName + " to contain string IDs")
 							}
-							ids = append(ids, idString)
+							field.Set(reflect.ValueOf(idString))
 						}
-						field.Set(reflect.ValueOf(ids))
 
 					case reflect.Int:
-						ids := []int{}
-						for _, id := range linkList {
-							idString, ok := id.(string)
+						if isASlice {
+							ids := []int{}
+							for _, id := range linkList {
+								idString, ok := id.(string)
+								if !ok {
+									return errors.New("expected " + linkName + " to contain string IDs")
+								}
+								idInt, err := strconv.Atoi(idString)
+								if err != nil {
+									return err
+								}
+								ids = append(ids, idInt)
+							}
+							field.Set(reflect.ValueOf(ids))
+						} else {
+							idString, ok := linkVal.(string)
 							if !ok {
 								return errors.New("expected " + linkName + " to contain string IDs")
 							}
@@ -88,9 +114,9 @@ func Unmarshal(ctx unmarshalContext, values interface{}) error {
 							if err != nil {
 								return err
 							}
-							ids = append(ids, idInt)
+
+							field.Set(reflect.ValueOf(idInt))
 						}
-						field.Set(reflect.ValueOf(ids))
 
 					default:
 						return errors.New("expected " + structFieldName + " to be a int or string slice")

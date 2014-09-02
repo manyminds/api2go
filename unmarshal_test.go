@@ -152,4 +152,54 @@ var _ = Describe("Unmarshal", func() {
 			Expect(posts).To(Equal([]Post{post}))
 		})
 	})
+
+	Context("when unmarshaling objects with single relation", func() {
+		type BlogAuthor struct {
+			ID   int
+			Name string
+		}
+
+		type BlogPost struct {
+			ID       int
+			Text     string
+			AuthorID int
+			Author   BlogAuthor
+		}
+
+		It("unmarshals author id", func() {
+			post := BlogPost{ID: 1, Text: "Test", AuthorID: 1, Author: BlogAuthor{}}
+			postMap := map[string]interface{}{
+				"blogPosts": []interface{}{
+					map[string]interface{}{
+						"id":   "1",
+						"text": "Test",
+						"links": map[string]interface{}{
+							"author": "1",
+						},
+					},
+				},
+			}
+			var posts []BlogPost
+			err := Unmarshal(postMap, &posts)
+			Expect(err).To(BeNil())
+			Expect(posts).To(Equal([]BlogPost{post}))
+		})
+
+		It("unmarshal no linked content", func() {
+			post := BlogPost{ID: 1, Text: "Test", AuthorID: 0, Author: BlogAuthor{}}
+			postMap := map[string]interface{}{
+				"blogPosts": []interface{}{
+					map[string]interface{}{
+						"id":    "1",
+						"text":  "Test",
+						"links": map[string]interface{}{},
+					},
+				},
+			}
+			var posts []BlogPost
+			err := Unmarshal(postMap, &posts)
+			Expect(err).To(BeNil())
+			Expect(posts).To(Equal([]BlogPost{post}))
+		})
+	})
 })
