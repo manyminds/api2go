@@ -2,6 +2,7 @@ package api2go
 
 import (
 	"encoding/json"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -50,6 +51,11 @@ var _ = Describe("Marshalling", func() {
 					firstPostMap,
 				},
 			}))
+		})
+
+		It("marshal nil value", func() {
+			_, err := Marshal(nil)
+			Expect(err).To(HaveOccurred())
 		})
 
 		It("marshals collections object", func() {
