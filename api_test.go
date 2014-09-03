@@ -10,16 +10,16 @@ import (
 )
 
 type sourceAdapter struct {
-	findAll   func() (interface{}, error)
-	findOne   func(string) (interface{}, error)
-	lNewSlice func() interface{}
-	create    func(interface{}) (string, error)
+	findAll func() (interface{}, error)
+	findOne func(string) (interface{}, error)
+	create  func(interface{}) (string, error)
+	delete  func(id string) error
 }
 
 func (a *sourceAdapter) FindAll() (interface{}, error)          { return a.findAll() }
 func (a *sourceAdapter) FindOne(id string) (interface{}, error) { return a.findOne(id) }
-func (a *sourceAdapter) NewSlice() interface{}                  { return a.lNewSlice() }
 func (a *sourceAdapter) Create(obj interface{}) (string, error) { return a.create(obj) }
+func (a *sourceAdapter) Delete(id string) error                 { return a.delete(id) }
 
 var _ = Describe("RestHandler", func() {
 	Context("when handling requests", func() {
@@ -34,9 +34,13 @@ var _ = Describe("RestHandler", func() {
 
 			api *API
 			rec *httptest.ResponseRecorder
+
+			deleted bool
 		)
 
 		BeforeEach(func() {
+			deleted = false
+
 			post1 = Post{ID: 1, Title: "Hello, World!"}
 			post1Map = map[string]interface{}{
 				"id":    "1",
@@ -57,13 +61,17 @@ var _ = Describe("RestHandler", func() {
 						panic("unknown id " + id)
 					}
 				},
-				lNewSlice: func() interface{} {
-					return &[]Post{}
-				},
 				create: func(obj interface{}) (string, error) {
 					p := obj.(Post)
 					Expect(p.Title).To(Equal("New Post"))
 					return "42", nil
+				},
+				delete: func(id string) error {
+					if id != "1" {
+						panic("unknown id")
+					}
+					deleted = true
+					return nil
 				},
 			}
 
@@ -122,6 +130,14 @@ var _ = Describe("RestHandler", func() {
 			Expect(err).To(BeNil())
 			Expect(rec.Code).To(Equal(http.StatusOK))
 			Expect(rec.Header().Get("Allow")).To(Equal("GET,PUT,DELETE,OPTIONS"))
+		})
+
+		It("DELETEs", func() {
+			req, err := http.NewRequest("DELETE", "/posts/1", nil)
+			Expect(err).To(BeNil())
+			api.Handler().ServeHTTP(rec, req)
+			Expect(rec.Code).To(Equal(http.StatusNoContent))
+			Expect(deleted).To(BeTrue())
 		})
 	})
 })

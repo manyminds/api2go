@@ -20,6 +20,9 @@ type DataSource interface {
 
 	// Create a new object and return its ID
 	Create(interface{}) (string, error)
+
+	// Delete an object
+	Delete(id string) error
 }
 
 // API is a REST JSONAPI.
@@ -132,6 +135,16 @@ func (api *API) AddResource(resource interface{}, source DataSource) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
 		w.Write(data)
+	})
+
+	api.router.DELETE("/"+name+"/:id", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+		err := source.Delete(ps.ByName("id"))
+		if err != nil {
+			w.WriteHeader(500)
+			log.Println(err)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
 	})
 }
 
