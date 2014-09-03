@@ -26,6 +26,18 @@ func Unmarshal(ctx unmarshalContext, values interface{}) error {
 		panic("You must pass a pointer to a []struct to Unmarshal()")
 	}
 
+	// Copy the value, then write into the new variable.
+	// Later Set() the actual value of the pointee.
+	val := sliceVal
+	err := unmarshalInto(ctx, structType, &val)
+	if err != nil {
+		return err
+	}
+	sliceVal.Set(val)
+	return nil
+}
+
+func unmarshalInto(ctx unmarshalContext, structType reflect.Type, sliceVal *reflect.Value) error {
 	// Read models slice
 	rootName := pluralize(jsonify(structType.Name()))
 	var modelsInterface interface{}
@@ -153,7 +165,7 @@ func Unmarshal(ctx unmarshalContext, values interface{}) error {
 			}
 		}
 
-		sliceVal.Set(reflect.Append(sliceVal, val))
+		*sliceVal = reflect.Append(*sliceVal, val)
 	}
 
 	return nil
