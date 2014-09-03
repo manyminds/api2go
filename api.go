@@ -1,8 +1,10 @@
 package api2go
 
 import (
+	"io/ioutil"
 	"log"
 	"net/http"
+	"reflect"
 
 	"github.com/julienschmidt/httprouter"
 )
@@ -14,6 +16,12 @@ type DataSource interface {
 
 	// FindOne returns an object by its ID
 	FindOne(ID string) (interface{}, error)
+
+	// New should return a empty slice of the model struct
+	NewSlice() interface{}
+
+	// Create a new object and return its ID
+	Create(interface{}) (string, error)
 }
 
 // API is a REST JSONAPI.
@@ -62,6 +70,34 @@ func (api *API) AddResource(name string, source DataSource) {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(json)
+	})
+
+	api.router.POST("/"+name, func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+		defer r.Body.Close()
+		json, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			w.WriteHeader(500)
+			log.Println(err)
+			return
+		}
+		newObjs := source.NewSlice()
+		err = UnmarshalJSON(json, newObjs)
+		if err != nil {
+			w.WriteHeader(500)
+			log.Println(err)
+			return
+		}
+		if reflect.ValueOf(newObjs).Elem().Len() != 1 {
+			panic("expected one object in POST")
+		}
+		id, err := source.Create(reflect.ValueOf(newObjs).Elem().Index(0).Interface())
+		if err != nil {
+			w.WriteHeader(500)
+			log.Println(err)
+			return
+		}
+		w.Header().Set("Location", "/"+name+"/"+id)
+		w.WriteHeader(http.StatusCreated)
 	})
 }
 

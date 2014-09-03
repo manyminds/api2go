@@ -4,17 +4,22 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 type sourceAdapter struct {
-	findAll func() (interface{}, error)
-	findOne func(string) (interface{}, error)
+	findAll   func() (interface{}, error)
+	findOne   func(string) (interface{}, error)
+	lNewSlice func() interface{}
+	create    func(interface{}) (string, error)
 }
 
 func (a *sourceAdapter) FindAll() (interface{}, error)          { return a.findAll() }
 func (a *sourceAdapter) FindOne(id string) (interface{}, error) { return a.findOne(id) }
+func (a *sourceAdapter) NewSlice() interface{}                  { return a.lNewSlice() }
+func (a *sourceAdapter) Create(obj interface{}) (string, error) { return a.create(obj) }
 
 var _ = Describe("RestHandler", func() {
 	Context("when handling requests", func() {
@@ -50,6 +55,14 @@ var _ = Describe("RestHandler", func() {
 						panic("unknown id " + id)
 					}
 				},
+				lNewSlice: func() interface{} {
+					return &[]Post{}
+				},
+				create: func(obj interface{}) (string, error) {
+					p := obj.(Post)
+					Expect(p.Title).To(Equal("New Post"))
+					return "42", nil
+				},
 			}
 
 			api = NewAPI()
@@ -80,6 +93,15 @@ var _ = Describe("RestHandler", func() {
 			Expect(result).To(Equal(map[string]interface{}{
 				"posts": []interface{}{post1Map},
 			}))
+		})
+
+		It("POSTSs new objects", func() {
+			reqBody := strings.NewReader(`{"posts": [{"title": "New Post"}]}`)
+			req, err := http.NewRequest("POST", "/posts", reqBody)
+			Expect(err).To(BeNil())
+			api.Handler().ServeHTTP(rec, req)
+			Expect(rec.Code).To(Equal(http.StatusCreated))
+			Expect(rec.Header().Get("Location")).To(Equal("/posts/42"))
 		})
 	})
 })
