@@ -102,7 +102,22 @@ func (api *API) AddResource(name string, source DataSource) {
 			return
 		}
 		w.Header().Set("Location", "/"+name+"/"+id)
+
+		obj, err := source.FindOne(id)
+		if err != nil {
+			w.WriteHeader(500)
+			log.Println(err)
+			return
+		}
+		json, err = MarshalToJSON(obj)
+		if err != nil {
+			w.WriteHeader(500)
+			log.Println(err)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
+		w.Write(json)
 	})
 }
 

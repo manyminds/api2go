@@ -51,6 +51,8 @@ var _ = Describe("RestHandler", func() {
 					switch id {
 					case "1":
 						return post1, nil
+					case "42":
+						return Post{ID: 42, Title: "New Post"}, nil
 					default:
 						panic("unknown id " + id)
 					}
@@ -102,6 +104,16 @@ var _ = Describe("RestHandler", func() {
 			api.Handler().ServeHTTP(rec, req)
 			Expect(rec.Code).To(Equal(http.StatusCreated))
 			Expect(rec.Header().Get("Location")).To(Equal("/posts/42"))
+			var result map[string]interface{}
+			Expect(json.Unmarshal(rec.Body.Bytes(), &result)).To(BeNil())
+			Expect(result).To(Equal(map[string]interface{}{
+				"posts": []interface{}{
+					map[string]interface{}{
+						"id":    "42",
+						"title": "New Post",
+					},
+				},
+			}))
 		})
 
 		It("OPTIONs on collection route", func() {
