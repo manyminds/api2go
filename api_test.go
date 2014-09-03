@@ -103,5 +103,13 @@ var _ = Describe("RestHandler", func() {
 			Expect(rec.Code).To(Equal(http.StatusCreated))
 			Expect(rec.Header().Get("Location")).To(Equal("/posts/42"))
 		})
+
+		It("OPTIONs on collection route", func() {
+			req, err := http.NewRequest("OPTIONS", "/posts", nil)
+			api.Handler().ServeHTTP(rec, req)
+			Expect(err).To(BeNil())
+			Expect(rec.Code).To(Equal(http.StatusOK))
+			Expect(rec.Header().Get("Allow")).To(Equal("GET,PUT,DELETE,OPTIONS"))
+		})
 	})
 })

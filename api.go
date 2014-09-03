@@ -72,6 +72,11 @@ func (api *API) AddResource(name string, source DataSource) {
 		w.Write(json)
 	})
 
+	api.router.Handle("OPTIONS", "/"+name, func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+		w.Header().Set("Allow", "GET,PUT,DELETE,OPTIONS")
+		w.WriteHeader(200)
+	})
+
 	api.router.POST("/"+name, func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		defer r.Body.Close()
 		json, err := ioutil.ReadAll(r.Body)
