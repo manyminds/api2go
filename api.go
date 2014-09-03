@@ -1,6 +1,7 @@
 package api2go
 
 import (
+	"encoding/json"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -16,9 +17,6 @@ type DataSource interface {
 
 	// FindOne returns an object by its ID
 	FindOne(ID string) (interface{}, error)
-
-	// New should return a empty slice of the model struct
-	NewSlice() interface{}
 
 	// Create a new object and return its ID
 	Create(interface{}) (string, error)
@@ -37,7 +35,14 @@ func NewAPI() *API {
 }
 
 // AddResource registers a data source for the given resource
-func (api *API) AddResource(name string, source DataSource) {
+// `resource` should by an empty struct instance such as `Post{}`. The same type will be used for constructing new elements.
+func (api *API) AddResource(resource interface{}, source DataSource) {
+	resourceType := reflect.TypeOf(resource)
+	if resourceType.Kind() != reflect.Struct {
+		panic("pass an empty resource struct to AddResource!")
+	}
+	name := jsonify(pluralize(resourceType.Name()))
+
 	api.router.GET("/"+name, func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		objs, err := source.FindAll()
 		if err != nil {
@@ -79,23 +84,32 @@ func (api *API) AddResource(name string, source DataSource) {
 
 	api.router.POST("/"+name, func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		defer r.Body.Close()
-		json, err := ioutil.ReadAll(r.Body)
+		data, err := ioutil.ReadAll(r.Body)
 		if err != nil {
 			w.WriteHeader(500)
 			log.Println(err)
 			return
 		}
-		newObjs := source.NewSlice()
-		err = UnmarshalJSON(json, newObjs)
+
+		var ctx unmarshalContext
+		err = json.Unmarshal(data, &ctx)
 		if err != nil {
 			w.WriteHeader(500)
 			log.Println(err)
 			return
 		}
-		if reflect.ValueOf(newObjs).Elem().Len() != 1 {
+
+		newObjs, err := unmarshalValue(ctx, resourceType)
+		if err != nil {
+			w.WriteHeader(500)
+			log.Println(err)
+			return
+		}
+
+		if newObjs.Len() != 1 {
 			panic("expected one object in POST")
 		}
-		id, err := source.Create(reflect.ValueOf(newObjs).Elem().Index(0).Interface())
+		id, err := source.Create(newObjs.Index(0).Interface())
 		if err != nil {
 			w.WriteHeader(500)
 			log.Println(err)
@@ -109,7 +123,7 @@ func (api *API) AddResource(name string, source DataSource) {
 			log.Println(err)
 			return
 		}
-		json, err = MarshalToJSON(obj)
+		data, err = MarshalToJSON(obj)
 		if err != nil {
 			w.WriteHeader(500)
 			log.Println(err)
@@ -117,7 +131,7 @@ func (api *API) AddResource(name string, source DataSource) {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
-		w.Write(json)
+		w.Write(data)
 	})
 }
 

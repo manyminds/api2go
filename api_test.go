@@ -68,7 +68,7 @@ var _ = Describe("RestHandler", func() {
 			}
 
 			api = NewAPI()
-			api.AddResource("posts", adapter)
+			api.AddResource(Post{}, adapter)
 
 			rec = httptest.NewRecorder()
 		})
