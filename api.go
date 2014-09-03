@@ -46,6 +46,16 @@ func (api *API) AddResource(resource interface{}, source DataSource) {
 	}
 	name := jsonify(pluralize(resourceType.Name()))
 
+	api.router.Handle("OPTIONS", "/"+name, func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+		w.Header().Set("Allow", "GET,POST,OPTIONS")
+		w.WriteHeader(200)
+	})
+
+	api.router.Handle("OPTIONS", "/"+name+"/:id", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+		w.Header().Set("Allow", "GET,PUT,DELETE,OPTIONS")
+		w.WriteHeader(200)
+	})
+
 	api.router.GET("/"+name, func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		objs, err := source.FindAll()
 		if err != nil {
@@ -78,11 +88,6 @@ func (api *API) AddResource(resource interface{}, source DataSource) {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(json)
-	})
-
-	api.router.Handle("OPTIONS", "/"+name, func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		w.Header().Set("Allow", "GET,PUT,DELETE,OPTIONS")
-		w.WriteHeader(200)
 	})
 
 	api.router.POST("/"+name, func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
