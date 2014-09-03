@@ -48,12 +48,12 @@ func (api *API) AddResource(resource interface{}, source DataSource) {
 
 	api.router.Handle("OPTIONS", "/"+name, func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		w.Header().Set("Allow", "GET,POST,OPTIONS")
-		w.WriteHeader(200)
+		w.WriteHeader(http.StatusNoContent)
 	})
 
 	api.router.Handle("OPTIONS", "/"+name+"/:id", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		w.Header().Set("Allow", "GET,PUT,DELETE,OPTIONS")
-		w.WriteHeader(200)
+		w.WriteHeader(http.StatusNoContent)
 	})
 
 	api.router.GET("/"+name, func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {

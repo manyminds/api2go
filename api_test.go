@@ -128,7 +128,7 @@ var _ = Describe("RestHandler", func() {
 			req, err := http.NewRequest("OPTIONS", "/posts", nil)
 			api.Handler().ServeHTTP(rec, req)
 			Expect(err).To(BeNil())
-			Expect(rec.Code).To(Equal(http.StatusOK))
+			Expect(rec.Code).To(Equal(http.StatusNoContent))
 			Expect(rec.Header().Get("Allow")).To(Equal("GET,POST,OPTIONS"))
 		})
 
@@ -136,7 +136,7 @@ var _ = Describe("RestHandler", func() {
 			req, err := http.NewRequest("OPTIONS", "/posts/1", nil)
 			api.Handler().ServeHTTP(rec, req)
 			Expect(err).To(BeNil())
-			Expect(rec.Code).To(Equal(http.StatusOK))
+			Expect(rec.Code).To(Equal(http.StatusNoContent))
 			Expect(rec.Header().Get("Allow")).To(Equal("GET,PUT,DELETE,OPTIONS"))
 		})
 
