@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"reflect"
-	"strconv"
 )
 
 type unmarshalContext map[string]interface{}
@@ -70,13 +69,9 @@ func unmarshalInto(ctx unmarshalContext, structType reflect.Type, sliceVal *refl
 			// TODO This is O(n^2), make it O(n)
 			for i := 0; i < sliceVal.Len(); i++ {
 				obj := sliceVal.Index(i)
-				idField := obj.FieldByName("ID")
-				if !idField.IsValid() {
-					return errors.New("expected ID field in struct")
-				}
-				otherID, err := toID(idField)
+				otherID, err := idFromObject(obj)
 				if err != nil {
-					return errors.New("invalid type for ID field")
+					return err
 				}
 				if otherID == id {
 					val = obj
@@ -85,112 +80,33 @@ func unmarshalInto(ctx unmarshalContext, structType reflect.Type, sliceVal *refl
 				}
 			}
 		}
-
-		// Otherwise, make a new struct
+		// If the struct wasn't already there for updating, make a new one
 		if !val.IsValid() {
 			val = reflect.New(structType).Elem()
-
 		}
 
 		for k, v := range attributes {
-			if k == "links" {
+			switch k {
+			case "links":
 				linksMap, ok := v.(map[string]interface{})
 				if !ok {
 					return errors.New("expected links to be an object")
 				}
-				for linkName, linkVal := range linksMap {
-					linkList, isASlice := linkVal.([]interface{})
-					// Check for fields named 'FoobarsIDs' for key 'foobars'
-					structFieldName := dejsonify(linkName) + "IDs"
-					field := val.FieldByName(structFieldName)
-					if !field.IsValid() {
-						// no slice, check for single relation
-						structFieldName = dejsonify(linkName) + "ID"
-						field = val.FieldByName(structFieldName)
-					}
-					if !field.IsValid() {
-						return errors.New("expected struct to have a " + structFieldName + " or " + structFieldName + "s field")
-					}
-					var kind reflect.Kind
-					if field.Kind() != reflect.Slice {
-						kind = field.Kind()
-					} else {
-						kind = field.Type().Elem().Kind()
-					}
-					switch kind {
-					case reflect.String:
-						if isASlice {
-							ids := []string{}
-							for _, id := range linkList {
-								idString, ok := id.(string)
-								if !ok {
-									return errors.New("expected " + linkName + " to contain string IDs")
-								}
-								ids = append(ids, idString)
-							}
-							field.Set(reflect.ValueOf(ids))
-						} else {
-							idString, ok := linkVal.(string)
-							if !ok {
-								return errors.New("expected " + linkName + " to contain string IDs")
-							}
-							field.Set(reflect.ValueOf(idString))
-						}
-
-					case reflect.Int:
-						if isASlice {
-							ids := []int{}
-							for _, id := range linkList {
-								idString, ok := id.(string)
-								if !ok {
-									return errors.New("expected " + linkName + " to contain string IDs")
-								}
-								idInt, err := strconv.Atoi(idString)
-								if err != nil {
-									return err
-								}
-								ids = append(ids, idInt)
-							}
-							field.Set(reflect.ValueOf(ids))
-						} else {
-							idString, ok := linkVal.(string)
-							if !ok {
-								return errors.New("expected " + linkName + " to contain string IDs")
-							}
-							idInt, err := strconv.Atoi(idString)
-							if err != nil {
-								return err
-							}
-
-							field.Set(reflect.ValueOf(idInt))
-						}
-
-					default:
-						return errors.New("expected " + structFieldName + " to be a int or string slice")
-					}
+				if err := unmarshalLinks(val, linksMap); err != nil {
+					return err
 				}
-			} else if k == "id" {
+
+			case "id":
 				// Allow conversion of string id to int
 				id, ok = v.(string)
 				if !ok {
 					return errors.New("expected id to be of type string")
 				}
-				field := val.FieldByName("ID")
-				if !field.IsValid() {
-					return errors.New("expected struct " + structType.Name() + " to have field 'ID'")
+				if err := setObjectID(val, id); err != nil {
+					return err
 				}
-				if field.Kind() == reflect.String {
-					field.Set(reflect.ValueOf(id))
-				} else if field.Kind() == reflect.Int {
-					intID, err := strconv.Atoi(id)
-					if err != nil {
-						return err
-					}
-					field.Set(reflect.ValueOf(intID))
-				} else {
-					return errors.New("expected ID to be of type int or string in struct")
-				}
-			} else {
+
+			default:
 				fieldName := dejsonify(k)
 				field := val.FieldByName(fieldName)
 				if !field.IsValid() {
@@ -205,6 +121,41 @@ func unmarshalInto(ctx unmarshalContext, structType reflect.Type, sliceVal *refl
 		}
 	}
 
+	return nil
+}
+
+func unmarshalLinks(val reflect.Value, linksMap map[string]interface{}) error {
+	for linkName, linkObj := range linksMap {
+		switch links := linkObj.(type) {
+		case []interface{}:
+			// Has-many
+			// Check for field named 'FoobarsIDs' for key 'foobars'
+			structFieldName := dejsonify(linkName) + "IDs"
+			sliceField := val.FieldByName(structFieldName)
+			if !sliceField.IsValid() || sliceField.Kind() != reflect.Slice {
+				return errors.New("expected struct to have a " + structFieldName + " slice")
+			}
+
+			sliceField.Set(reflect.MakeSlice(sliceField.Type(), len(links), len(links)))
+			for i, idInterface := range links {
+				if err := setIDValue(sliceField.Index(i), idInterface); err != nil {
+					return err
+				}
+			}
+
+		case string:
+			// Belongs-to or has-one
+			// Check for field named 'FoobarID' for key 'foobar'
+			structFieldName := dejsonify(linkName) + "ID"
+			field := val.FieldByName(structFieldName)
+			if err := setIDValue(field, links); err != nil {
+				return err
+			}
+
+		default:
+			return errors.New("expected string or array in links object")
+		}
+	}
 	return nil
 }
 

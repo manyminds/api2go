@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"reflect"
-	"strconv"
 	"strings"
 )
 
@@ -24,7 +23,7 @@ func makeContext(rootName string) *marshalingContext {
 // Marshal takes a struct (or slice of structs) and marshals them to a json encodable interface{} value
 func Marshal(data interface{}) (interface{}, error) {
 	if data == nil || data == "" {
-		return nil, errors.New("Marshal only works with objects")
+		return nil, errors.New("marshal only works with objects")
 	}
 
 	var ctx *marshalingContext
@@ -36,7 +35,7 @@ func Marshal(data interface{}) (interface{}, error) {
 
 		// Panic if empty string, i.e. passed []interface{}
 		if rootName == "" {
-			return nil, errors.New("You passed a slice of interfaces []interface{}{...} to Marshal. We cannot determine key names from that. Use []YourObjectName{...} instead.")
+			return nil, errors.New("you passed a slice of interfaces []interface{}{...} to Marshal. we cannot determine key names from that. Use []YourObjectName{...} instead")
 		}
 		ctx = makeContext(rootName)
 
@@ -79,15 +78,11 @@ func (ctx *marshalingContext) marshalStruct(val reflect.Value) error {
 			if field.Type().Elem().Kind() == reflect.Struct {
 				ids := []interface{}{}
 				for i := 0; i < field.Len(); i++ {
-					if idVal := field.Index(i).FieldByName("ID"); idVal.IsValid() {
-						idString, err := toID(idVal)
-						if err != nil {
-							return err
-						}
-						ids = append(ids, idString)
-					} else {
-						panic("structs passed to Marshal need to contain ID fields")
+					id, err := idFromObject(field.Index(i))
+					if err != nil {
+						return err
 					}
+					ids = append(ids, id)
 
 					if err := ctx.marshalStruct(field.Index(i)); err != nil {
 						return err
@@ -102,7 +97,7 @@ func (ctx *marshalingContext) marshalStruct(val reflect.Value) error {
 				if linksMap[keyName] == nil || linksMapReflect.Kind() == reflect.Slice && len(linksMap[keyName].([]interface{})) == 0 {
 					ids := []interface{}{}
 					for i := 0; i < field.Len(); i++ {
-						id, err := toID(field.Index(i))
+						id, err := idFromValue(field.Index(i))
 						if err != nil {
 							return err
 						}
@@ -113,17 +108,14 @@ func (ctx *marshalingContext) marshalStruct(val reflect.Value) error {
 			}
 		} else if keyName == "id" {
 			// ID needs to be converted to string
-			id, err := toID(field)
+			id, err := idFromValue(field)
 			if err != nil {
 				return err
 			}
 			result[keyName] = id
 		} else if field.Type().Kind() == reflect.Struct {
-			if value := field.FieldByName("ID"); value.IsValid() {
-				id, err := toID(value)
-				if err != nil {
-					return err
-				}
+			id, err := idFromObject(field)
+			if err == nil {
 				if id != "0" {
 					linksMap[keyName] = id
 					if err := ctx.marshalStruct(field); err != nil {
@@ -175,20 +167,6 @@ func (ctx *marshalingContext) addValue(name string, val map[string]interface{}) 
 		} else {
 			linkedMap[name] = []interface{}{val}
 		}
-	}
-}
-
-// toID converts a value to a ID string
-func toID(v reflect.Value) (string, error) {
-	switch v.Kind() {
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		return strconv.FormatInt(v.Int(), 10), nil
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		return strconv.FormatUint(v.Uint(), 10), nil
-	case reflect.String:
-		return v.String(), nil
-	default:
-		return "", errors.New("need int or string as type of ID")
 	}
 }
 

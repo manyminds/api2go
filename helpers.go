@@ -1,6 +1,9 @@
 package api2go
 
 import (
+	"errors"
+	"reflect"
+	"strconv"
 	"strings"
 	"unicode"
 
@@ -77,4 +80,56 @@ func pluralize(word string) string {
 // singularize a noun
 func singularize(word string) string {
 	return inflector.Singularize(word)
+}
+
+func idFromObject(obj reflect.Value) (string, error) {
+	idField := obj.FieldByName("ID")
+	if !idField.IsValid() {
+		return "", errors.New("expected 'ID' field in struct")
+	}
+	return idFromValue(idField)
+}
+
+func idFromValue(v reflect.Value) (string, error) {
+	switch v.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return strconv.FormatInt(v.Int(), 10), nil
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return strconv.FormatUint(v.Uint(), 10), nil
+	case reflect.String:
+		return v.String(), nil
+	default:
+		return "", errors.New("need int or string as type of ID")
+	}
+}
+
+func setObjectID(obj reflect.Value, idInterface interface{}) error {
+	field := obj.FieldByName("ID")
+	if !field.IsValid() {
+		return errors.New("expected struct to have field 'ID'")
+	}
+	return setIDValue(field, idInterface)
+}
+
+func setIDValue(val reflect.Value, idInterface interface{}) error {
+	id, ok := idInterface.(string)
+	if !ok {
+		return errors.New("expected ID to be string in json")
+	}
+	switch val.Kind() {
+	case reflect.String:
+		val.Set(reflect.ValueOf(id))
+
+	case reflect.Int:
+		intID, err := strconv.Atoi(id)
+		if err != nil {
+			return err
+		}
+		val.Set(reflect.ValueOf(intID))
+
+	default:
+		return errors.New("expected ID to be of type int or string in struct")
+	}
+
+	return nil
 }
