@@ -23,6 +23,9 @@ type DataSource interface {
 
 	// Delete an object
 	Delete(id string) error
+
+	// Update an object and return its saved state
+	Update(obj interface{}) (interface{}, error)
 }
 
 // API is a REST JSONAPI.
@@ -151,6 +154,52 @@ func (api *API) AddResource(resource interface{}, source DataSource) {
 			return
 		}
 		w.WriteHeader(http.StatusNoContent)
+	})
+
+	api.router.PUT("/"+name+"/:id", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+		obj, err := source.FindOne(ps.ByName("id"))
+		if err != nil {
+			w.WriteHeader(500)
+			log.Println(err)
+			return
+		}
+		defer r.Body.Close()
+		data, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			w.WriteHeader(500)
+			log.Println(err)
+			return
+		}
+		var ctx unmarshalContext
+		err = json.Unmarshal(data, &ctx)
+		if err != nil {
+			w.WriteHeader(500)
+			log.Println(err)
+			return
+		}
+
+		updatingObjs := reflect.MakeSlice(reflect.SliceOf(resourceType), 1, 1)
+		updatingObjs.Index(0).Set(reflect.ValueOf(obj))
+		err = unmarshalInto(ctx, resourceType, &updatingObjs)
+		if err != nil {
+			w.WriteHeader(500)
+			log.Println(err)
+			return
+		}
+
+		if updatingObjs.Len() != 1 {
+			panic("expected one object in PUT")
+		}
+
+		data, err = MarshalToJSON(updatingObjs.Index(0).Interface())
+		if err != nil {
+			w.WriteHeader(500)
+			log.Println(err)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write(data)
 	})
 }
 
