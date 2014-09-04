@@ -25,7 +25,7 @@ type DataSource interface {
 	Delete(id string) error
 
 	// Update an object and return its saved state
-	Update(obj interface{}) (interface{}, error)
+	Update(obj interface{}) error
 }
 
 // API is a REST JSONAPI.
@@ -190,16 +190,13 @@ func (api *API) AddResource(resource interface{}, source DataSource) {
 		if updatingObjs.Len() != 1 {
 			panic("expected one object in PUT")
 		}
-
-		data, err = MarshalToJSON(updatingObjs.Index(0).Interface())
-		if err != nil {
+		if err := source.Update(updatingObjs.Index(0).Interface()); err != nil {
 			w.WriteHeader(500)
 			log.Println(err)
 			return
 		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		w.Write(data)
+
+		w.WriteHeader(http.StatusNoContent)
 	})
 }
 

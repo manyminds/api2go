@@ -14,14 +14,14 @@ type sourceAdapter struct {
 	findOne func(string) (interface{}, error)
 	create  func(interface{}) (string, error)
 	delete  func(string) error
-	update  func(interface{}) (interface{}, error)
+	update  func(interface{}) error
 }
 
-func (a *sourceAdapter) FindAll() (interface{}, error)               { return a.findAll() }
-func (a *sourceAdapter) FindOne(id string) (interface{}, error)      { return a.findOne(id) }
-func (a *sourceAdapter) Create(obj interface{}) (string, error)      { return a.create(obj) }
-func (a *sourceAdapter) Delete(id string) error                      { return a.delete(id) }
-func (a *sourceAdapter) Update(obj interface{}) (interface{}, error) { return a.update(obj) }
+func (a *sourceAdapter) FindAll() (interface{}, error)          { return a.findAll() }
+func (a *sourceAdapter) FindOne(id string) (interface{}, error) { return a.findOne(id) }
+func (a *sourceAdapter) Create(obj interface{}) (string, error) { return a.create(obj) }
+func (a *sourceAdapter) Delete(id string) error                 { return a.delete(id) }
+func (a *sourceAdapter) Update(obj interface{}) error           { return a.update(obj) }
 
 var _ = Describe("RestHandler", func() {
 	Context("when handling requests", func() {
@@ -75,13 +75,13 @@ var _ = Describe("RestHandler", func() {
 					deleted = true
 					return nil
 				},
-				update: func(obj interface{}) (interface{}, error) {
+				update: func(obj interface{}) error {
 					p := obj.(Post)
 					if p.ID != 1 {
 						panic("unknown id")
 					}
 					post1.Title = p.Title
-					return post1, nil
+					return nil
 				},
 			}
 
@@ -163,17 +163,8 @@ var _ = Describe("RestHandler", func() {
 			req, err := http.NewRequest("PUT", "/posts/1", reqBody)
 			Expect(err).To(BeNil())
 			api.Handler().ServeHTTP(rec, req)
-			Expect(rec.Code).To(Equal(http.StatusOK))
-			var result map[string]interface{}
-			Expect(json.Unmarshal(rec.Body.Bytes(), &result)).To(BeNil())
-			Expect(result).To(Equal(map[string]interface{}{
-				"posts": []interface{}{
-					map[string]interface{}{
-						"id":    "1",
-						"title": "New Title",
-					},
-				},
-			}))
+			Expect(rec.Code).To(Equal(http.StatusNoContent))
+			Expect(post1.Title).To(Equal("New Title"))
 		})
 	})
 })
