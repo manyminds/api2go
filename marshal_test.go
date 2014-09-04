@@ -3,6 +3,7 @@ package api2go
 import (
 	"database/sql"
 	"encoding/json"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -60,6 +61,11 @@ var _ = Describe("Marshalling", func() {
 			}))
 		})
 
+		It("marshal nil value", func() {
+			_, err := Marshal(nil)
+			Expect(err).To(HaveOccurred())
+		})
+
 		It("marshals collections object", func() {
 			i, err := Marshal([]SimplePost{firstPost, secondPost})
 			Expect(err).To(BeNil())
@@ -79,10 +85,14 @@ var _ = Describe("Marshalling", func() {
 			}))
 		})
 
-		It("panics when passing interface{} slices", func() {
-			Expect(func() {
-				Marshal([]interface{}{})
-			}).To(Panic())
+		It("returns an error when passing interface{} slices", func() {
+			_, err := Marshal([]interface{}{})
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("returns an error when passing an empty string", func() {
+			_, err := Marshal("")
+			Expect(err).To(HaveOccurred())
 		})
 
 		It("marshals to JSON", func() {
