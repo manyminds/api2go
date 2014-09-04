@@ -107,7 +107,8 @@ func (api *API) AddResource(resource interface{}, source DataSource) {
 			return
 		}
 
-		newObjs, err := unmarshalValue(ctx, resourceType)
+		newObjs := reflect.MakeSlice(reflect.SliceOf(resourceType), 0, 0)
+		err = unmarshalInto(ctx, resourceType, &newObjs)
 		if err != nil {
 			w.WriteHeader(500)
 			log.Println(err)
