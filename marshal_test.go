@@ -1,6 +1,7 @@
 package api2go
 
 import (
+	"database/sql"
 	"encoding/json"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -16,11 +17,18 @@ var _ = Describe("Marshalling", func() {
 		Text string
 	}
 
+	type Author struct {
+		ID   int
+		Name string
+	}
+
 	type Post struct {
 		ID          int
 		Title       string
 		Comments    []Comment
 		CommentsIDs []int
+		Author      Author
+		AuthorID    sql.NullInt64
 	}
 
 	Context("When marshaling simple objects", func() {
@@ -135,8 +143,9 @@ var _ = Describe("Marshalling", func() {
 		It("marshals nested objects", func() {
 			comment1 := Comment{ID: 1, Text: "First!"}
 			comment2 := Comment{ID: 2, Text: "Second!"}
-			post1 := Post{ID: 1, Title: "Foobar", Comments: []Comment{comment1, comment2}}
-			post2 := Post{ID: 2, Title: "Foobarbarbar", Comments: []Comment{comment1, comment2}}
+			author := Author{ID: 1, Name: "Test Author"}
+			post1 := Post{ID: 1, Title: "Foobar", Comments: []Comment{comment1, comment2}, Author: author}
+			post2 := Post{ID: 2, Title: "Foobarbarbar", Comments: []Comment{comment1, comment2}, Author: author}
 
 			posts := []Post{post1, post2}
 
@@ -147,15 +156,17 @@ var _ = Describe("Marshalling", func() {
 					map[string]interface{}{
 						"id":    "1",
 						"title": "Foobar",
-						"links": map[string][]interface{}{
+						"links": map[string]interface{}{
 							"comments": []interface{}{"1", "2"},
+							"author":   "1",
 						},
 					},
 					map[string]interface{}{
 						"id":    "2",
 						"title": "Foobarbarbar",
-						"links": map[string][]interface{}{
+						"links": map[string]interface{}{
 							"comments": []interface{}{"1", "2"},
+							"author":   "1",
 						},
 					},
 				},
@@ -168,6 +179,12 @@ var _ = Describe("Marshalling", func() {
 						map[string]interface{}{
 							"id":   "2",
 							"text": "Second!",
+						},
+					},
+					"authors": []interface{}{
+						map[string]interface{}{
+							"id":   "1",
+							"name": "Test Author",
 						},
 					},
 				},
@@ -183,7 +200,7 @@ var _ = Describe("Marshalling", func() {
 					map[string]interface{}{
 						"id":    "1",
 						"title": "",
-						"links": map[string][]interface{}{
+						"links": map[string]interface{}{
 							"comments": []interface{}{"1"},
 						},
 					},
@@ -201,7 +218,7 @@ var _ = Describe("Marshalling", func() {
 					map[string]interface{}{
 						"id":    "1",
 						"title": "",
-						"links": map[string][]interface{}{
+						"links": map[string]interface{}{
 							"comments": []interface{}{"1"},
 						},
 					},
