@@ -7,6 +7,7 @@ import (
 
 var _ = Describe("Unmarshal", func() {
 	type SimplePost struct {
+		ID          string
 		Title, Text string
 	}
 
@@ -18,12 +19,13 @@ var _ = Describe("Unmarshal", func() {
 	}
 
 	Context("When unmarshaling simple objects", func() {
-		singleJSON := []byte(`{"simplePosts":[{"title":"First Post","text":"Lipsum"}]}`)
-		firstPost := SimplePost{Title: "First Post", Text: "Lipsum"}
-		secondPost := SimplePost{Title: "Second Post", Text: "Foobar!"}
+		singleJSON := []byte(`{"simplePosts":[{"id": "1", "title":"First Post","text":"Lipsum"}]}`)
+		firstPost := SimplePost{ID: "1", Title: "First Post", Text: "Lipsum"}
+		secondPost := SimplePost{ID: "2", Title: "Second Post", Text: "Foobar!"}
 		singlePostMap := map[string]interface{}{
 			"simplePosts": []interface{}{
 				map[string]interface{}{
+					"id":    "1",
 					"title": firstPost.Title,
 					"text":  firstPost.Text,
 				},
@@ -32,10 +34,12 @@ var _ = Describe("Unmarshal", func() {
 		multiplePostMap := map[string]interface{}{
 			"simplePosts": []interface{}{
 				map[string]interface{}{
+					"id":    "1",
 					"title": firstPost.Title,
 					"text":  firstPost.Text,
 				},
 				map[string]interface{}{
+					"id":    "2",
 					"title": secondPost.Title,
 					"text":  secondPost.Text,
 				},
@@ -200,6 +204,24 @@ var _ = Describe("Unmarshal", func() {
 			err := Unmarshal(postMap, &posts)
 			Expect(err).To(BeNil())
 			Expect(posts).To(Equal([]BlogPost{post}))
+		})
+	})
+
+	Context("when unmarshaling into an existing slice", func() {
+		It("updates existing entries", func() {
+			post := Post{ID: 1, Title: "Old Title"}
+			postMap := map[string]interface{}{
+				"posts": []interface{}{
+					map[string]interface{}{
+						"id":    "1",
+						"title": "New Title",
+					},
+				},
+			}
+			posts := []Post{post}
+			err := Unmarshal(postMap, &posts)
+			Expect(err).To(BeNil())
+			Expect(posts).To(Equal([]Post{Post{ID: 1, Title: "New Title"}}))
 		})
 	})
 })

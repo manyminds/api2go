@@ -56,7 +56,42 @@ func unmarshalInto(ctx unmarshalContext, structType reflect.Type, sliceVal *refl
 			return errors.New("expected an array of objects under key '" + rootName + "'")
 		}
 
-		val := reflect.New(structType).Elem()
+		var val reflect.Value
+		isNew := true
+		id := ""
+
+		if v := attributes["id"]; v != nil {
+			id, ok = v.(string)
+			if !ok {
+				return errors.New("id must be a string")
+			}
+
+			// If we have an ID, check if there's already an object with that ID in the slice
+			// TODO This is O(n^2), make it O(n)
+			for i := 0; i < sliceVal.Len(); i++ {
+				obj := sliceVal.Index(i)
+				idField := obj.FieldByName("ID")
+				if !idField.IsValid() {
+					return errors.New("expected ID field in struct")
+				}
+				otherID, err := toID(idField)
+				if err != nil {
+					return errors.New("invalid type for ID field")
+				}
+				if otherID == id {
+					val = obj
+					isNew = false
+					break
+				}
+			}
+		}
+
+		// Otherwise, make a new struct
+		if !val.IsValid() {
+			val = reflect.New(structType).Elem()
+
+		}
+
 		for k, v := range attributes {
 			if k == "links" {
 				linksMap, ok := v.(map[string]interface{})
@@ -136,7 +171,7 @@ func unmarshalInto(ctx unmarshalContext, structType reflect.Type, sliceVal *refl
 				}
 			} else if k == "id" {
 				// Allow conversion of string id to int
-				strID, ok := v.(string)
+				id, ok = v.(string)
 				if !ok {
 					return errors.New("expected id to be of type string")
 				}
@@ -145,9 +180,9 @@ func unmarshalInto(ctx unmarshalContext, structType reflect.Type, sliceVal *refl
 					return errors.New("expected struct " + structType.Name() + " to have field 'ID'")
 				}
 				if field.Kind() == reflect.String {
-					field.Set(reflect.ValueOf(strID))
+					field.Set(reflect.ValueOf(id))
 				} else if field.Kind() == reflect.Int {
-					intID, err := strconv.Atoi(strID)
+					intID, err := strconv.Atoi(id)
 					if err != nil {
 						return err
 					}
@@ -165,7 +200,9 @@ func unmarshalInto(ctx unmarshalContext, structType reflect.Type, sliceVal *refl
 			}
 		}
 
-		*sliceVal = reflect.Append(*sliceVal, val)
+		if isNew {
+			*sliceVal = reflect.Append(*sliceVal, val)
+		}
 	}
 
 	return nil
