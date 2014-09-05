@@ -15,19 +15,69 @@ Take the simple structs:
 
 ```go
 type Post struct {
-	ID          int
-	Title       string
-	Comments    []Comment
-	CommentsIDs []int
+  ID          int
+  Title       string
+  Comments    []Comment
+  CommentsIDs []int
 }
 
 type Comment struct {
-	ID   int
-	Text string
+  ID   int
+  Text string
 }
 ```
 
-### Marshaling
+### Building a REST API
+
+First, write an implementation of `api2go.DataSource`. You have to implement 5 methods:
+
+```go
+type PostsSource struct {}
+
+func (s *fixtureSource) FindAll() (interface{}, error) {
+  // Return a slice of all posts as []Post
+}
+
+func (s *fixtureSource) FindOne(id string) (interface{}, error) {
+  // Return a single post by ID as Post
+}
+
+func (s *fixtureSource) Create(obj interface{}) (string, error) {
+  // Save the new Post in `obj` and return its ID.
+}
+
+func (s *fixtureSource) Delete(id string) error {
+  // Delete a post
+}
+
+func (s *fixtureSource) Update(obj interface{}) error {
+  // Apply the new values in the Post in `obj`
+}
+```
+
+As an example, check out the implementation of `fixtureSource` in [api_test.go](/api_test.go).
+
+You can then create an API:
+
+```go
+api := api2go.NewAPI()
+api.AddResource(Post{}, &PostsSource{})
+http.ListenAndServe(":8080", api.Handler())
+```
+
+This generates the standard endpoints:
+
+```
+OPTIONS  /posts
+OPTIONS  /posts/<id>
+GET      /posts
+POST     /posts
+GET      /posts/<id>
+PUT      /posts/<id>
+DELTE    /posts/<id>
+```
+
+### Manual marshaling / unmarshaling
 
 ```go
 comment1 = Comment{ID: 1, Text: "First!"}
@@ -57,10 +107,6 @@ will yield
 }
 ```
 
-When marshaling, api2go will prefer to read from the `Comments` field over the `CommentsIDs` field (naming is important!). If `Comments` is empty, `CommentsIDs` will be used.
-
-### Unmarshaling
-
 Recover the structure from above using
 
 ```go
@@ -70,6 +116,19 @@ err := api2go.UnmarshalJSON(json, &posts)
 ```
 
 Note that when unmarshaling, api2go will always fill the `CommentsIDs` field, never the `Comments` field.
+
+## Conventions
+
+Structs MUST have:
+
+- A field called `ID` that is either a `string` or `int`.
+
+Structs MAY have:
+
+- Fields with struct-slices, e.g. `Comments []Comment`. They will be serialized as links (using the field name) and the linked structs embedded.
+- Fields with `int` / `string` slices, e.g. `CommentsIDs`. They will be serialized as links (using the field name minus an optional `IDs` suffix), but not embedded.
+- Fields of struct type, e.g. `Author Person`. They will be serialized as a single link (using the field name) and the linked struct embedded.
+- Fields of `int` / `string` type, ending in `ID`, e.g. `AuthorID`. They will be serialized as a single link (using the field name minus the `ID` suffix), but not embedded.
 
 ## Tests
 
