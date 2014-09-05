@@ -4,89 +4,91 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
-type sourceAdapter struct {
-	findAll func() (interface{}, error)
-	findOne func(string) (interface{}, error)
-	create  func(interface{}) (string, error)
-	delete  func(string) error
-	update  func(interface{}) error
+type Post struct {
+	ID    string
+	Title string
 }
 
-func (a *sourceAdapter) FindAll() (interface{}, error)          { return a.findAll() }
-func (a *sourceAdapter) FindOne(id string) (interface{}, error) { return a.findOne(id) }
-func (a *sourceAdapter) Create(obj interface{}) (string, error) { return a.create(obj) }
-func (a *sourceAdapter) Delete(id string) error                 { return a.delete(id) }
-func (a *sourceAdapter) Update(obj interface{}) error           { return a.update(obj) }
+type fixtureSource struct {
+	posts map[string]*Post
+}
+
+func (s *fixtureSource) FindAll() (interface{}, error) {
+	postsSlice := make([]Post, len(s.posts))
+	i := 0
+	for _, p := range s.posts {
+		postsSlice[i] = *p
+		i++
+	}
+	return postsSlice, nil
+}
+
+func (s *fixtureSource) FindOne(id string) (interface{}, error) {
+	if p, ok := s.posts[id]; ok {
+		return *p, nil
+	}
+	return nil, NewHTTPError(nil, "post not found", http.StatusNotFound)
+}
+
+func (s *fixtureSource) Create(obj interface{}) (string, error) {
+	p := obj.(Post)
+	maxID := 0
+	for k := range s.posts {
+		id, _ := strconv.Atoi(k)
+		if id > maxID {
+			maxID = id
+		}
+	}
+	newID := strconv.Itoa(maxID + 1)
+	p.ID = newID
+	s.posts[newID] = &p
+	return newID, nil
+}
+
+func (s *fixtureSource) Delete(id string) error {
+	delete(s.posts, id)
+	return nil
+}
+
+func (s *fixtureSource) Update(obj interface{}) error {
+	p := obj.(Post)
+	if oldP, ok := s.posts[p.ID]; ok {
+		oldP.Title = p.Title
+		return nil
+	}
+	return NewHTTPError(nil, "post not found", http.StatusNotFound)
+}
 
 var _ = Describe("RestHandler", func() {
 	Context("when handling requests", func() {
-		type Post struct {
-			ID    int
-			Title string
-		}
 
 		var (
-			post1    Post
-			post1Map map[string]interface{}
+			source    *fixtureSource
+			post1Json map[string]interface{}
 
 			api *API
 			rec *httptest.ResponseRecorder
-
-			deleted bool
 		)
 
 		BeforeEach(func() {
-			deleted = false
+			source = &fixtureSource{map[string]*Post{
+				"1": &Post{ID: "1", Title: "Hello, World!"},
+			}}
 
-			post1 = Post{ID: 1, Title: "Hello, World!"}
-			post1Map = map[string]interface{}{
+			post1Json = map[string]interface{}{
 				"id":    "1",
 				"title": "Hello, World!",
 			}
 
-			adapter := &sourceAdapter{
-				findAll: func() (interface{}, error) {
-					return []Post{post1}, nil
-				},
-				findOne: func(id string) (interface{}, error) {
-					switch id {
-					case "1":
-						return post1, nil
-					case "42":
-						return Post{ID: 42, Title: "New Post"}, nil
-					default:
-						return nil, NewHTTPError(nil, "post not found", http.StatusNotFound)
-					}
-				},
-				create: func(obj interface{}) (string, error) {
-					p := obj.(Post)
-					Expect(p.Title).To(Equal("New Post"))
-					return "42", nil
-				},
-				delete: func(id string) error {
-					if id != "1" {
-						panic("unknown id")
-					}
-					deleted = true
-					return nil
-				},
-				update: func(obj interface{}) error {
-					p := obj.(Post)
-					if p.ID != 1 {
-						panic("unknown id")
-					}
-					post1.Title = p.Title
-					return nil
-				},
-			}
-
 			api = NewAPI()
-			api.AddResource(Post{}, adapter)
+			api.AddResource(Post{}, source)
 
 			rec = httptest.NewRecorder()
 		})
@@ -99,7 +101,7 @@ var _ = Describe("RestHandler", func() {
 			var result map[string]interface{}
 			Expect(json.Unmarshal(rec.Body.Bytes(), &result)).To(BeNil())
 			Expect(result).To(Equal(map[string]interface{}{
-				"posts": []interface{}{post1Map},
+				"posts": []interface{}{post1Json},
 			}))
 		})
 
@@ -111,7 +113,7 @@ var _ = Describe("RestHandler", func() {
 			var result map[string]interface{}
 			Expect(json.Unmarshal(rec.Body.Bytes(), &result)).To(BeNil())
 			Expect(result).To(Equal(map[string]interface{}{
-				"posts": []interface{}{post1Map},
+				"posts": []interface{}{post1Json},
 			}))
 		})
 
@@ -129,13 +131,13 @@ var _ = Describe("RestHandler", func() {
 			Expect(err).To(BeNil())
 			api.Handler().ServeHTTP(rec, req)
 			Expect(rec.Code).To(Equal(http.StatusCreated))
-			Expect(rec.Header().Get("Location")).To(Equal("/posts/42"))
+			Expect(rec.Header().Get("Location")).To(Equal("/posts/2"))
 			var result map[string]interface{}
 			Expect(json.Unmarshal(rec.Body.Bytes(), &result)).To(BeNil())
 			Expect(result).To(Equal(map[string]interface{}{
 				"posts": []interface{}{
 					map[string]interface{}{
-						"id":    "42",
+						"id":    "2",
 						"title": "New Post",
 					},
 				},
@@ -163,7 +165,7 @@ var _ = Describe("RestHandler", func() {
 			Expect(err).To(BeNil())
 			api.Handler().ServeHTTP(rec, req)
 			Expect(rec.Code).To(Equal(http.StatusNoContent))
-			Expect(deleted).To(BeTrue())
+			Expect(len(source.posts)).To(BeZero())
 		})
 
 		It("UPDATEs", func() {
@@ -172,7 +174,7 @@ var _ = Describe("RestHandler", func() {
 			Expect(err).To(BeNil())
 			api.Handler().ServeHTTP(rec, req)
 			Expect(rec.Code).To(Equal(http.StatusNoContent))
-			Expect(post1.Title).To(Equal("New Title"))
+			Expect(source.posts["1"].Title).To(Equal("New Title"))
 		})
 	})
 })
