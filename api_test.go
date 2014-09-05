@@ -60,7 +60,7 @@ var _ = Describe("RestHandler", func() {
 					case "42":
 						return Post{ID: 42, Title: "New Post"}, nil
 					default:
-						panic("unknown id " + id)
+						return nil, NewHTTPError(nil, "post not found", http.StatusNotFound)
 					}
 				},
 				create: func(obj interface{}) (string, error) {
@@ -113,6 +113,14 @@ var _ = Describe("RestHandler", func() {
 			Expect(result).To(Equal(map[string]interface{}{
 				"posts": []interface{}{post1Map},
 			}))
+		})
+
+		It("404s", func() {
+			req, err := http.NewRequest("GET", "/posts/23", nil)
+			Expect(err).To(BeNil())
+			api.Handler().ServeHTTP(rec, req)
+			Expect(rec.Code).To(Equal(http.StatusNotFound))
+			Expect(rec.Body.String()).To(Equal("post not found\n"))
 		})
 
 		It("POSTSs new objects", func() {
