@@ -111,7 +111,7 @@ var _ = Describe("Unmarshal", func() {
 
 		It("unmarshals JSON", func() {
 			var posts []SimplePost
-			err := UnmarshalJSON(singleJSON, &posts)
+			err := UnmarshalFromJSON(singleJSON, &posts)
 			Expect(err).To(BeNil())
 			Expect(posts).To(Equal([]SimplePost{firstPost}))
 		})

@@ -111,7 +111,7 @@ Recover the structure from above using
 
 ```go
 var posts []Post
-err := api2go.UnmarshalJSON(json, &posts)
+err := api2go.UnmarshalFromJSON(json, &posts)
 // posts[0] == Post{ID: 1, Title: "Foobar", CommentsIDs: []int{1, 2}}
 ```
 

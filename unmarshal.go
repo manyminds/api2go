@@ -159,8 +159,8 @@ func unmarshalLinks(val reflect.Value, linksMap map[string]interface{}) error {
 	return nil
 }
 
-// UnmarshalJSON reads a JSONAPI compatible JSON document to a model struct
-func UnmarshalJSON(data []byte, values interface{}) error {
+// UnmarshalFromJSON reads a JSONAPI compatible JSON document to a model struct
+func UnmarshalFromJSON(data []byte, values interface{}) error {
 	var ctx unmarshalContext
 	err := json.Unmarshal(data, &ctx)
 	if err != nil {
