@@ -40,14 +40,26 @@ func NewAPI() *API {
 	return api
 }
 
+type resource struct {
+	resourceType reflect.Type
+	source       DataSource
+	name         string
+}
+
 // AddResource registers a data source for the given resource
 // `resource` should by an empty struct instance such as `Post{}`. The same type will be used for constructing new elements.
-func (api *API) AddResource(resource interface{}, source DataSource) {
-	resourceType := reflect.TypeOf(resource)
+func (api *API) AddResource(prototype interface{}, source DataSource) {
+	resourceType := reflect.TypeOf(prototype)
 	if resourceType.Kind() != reflect.Struct {
 		panic("pass an empty resource struct to AddResource!")
 	}
+
 	name := jsonify(pluralize(resourceType.Name()))
+	res := resource{
+		resourceType: resourceType,
+		name:         name,
+		source:       source,
+	}
 
 	api.router.Handle("OPTIONS", "/"+name, func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		w.Header().Set("Allow", "GET,POST,OPTIONS")
@@ -60,144 +72,145 @@ func (api *API) AddResource(resource interface{}, source DataSource) {
 	})
 
 	api.router.GET("/"+name, func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-		objs, err := source.FindAll()
+		err := res.handleIndex(w, r)
 		if err != nil {
-			w.WriteHeader(500)
-			log.Println(err)
-			return
+			handleError(err, w)
 		}
-		json, err := MarshalToJSON(objs)
-		if err != nil {
-			log.Println(err)
-			w.WriteHeader(500)
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(json)
 	})
 
 	api.router.GET("/"+name+"/:id", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		obj, err := source.FindOne(ps.ByName("id"))
+		err := res.handleRead(w, r, ps)
 		if err != nil {
-			w.WriteHeader(500)
-			log.Println(err)
-			return
+			handleError(err, w)
 		}
-		json, err := MarshalToJSON(obj)
-		if err != nil {
-			w.WriteHeader(500)
-			log.Println(err)
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(json)
 	})
 
 	api.router.POST("/"+name, func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		defer r.Body.Close()
-		data, err := ioutil.ReadAll(r.Body)
+		err := res.handleCreate(w, r)
 		if err != nil {
-			w.WriteHeader(500)
-			log.Println(err)
-			return
+			handleError(err, w)
 		}
-
-		var ctx unmarshalContext
-		err = json.Unmarshal(data, &ctx)
-		if err != nil {
-			w.WriteHeader(500)
-			log.Println(err)
-			return
-		}
-
-		newObjs := reflect.MakeSlice(reflect.SliceOf(resourceType), 0, 0)
-		err = unmarshalInto(ctx, resourceType, &newObjs)
-		if err != nil {
-			w.WriteHeader(500)
-			log.Println(err)
-			return
-		}
-
-		if newObjs.Len() != 1 {
-			panic("expected one object in POST")
-		}
-		id, err := source.Create(newObjs.Index(0).Interface())
-		if err != nil {
-			w.WriteHeader(500)
-			log.Println(err)
-			return
-		}
-		w.Header().Set("Location", "/"+name+"/"+id)
-
-		obj, err := source.FindOne(id)
-		if err != nil {
-			w.WriteHeader(500)
-			log.Println(err)
-			return
-		}
-		data, err = MarshalToJSON(obj)
-		if err != nil {
-			w.WriteHeader(500)
-			log.Println(err)
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusCreated)
-		w.Write(data)
 	})
 
 	api.router.DELETE("/"+name+"/:id", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		err := source.Delete(ps.ByName("id"))
+		err := res.handleDelete(w, r, ps)
 		if err != nil {
-			w.WriteHeader(500)
-			log.Println(err)
-			return
+			handleError(err, w)
 		}
-		w.WriteHeader(http.StatusNoContent)
 	})
 
 	api.router.PUT("/"+name+"/:id", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		obj, err := source.FindOne(ps.ByName("id"))
+		err := res.handleUpdate(w, r, ps)
 		if err != nil {
-			w.WriteHeader(500)
-			log.Println(err)
-			return
+			handleError(err, w)
 		}
-		defer r.Body.Close()
-		data, err := ioutil.ReadAll(r.Body)
-		if err != nil {
-			w.WriteHeader(500)
-			log.Println(err)
-			return
-		}
-		var ctx unmarshalContext
-		err = json.Unmarshal(data, &ctx)
-		if err != nil {
-			w.WriteHeader(500)
-			log.Println(err)
-			return
-		}
-
-		updatingObjs := reflect.MakeSlice(reflect.SliceOf(resourceType), 1, 1)
-		updatingObjs.Index(0).Set(reflect.ValueOf(obj))
-		err = unmarshalInto(ctx, resourceType, &updatingObjs)
-		if err != nil {
-			w.WriteHeader(500)
-			log.Println(err)
-			return
-		}
-
-		if updatingObjs.Len() != 1 {
-			panic("expected one object in PUT")
-		}
-		if err := source.Update(updatingObjs.Index(0).Interface()); err != nil {
-			w.WriteHeader(500)
-			log.Println(err)
-			return
-		}
-
-		w.WriteHeader(http.StatusNoContent)
 	})
+}
+
+func (res *resource) handleIndex(w http.ResponseWriter, r *http.Request) error {
+	objs, err := res.source.FindAll()
+	if err != nil {
+		return err
+	}
+	return respondWith(objs, http.StatusOK, w)
+}
+
+func (res *resource) handleRead(w http.ResponseWriter, r *http.Request, ps httprouter.Params) error {
+	obj, err := res.source.FindOne(ps.ByName("id"))
+	if err != nil {
+		return err
+	}
+	return respondWith(obj, http.StatusOK, w)
+}
+
+func (res *resource) handleCreate(w http.ResponseWriter, r *http.Request) error {
+	ctx, err := unmarshalJSONRequest(r)
+	if err != nil {
+		return err
+	}
+	newObjs := reflect.MakeSlice(reflect.SliceOf(res.resourceType), 0, 0)
+	err = unmarshalInto(ctx, res.resourceType, &newObjs)
+	if err != nil {
+		return err
+	}
+	if newObjs.Len() != 1 {
+		panic("expected one object in POST")
+	}
+	id, err := res.source.Create(newObjs.Index(0).Interface())
+	if err != nil {
+		return err
+	}
+	w.Header().Set("Location", "/"+res.name+"/"+id)
+
+	obj, err := res.source.FindOne(id)
+	if err != nil {
+		return err
+	}
+	return respondWith(obj, http.StatusCreated, w)
+}
+
+func (res *resource) handleUpdate(w http.ResponseWriter, r *http.Request, ps httprouter.Params) error {
+	obj, err := res.source.FindOne(ps.ByName("id"))
+	if err != nil {
+		return err
+	}
+	ctx, err := unmarshalJSONRequest(r)
+	if err != nil {
+		return err
+	}
+	updatingObjs := reflect.MakeSlice(reflect.SliceOf(res.resourceType), 1, 1)
+	updatingObjs.Index(0).Set(reflect.ValueOf(obj))
+	err = unmarshalInto(ctx, res.resourceType, &updatingObjs)
+	if err != nil {
+		return err
+	}
+	if updatingObjs.Len() != 1 {
+		panic("expected one object in PUT")
+	}
+	if err := res.source.Update(updatingObjs.Index(0).Interface()); err != nil {
+		return err
+	}
+	w.WriteHeader(http.StatusNoContent)
+	return nil
+}
+
+func (res *resource) handleDelete(w http.ResponseWriter, r *http.Request, ps httprouter.Params) error {
+	err := res.source.Delete(ps.ByName("id"))
+	if err != nil {
+		return err
+	}
+	w.WriteHeader(http.StatusNoContent)
+	return nil
+}
+
+func respondWith(obj interface{}, status int, w http.ResponseWriter) error {
+	data, err := MarshalToJSON(obj)
+	if err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	w.Write(data)
+	return nil
+}
+
+func unmarshalJSONRequest(r *http.Request) (map[string]interface{}, error) {
+	defer r.Body.Close()
+	data, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		return nil, err
+	}
+	result := map[string]interface{}{}
+	err = json.Unmarshal(data, &result)
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+func handleError(err error, w http.ResponseWriter) {
+	log.Println(err)
+	w.WriteHeader(500)
 }
 
 // Handler returns the http.Handler instance for the API.
