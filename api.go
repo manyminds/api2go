@@ -24,7 +24,7 @@ type DataSource interface {
 	// Delete an object
 	Delete(id string) error
 
-	// Update an object and return its saved state
+	// Update an object
 	Update(obj interface{}) error
 }
 
