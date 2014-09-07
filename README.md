@@ -60,7 +60,7 @@ As an example, check out the implementation of `fixtureSource` in [api_test.go](
 You can then create an API:
 
 ```go
-api := api2go.NewAPI()
+api := api2go.NewAPI("v1")
 api.AddResource(Post{}, &PostsSource{})
 http.ListenAndServe(":8080", api.Handler())
 ```
@@ -68,13 +68,13 @@ http.ListenAndServe(":8080", api.Handler())
 This generates the standard endpoints:
 
 ```
-OPTIONS  /posts
-OPTIONS  /posts/<id>
-GET      /posts
-POST     /posts
-GET      /posts/<id>
-PUT      /posts/<id>
-DELTE    /posts/<id>
+OPTIONS  /v1/posts
+OPTIONS  /v1/posts/<id>
+GET      /v1/posts
+POST     /v1/posts
+GET      /v1/posts/<id>
+PUT      /v1/posts/<id>
+DELTE    /v1/posts/<id>
 ```
 
 ### Manual marshaling / unmarshaling

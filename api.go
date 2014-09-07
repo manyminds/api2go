@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"reflect"
+	"strings"
 
 	"github.com/julienschmidt/httprouter"
 )
@@ -31,13 +32,25 @@ type DataSource interface {
 // API is a REST JSONAPI.
 type API struct {
 	router *httprouter.Router
+	// Route prefix, including slashes
+	prefix string
 }
 
 // NewAPI returns an initialized API instance
-func NewAPI() *API {
-	api := new(API)
-	api.router = httprouter.New()
-	return api
+// `prefix` is added in front of all endpoints.
+func NewAPI(prefix string) *API {
+	// Add initial and trailing slash to prefix
+	prefix = strings.Trim(prefix, "/")
+	if len(prefix) > 0 {
+		prefix = "/" + prefix + "/"
+	} else {
+		prefix = "/"
+	}
+
+	return &API{
+		router: httprouter.New(),
+		prefix: prefix,
+	}
 }
 
 type resource struct {
@@ -61,45 +74,45 @@ func (api *API) AddResource(prototype interface{}, source DataSource) {
 		source:       source,
 	}
 
-	api.router.Handle("OPTIONS", "/"+name, func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	api.router.Handle("OPTIONS", api.prefix+name, func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		w.Header().Set("Allow", "GET,POST,OPTIONS")
 		w.WriteHeader(http.StatusNoContent)
 	})
 
-	api.router.Handle("OPTIONS", "/"+name+"/:id", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	api.router.Handle("OPTIONS", api.prefix+name+"/:id", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		w.Header().Set("Allow", "GET,PUT,DELETE,OPTIONS")
 		w.WriteHeader(http.StatusNoContent)
 	})
 
-	api.router.GET("/"+name, func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	api.router.GET(api.prefix+name, func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		err := res.handleIndex(w, r)
 		if err != nil {
 			handleError(err, w)
 		}
 	})
 
-	api.router.GET("/"+name+"/:id", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	api.router.GET(api.prefix+name+"/:id", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		err := res.handleRead(w, r, ps)
 		if err != nil {
 			handleError(err, w)
 		}
 	})
 
-	api.router.POST("/"+name, func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		err := res.handleCreate(w, r)
+	api.router.POST(api.prefix+name, func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+		err := res.handleCreate(w, r, api.prefix)
 		if err != nil {
 			handleError(err, w)
 		}
 	})
 
-	api.router.DELETE("/"+name+"/:id", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	api.router.DELETE(api.prefix+name+"/:id", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		err := res.handleDelete(w, r, ps)
 		if err != nil {
 			handleError(err, w)
 		}
 	})
 
-	api.router.PUT("/"+name+"/:id", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	api.router.PUT(api.prefix+name+"/:id", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		err := res.handleUpdate(w, r, ps)
 		if err != nil {
 			handleError(err, w)
@@ -123,7 +136,7 @@ func (res *resource) handleRead(w http.ResponseWriter, r *http.Request, ps httpr
 	return respondWith(obj, http.StatusOK, w)
 }
 
-func (res *resource) handleCreate(w http.ResponseWriter, r *http.Request) error {
+func (res *resource) handleCreate(w http.ResponseWriter, r *http.Request, prefix string) error {
 	ctx, err := unmarshalJSONRequest(r)
 	if err != nil {
 		return err
@@ -140,7 +153,7 @@ func (res *resource) handleCreate(w http.ResponseWriter, r *http.Request) error 
 	if err != nil {
 		return err
 	}
-	w.Header().Set("Location", "/"+res.name+"/"+id)
+	w.Header().Set("Location", prefix+res.name+"/"+id)
 
 	obj, err := res.source.FindOne(id)
 	if err != nil {

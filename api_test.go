@@ -87,7 +87,7 @@ var _ = Describe("RestHandler", func() {
 				"title": "Hello, World!",
 			}
 
-			api = NewAPI()
+			api = NewAPI("")
 			api.AddResource(Post{}, source)
 
 			rec = httptest.NewRecorder()
@@ -175,6 +175,20 @@ var _ = Describe("RestHandler", func() {
 			api.Handler().ServeHTTP(rec, req)
 			Expect(rec.Code).To(Equal(http.StatusNoContent))
 			Expect(source.posts["1"].Title).To(Equal("New Title"))
+		})
+	})
+
+	Context("when prefixing routes", func() {
+		It("has correct Location when creating", func() {
+			api := NewAPI("v1")
+			api.AddResource(Post{}, &fixtureSource{map[string]*Post{}})
+			rec := httptest.NewRecorder()
+			reqBody := strings.NewReader(`{"posts": [{"title": "New Post"}]}`)
+			req, err := http.NewRequest("POST", "/v1/posts", reqBody)
+			Expect(err).To(BeNil())
+			api.Handler().ServeHTTP(rec, req)
+			Expect(rec.Code).To(Equal(http.StatusCreated))
+			Expect(rec.Header().Get("Location")).To(Equal("/v1/posts/1"))
 		})
 	})
 })
