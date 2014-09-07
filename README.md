@@ -9,6 +9,8 @@ A [JSON API](http://jsonapi.org) Implementation for Go, to be used e.g. as serve
 import "github.com/univedo/api2go"
 ```
 
+**api2go works, but we're still working on some rough edges. Things might change. Open an issue and join in!  **
+
 ## Usage
 
 Take the simple structs:
