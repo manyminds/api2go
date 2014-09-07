@@ -76,7 +76,7 @@ GET      /v1/posts
 POST     /v1/posts
 GET      /v1/posts/<id>
 PUT      /v1/posts/<id>
-DELTE    /v1/posts/<id>
+DELETE    /v1/posts/<id>
 ```
 
 ### Manual marshaling / unmarshaling
