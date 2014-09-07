@@ -70,13 +70,13 @@ http.ListenAndServe(":8080", api.Handler())
 This generates the standard endpoints:
 
 ```
-OPTIONS  /v1/posts
-OPTIONS  /v1/posts/<id>
-GET      /v1/posts
-POST     /v1/posts
-GET      /v1/posts/<id>
-PUT      /v1/posts/<id>
-DELETE    /v1/posts/<id>
+OPTIONS /v1/posts
+OPTIONS /v1/posts/<id>
+GET     /v1/posts
+POST    /v1/posts
+GET     /v1/posts/<id>
+PUT     /v1/posts/<id>
+DELETE  /v1/posts/<id>
 ```
 
 ### Manual marshaling / unmarshaling
