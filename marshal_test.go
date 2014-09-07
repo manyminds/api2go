@@ -3,6 +3,7 @@ package api2go
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -28,7 +29,7 @@ var _ = Describe("Marshalling", func() {
 		Title       string
 		Comments    []Comment
 		CommentsIDs []int
-		Author      Author
+		Author      *Author
 		AuthorID    sql.NullInt64
 	}
 
@@ -154,8 +155,8 @@ var _ = Describe("Marshalling", func() {
 			comment1 := Comment{ID: 1, Text: "First!"}
 			comment2 := Comment{ID: 2, Text: "Second!"}
 			author := Author{ID: 1, Name: "Test Author"}
-			post1 := Post{ID: 1, Title: "Foobar", Comments: []Comment{comment1, comment2}, Author: author}
-			post2 := Post{ID: 2, Title: "Foobarbarbar", Comments: []Comment{comment1, comment2}, Author: author}
+			post1 := Post{ID: 1, Title: "Foobar", Comments: []Comment{comment1, comment2}, Author: &author}
+			post2 := Post{ID: 2, Title: "Foobarbarbar", Comments: []Comment{comment1, comment2}, Author: &author}
 
 			posts := []Post{post1, post2}
 
@@ -212,6 +213,7 @@ var _ = Describe("Marshalling", func() {
 						"title": "",
 						"links": map[string]interface{}{
 							"comments": []interface{}{"1"},
+							"author":   nil,
 						},
 					},
 				},
@@ -220,7 +222,8 @@ var _ = Describe("Marshalling", func() {
 
 		It("prefers nested structs when given both, structs and IDs", func() {
 			comment := Comment{ID: 1}
-			post := Post{ID: 1, Comments: []Comment{comment}, CommentsIDs: []int{2}}
+			author := Author{ID: 1, Name: "Tester"}
+			post := Post{ID: 1, Comments: []Comment{comment}, CommentsIDs: []int{2}, Author: &author, AuthorID: sql.NullInt64{Int64: 1337}}
 			i, err := Marshal(post)
 			Expect(err).To(BeNil())
 			Expect(i).To(Equal(map[string]interface{}{
@@ -230,6 +233,7 @@ var _ = Describe("Marshalling", func() {
 						"title": "",
 						"links": map[string]interface{}{
 							"comments": []interface{}{"1"},
+							"author":   "1",
 						},
 					},
 				},
@@ -240,8 +244,47 @@ var _ = Describe("Marshalling", func() {
 							"text": "",
 						},
 					},
+					"authors": []interface{}{
+						map[string]interface{}{
+							"id":   "1",
+							"name": "Tester",
+						},
+					},
 				},
 			}))
+		})
+
+		It("uses ID field if single relation struct is nil", func() {
+			type AnotherPost struct {
+				ID       int
+				AuthorID int
+				Author   *Author
+			}
+
+			anotherPost := AnotherPost{ID: 1, AuthorID: 1}
+			i, err := Marshal(anotherPost)
+			Expect(err).To(BeNil())
+			Expect(i).To(Equal(map[string]interface{}{
+				"anotherPosts": []interface{}{
+					map[string]interface{}{
+						"id": "1",
+						"links": map[string]interface{}{
+							"author": "1",
+						},
+					},
+				},
+			}))
+		})
+
+		It("returns an error if ID field but no struct field is in struct", func() {
+			type WrongStruct struct {
+				ID       int
+				AuthorID int
+			}
+
+			wrongStruct := WrongStruct{ID: 1, AuthorID: 1}
+			_, err := Marshal(wrongStruct)
+			Expect(err).To(Equal(errors.New("expected struct to have field Author")))
 		})
 	})
 })

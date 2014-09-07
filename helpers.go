@@ -1,6 +1,7 @@
 package api2go
 
 import (
+	"database/sql"
 	"errors"
 	"reflect"
 	"strconv"
@@ -83,6 +84,9 @@ func singularize(word string) string {
 }
 
 func idFromObject(obj reflect.Value) (string, error) {
+	if obj.Kind() == reflect.Ptr {
+		obj = obj.Elem()
+	}
 	idField := obj.FieldByName("ID")
 	if !idField.IsValid() {
 		return "", errors.New("expected 'ID' field in struct")
@@ -91,6 +95,22 @@ func idFromObject(obj reflect.Value) (string, error) {
 }
 
 func idFromValue(v reflect.Value) (string, error) {
+	// Todo: All other sql types must be checked as well
+	if v.Kind() == reflect.Struct {
+		i := v.Interface()
+		sv, ok := i.(sql.NullInt64)
+		if ok {
+			if sv.Valid {
+				var value int64
+				sv.Scan(&value)
+				v = reflect.ValueOf(value)
+			} else {
+				return "", nil
+			}
+		}
+
+	}
+
 	switch v.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		return strconv.FormatInt(v.Int(), 10), nil
