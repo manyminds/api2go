@@ -95,23 +95,16 @@ func idFromObject(obj reflect.Value) (string, error) {
 }
 
 func idFromValue(v reflect.Value) (string, error) {
-	// Todo: All other sql types must be checked as well
-	if v.Kind() == reflect.Struct {
-		i := v.Interface()
-		sv, ok := i.(sql.NullInt64)
-		if ok {
-			if sv.Valid {
-				var value int64
-				sv.Scan(&value)
-				v = reflect.ValueOf(value)
-			} else {
-				return "", nil
-			}
+	kind := v.Kind()
+	if kind == reflect.Struct {
+		if sv, err := extractIDFromSqlStruct(v); err != nil {
+			v = sv
+		} else {
+			return "", err
 		}
-
 	}
 
-	switch v.Kind() {
+	switch kind {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		return strconv.FormatInt(v.Int(), 10), nil
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
@@ -121,6 +114,34 @@ func idFromValue(v reflect.Value) (string, error) {
 	default:
 		return "", errors.New("need int or string as type of ID")
 	}
+}
+
+func extractIDFromSqlStruct(v reflect.Value) (reflect.Value, error) {
+	i := v.Interface()
+	switch value := i.(type) {
+	case sql.NullInt64:
+		if value.Valid {
+			var id int64
+			value.Scan(&id)
+			return reflect.ValueOf(id), nil
+		}
+	case sql.NullFloat64:
+		if value.Valid {
+			var id float64
+			value.Scan(&id)
+			return reflect.ValueOf(id), nil
+		}
+	case sql.NullString:
+		if value.Valid {
+			var id string
+			value.Scan(&id)
+			return reflect.ValueOf(id), nil
+		}
+	default:
+		return reflect.ValueOf(""), errors.New("invalid type, allowed sql/database types are sql.NullInt64, sql.NullFloat64, sql.NullString")
+	}
+
+	return reflect.ValueOf(""), nil
 }
 
 func setObjectID(obj reflect.Value, idInterface interface{}) error {
