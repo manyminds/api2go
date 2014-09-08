@@ -1,6 +1,7 @@
 package api2go
 
 import (
+	"database/sql"
 	"errors"
 	"reflect"
 	"strconv"
@@ -83,6 +84,9 @@ func singularize(word string) string {
 }
 
 func idFromObject(obj reflect.Value) (string, error) {
+	if obj.Kind() == reflect.Ptr {
+		obj = obj.Elem()
+	}
 	idField := obj.FieldByName("ID")
 	if !idField.IsValid() {
 		return "", errors.New("expected 'ID' field in struct")
@@ -91,7 +95,16 @@ func idFromObject(obj reflect.Value) (string, error) {
 }
 
 func idFromValue(v reflect.Value) (string, error) {
-	switch v.Kind() {
+	kind := v.Kind()
+	if kind == reflect.Struct {
+		if sv, err := extractIDFromSqlStruct(v); err != nil {
+			v = sv
+		} else {
+			return "", err
+		}
+	}
+
+	switch kind {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		return strconv.FormatInt(v.Int(), 10), nil
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
@@ -101,6 +114,34 @@ func idFromValue(v reflect.Value) (string, error) {
 	default:
 		return "", errors.New("need int or string as type of ID")
 	}
+}
+
+func extractIDFromSqlStruct(v reflect.Value) (reflect.Value, error) {
+	i := v.Interface()
+	switch value := i.(type) {
+	case sql.NullInt64:
+		if value.Valid {
+			var id int64
+			value.Scan(&id)
+			return reflect.ValueOf(id), nil
+		}
+	case sql.NullFloat64:
+		if value.Valid {
+			var id float64
+			value.Scan(&id)
+			return reflect.ValueOf(id), nil
+		}
+	case sql.NullString:
+		if value.Valid {
+			var id string
+			value.Scan(&id)
+			return reflect.ValueOf(id), nil
+		}
+	default:
+		return reflect.ValueOf(""), errors.New("invalid type, allowed sql/database types are sql.NullInt64, sql.NullFloat64, sql.NullString")
+	}
+
+	return reflect.ValueOf(""), nil
 }
 
 func setObjectID(obj reflect.Value, idInterface interface{}) error {

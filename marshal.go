@@ -3,7 +3,9 @@ package api2go
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"reflect"
+	"regexp"
 	"strings"
 )
 
@@ -65,6 +67,7 @@ func Marshal(data interface{}) (interface{}, error) {
 func (ctx *marshalingContext) marshalStruct(val reflect.Value) error {
 	result := map[string]interface{}{}
 	linksMap := map[string]interface{}{}
+	idFieldRegex := regexp.MustCompile("^.*ID$")
 
 	valType := val.Type()
 	for i := 0; i < val.NumField(); i++ {
@@ -113,14 +116,33 @@ func (ctx *marshalingContext) marshalStruct(val reflect.Value) error {
 				return err
 			}
 			result[keyName] = id
-		} else if field.Type().Kind() == reflect.Struct {
-			id, err := idFromObject(field)
-			if err == nil {
-				if id != "0" {
+		} else if field.Type().Kind() == reflect.Ptr {
+			if !field.IsNil() {
+				id, err := idFromObject(field)
+				if err == nil {
 					linksMap[keyName] = id
-					if err := ctx.marshalStruct(field); err != nil {
+					if err := ctx.marshalStruct(field.Elem()); err != nil {
 						return err
 					}
+				}
+			}
+		} else if idFieldRegex.MatchString(keyName) {
+			keyNameWithoutID := strings.TrimSuffix(keyName, "ID")
+			structFieldName := dejsonify(keyNameWithoutID)
+			// struct must be preferred, only use this field if struct ptr is nil
+			structFieldValue := val.FieldByName(structFieldName)
+			if !structFieldValue.IsValid() {
+				return fmt.Errorf("expected struct to have field %s", structFieldName)
+			}
+			if structFieldValue.Kind() == reflect.Ptr && structFieldValue.IsNil() {
+				id, err := idFromValue(field)
+				if err != nil {
+					return err
+				}
+				if id != "" {
+					linksMap[keyNameWithoutID] = id
+				} else {
+					linksMap[keyNameWithoutID] = nil
 				}
 			}
 		} else {

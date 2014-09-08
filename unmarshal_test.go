@@ -167,11 +167,11 @@ var _ = Describe("Unmarshal", func() {
 			ID       int
 			Text     string
 			AuthorID int
-			Author   BlogAuthor
+			Author   *BlogAuthor
 		}
 
 		It("unmarshals author id", func() {
-			post := BlogPost{ID: 1, Text: "Test", AuthorID: 1, Author: BlogAuthor{}}
+			post := BlogPost{ID: 1, Text: "Test", AuthorID: 1, Author: nil}
 			postMap := map[string]interface{}{
 				"blogPosts": []interface{}{
 					map[string]interface{}{
@@ -190,7 +190,7 @@ var _ = Describe("Unmarshal", func() {
 		})
 
 		It("unmarshal no linked content", func() {
-			post := BlogPost{ID: 1, Text: "Test", AuthorID: 0, Author: BlogAuthor{}}
+			post := BlogPost{ID: 1, Text: "Test", AuthorID: 0, Author: nil}
 			postMap := map[string]interface{}{
 				"blogPosts": []interface{}{
 					map[string]interface{}{
