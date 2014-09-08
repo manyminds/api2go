@@ -19,8 +19,9 @@ var _ = Describe("Marshalling", func() {
 	}
 
 	type Author struct {
-		ID   int
-		Name string
+		ID       int
+		Name     string
+		Password string `json:"-"`
 	}
 
 	type Post struct {
