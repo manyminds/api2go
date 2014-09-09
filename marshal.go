@@ -71,6 +71,11 @@ func (ctx *marshalingContext) marshalStruct(val reflect.Value) error {
 
 	valType := val.Type()
 	for i := 0; i < val.NumField(); i++ {
+		tag := valType.Field(i).Tag.Get("json")
+		if tag == "-" {
+			continue
+		}
+
 		field := val.Field(i)
 		keyName := jsonify(valType.Field(i).Name)
 
