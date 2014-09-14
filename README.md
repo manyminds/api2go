@@ -34,7 +34,7 @@ type Comment struct {
 First, write an implementation of `api2go.DataSource`. You have to implement 5 methods:
 
 ```go
-type PostsSource struct {}
+type fixtureSource struct {}
 
 func (s *fixtureSource) FindAll() (interface{}, error) {
   // Return a slice of all posts as []Post
