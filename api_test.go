@@ -2,6 +2,8 @@ package api2go
 
 import (
 	"encoding/json"
+	"io/ioutil"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -82,6 +84,8 @@ var _ = Describe("RestHandler", func() {
 				"1": &Post{ID: "1", Title: "Hello, World!"},
 			}}
 
+			log.SetOutput(ioutil.Discard)
+
 			post1Json = map[string]interface{}{
 				"id":    "1",
 				"title": "Hello, World!",
@@ -147,6 +151,16 @@ var _ = Describe("RestHandler", func() {
 					},
 				},
 			}))
+		})
+
+		It("POSTSs multiple objects", func() {
+			reqBody := strings.NewReader(`{"posts": [{"title": "New Post"}, {"title" : "Second New Post"}]}`)
+			req, err := http.NewRequest("POST", "/posts", reqBody)
+			Expect(err).To(BeNil())
+			api.Handler().ServeHTTP(rec, req)
+			Expect(rec.Code).To(Equal(http.StatusInternalServerError))
+			Expect(rec.Header().Get("Location")).To(Equal(""))
+			Expect(rec.Body.Bytes()).To(BeNil())
 		})
 
 		It("OPTIONS on collection route", func() {
