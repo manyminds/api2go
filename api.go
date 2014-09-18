@@ -2,6 +2,7 @@ package api2go
 
 import (
 	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -61,10 +62,10 @@ type resource struct {
 
 // AddResource registers a data source for the given resource
 // `resource` should by an empty struct instance such as `Post{}`. The same type will be used for constructing new elements.
-func (api *API) AddResource(prototype interface{}, source DataSource) {
+func (api *API) AddResource(prototype interface{}, source DataSource) error {
 	resourceType := reflect.TypeOf(prototype)
 	if resourceType.Kind() != reflect.Struct {
-		panic("pass an empty resource struct to AddResource!")
+		return errors.New("You need pass an empty resource struct to AddResource")
 	}
 
 	name := jsonify(pluralize(resourceType.Name()))
@@ -118,6 +119,8 @@ func (api *API) AddResource(prototype interface{}, source DataSource) {
 			handleError(err, w)
 		}
 	})
+
+	return nil
 }
 
 func (res *resource) handleIndex(w http.ResponseWriter, r *http.Request) error {

@@ -93,6 +93,11 @@ var _ = Describe("RestHandler", func() {
 			rec = httptest.NewRecorder()
 		})
 
+		It("initializes an invalid resource", func() {
+			err := api.AddResource("baka", source)
+			Expect(err).To(HaveOccurred())
+		})
+
 		It("GETs collections", func() {
 			req, err := http.NewRequest("GET", "/posts", nil)
 			Expect(err).To(BeNil())
