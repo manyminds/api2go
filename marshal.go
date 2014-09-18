@@ -35,7 +35,7 @@ func Marshal(data interface{}) (interface{}, error) {
 		// Using Elem() here to get the slice's element type
 		rootName := pluralize(jsonify(reflect.TypeOf(data).Elem().Name()))
 
-		// Panic if empty string, i.e. passed []interface{}
+		// Error on empty string, i.e. passed []interface{}
 		if rootName == "" {
 			return nil, errors.New("you passed a slice of interfaces []interface{}{...} to Marshal. we cannot determine key names from that. Use []YourObjectName{...} instead")
 		}

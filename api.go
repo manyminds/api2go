@@ -2,6 +2,7 @@ package api2go
 
 import (
 	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -147,7 +148,7 @@ func (res *resource) handleCreate(w http.ResponseWriter, r *http.Request, prefix
 		return err
 	}
 	if newObjs.Len() != 1 {
-		panic("expected one object in POST")
+		return errors.New("expected one object in POST")
 	}
 	id, err := res.source.Create(newObjs.Index(0).Interface())
 	if err != nil {
@@ -178,7 +179,7 @@ func (res *resource) handleUpdate(w http.ResponseWriter, r *http.Request, ps htt
 		return err
 	}
 	if updatingObjs.Len() != 1 {
-		panic("expected one object in PUT")
+		return errors.New("expected one object in PUT")
 	}
 	if err := res.source.Update(updatingObjs.Index(0).Interface()); err != nil {
 		return err
