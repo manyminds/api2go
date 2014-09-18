@@ -60,19 +60,24 @@ var _ = Describe("Unmarshal", func() {
 			Expect(posts).To(Equal([]SimplePost{firstPost, secondPost}))
 		})
 
-		It("panics on invalid params", func() {
-			Expect(func() {
-				Unmarshal(singlePostMap, nil)
-			}).To(Panic())
-			Expect(func() {
-				Unmarshal(singlePostMap, 42)
-			}).To(Panic())
-			Expect(func() {
-				Unmarshal(singlePostMap, []interface{}{})
-			}).To(Panic())
-			Expect(func() {
-				Unmarshal(singlePostMap, &[]interface{}{})
-			}).To(Panic())
+		It("panics on invalid param nil", func() {
+			err := Unmarshal(singlePostMap, nil)
+			Expect(err).Should(HaveOccurred())
+		})
+
+		It("panics on invalid param int", func() {
+			err := Unmarshal(singlePostMap, nil)
+			Expect(err).Should(HaveOccurred())
+		})
+
+		It("panics on invalid param map", func() {
+			err := Unmarshal(singlePostMap, []interface{}{})
+			Expect(err).Should(HaveOccurred())
+		})
+
+		It("panics on invalid pointer", func() {
+			err := Unmarshal(singlePostMap, &[]interface{}{})
+			Expect(err).Should(HaveOccurred())
 		})
 
 		It("errors on empty maps", func() {

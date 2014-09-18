@@ -13,16 +13,16 @@ func Unmarshal(ctx unmarshalContext, values interface{}) error {
 	// Check that target is a *[]Model
 	ptrVal := reflect.ValueOf(values)
 	if ptrVal.Kind() != reflect.Ptr || ptrVal.IsNil() {
-		panic("You must pass a pointer to a []struct to Unmarshal()")
+		return errors.New("You must pass a pointer to a []struct to Unmarshal()")
 	}
 	sliceType := reflect.TypeOf(values).Elem()
 	sliceVal := ptrVal.Elem()
 	if sliceType.Kind() != reflect.Slice {
-		panic("You must pass a pointer to a []struct to Unmarshal()")
+		return errors.New("You must pass a pointer to a []struct to Unmarshal()")
 	}
 	structType := sliceType.Elem()
 	if structType.Kind() != reflect.Struct {
-		panic("You must pass a pointer to a []struct to Unmarshal()")
+		return errors.New("You must pass a pointer to a []struct to Unmarshal()")
 	}
 
 	// Copy the value, then write into the new variable.
