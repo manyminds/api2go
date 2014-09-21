@@ -277,6 +277,50 @@ var _ = Describe("Marshalling", func() {
 			}))
 		})
 
+		It("uses ID field for the sql.NullInt64 type", func() {
+			type SqlTypesPost struct {
+				ID       int
+				AuthorID sql.NullInt64
+				Author   *Author
+			}
+
+			anotherPost := SqlTypesPost{ID: 1, AuthorID: sql.NullInt64{1, true}}
+			i, err := Marshal(anotherPost)
+			Expect(err).To(BeNil())
+			Expect(i).To(Equal(map[string]interface{}{
+				"sqlTypesPosts": []interface{}{
+					map[string]interface{}{
+						"id": "1",
+						"links": map[string]interface{}{
+							"author": "1",
+						},
+					},
+				},
+			}))
+		})
+
+		It("uses ID field for the sql.NullString type", func() {
+			type SqlTypesPost struct {
+				ID       int
+				AuthorID sql.NullString
+				Author   *Author
+			}
+
+			anotherPost := SqlTypesPost{ID: 1, AuthorID: sql.NullString{"1", true}}
+			i, err := Marshal(anotherPost)
+			Expect(err).To(BeNil())
+			Expect(i).To(Equal(map[string]interface{}{
+				"sqlTypesPosts": []interface{}{
+					map[string]interface{}{
+						"id": "1",
+						"links": map[string]interface{}{
+							"author": "1",
+						},
+					},
+				},
+			}))
+		})
+
 		It("returns an error if ID field but no struct field is in struct", func() {
 			type WrongStruct struct {
 				ID       int

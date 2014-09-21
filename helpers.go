@@ -97,8 +97,9 @@ func idFromObject(obj reflect.Value) (string, error) {
 func idFromValue(v reflect.Value) (string, error) {
 	kind := v.Kind()
 	if kind == reflect.Struct {
-		if sv, err := extractIDFromSqlStruct(v); err != nil {
+		if sv, err := extractIDFromSqlStruct(v); err == nil {
 			v = sv
+			kind = v.Kind()
 		} else {
 			return "", err
 		}
@@ -121,21 +122,15 @@ func extractIDFromSqlStruct(v reflect.Value) (reflect.Value, error) {
 	switch value := i.(type) {
 	case sql.NullInt64:
 		if value.Valid {
-			var id int64
-			value.Scan(&id)
-			return reflect.ValueOf(id), nil
+			return reflect.ValueOf(value.Int64), nil
 		}
 	case sql.NullFloat64:
 		if value.Valid {
-			var id float64
-			value.Scan(&id)
-			return reflect.ValueOf(id), nil
+			return reflect.ValueOf(value.Float64), nil
 		}
 	case sql.NullString:
 		if value.Valid {
-			var id string
-			value.Scan(&id)
-			return reflect.ValueOf(id), nil
+			return reflect.ValueOf(value.String), nil
 		}
 	default:
 		return reflect.ValueOf(""), errors.New("invalid type, allowed sql/database types are sql.NullInt64, sql.NullFloat64, sql.NullString")
