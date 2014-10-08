@@ -248,4 +248,21 @@ var _ = Describe("Unmarshal", func() {
 			Expect(posts).To(Equal([]SimplePost{post}))
 		})
 	})
+
+	Context("when unmarshaling without id", func() {
+		It("updates existing entries", func() {
+			post := SimplePost{Title: "Nice Title"}
+			postMap := map[string]interface{}{
+				"simplePosts": []interface{}{
+					map[string]interface{}{
+						"title": "Nice Title",
+					},
+				},
+			}
+			var posts []SimplePost
+			err := Unmarshal(postMap, &posts)
+			Expect(err).To(BeNil())
+			Expect(posts).To(Equal([]SimplePost{post}))
+		})
+	})
 })
