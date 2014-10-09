@@ -231,7 +231,7 @@ var _ = Describe("Unmarshal", func() {
 	})
 
 	Context("when unmarshaling with null values", func() {
-		It("updates existing entries", func() {
+		It("adding a new entry", func() {
 			post := SimplePost{ID: "1", Title: "Nice Title"}
 			postMap := map[string]interface{}{
 				"simplePosts": []interface{}{
@@ -250,7 +250,7 @@ var _ = Describe("Unmarshal", func() {
 	})
 
 	Context("when unmarshaling without id", func() {
-		It("updates existing entries", func() {
+		It("adding a new entry", func() {
 			post := SimplePost{Title: "Nice Title"}
 			postMap := map[string]interface{}{
 				"simplePosts": []interface{}{
