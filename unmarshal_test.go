@@ -265,4 +265,41 @@ var _ = Describe("Unmarshal", func() {
 			Expect(posts).To(Equal([]SimplePost{post}))
 		})
 	})
+
+	Context("when unmarshaling with int64 ids", func() {
+		type User struct {
+			ID   int64
+			Name string
+		}
+
+		type Post struct {
+			ID     int64
+			Text   string
+			UserID int64
+		}
+
+		It("adds a new entry with a linked value", func() {
+			post := Post{
+				ID:     4711,
+				Text:   "Very nice text",
+				UserID: 1337,
+			}
+			postMap := map[string]interface{}{
+				"posts": []interface{}{
+					map[string]interface{}{
+						"id":   "4711",
+						"text": "Very nice text",
+						"links": map[string]interface{}{
+							"user":    "1337",
+							"another": "42",
+						},
+					},
+				},
+			}
+			var posts []Post
+			err := Unmarshal(postMap, &posts)
+			Expect(err).To(BeNil())
+			Expect(posts).To(Equal([]Post{post}))
+		})
+	})
 })
