@@ -290,8 +290,7 @@ var _ = Describe("Unmarshal", func() {
 						"id":   "4711",
 						"text": "Very nice text",
 						"links": map[string]interface{}{
-							"user":    "1337",
-							"another": "42",
+							"user": "1337",
 						},
 					},
 				},

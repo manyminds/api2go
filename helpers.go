@@ -163,6 +163,13 @@ func setIDValue(val reflect.Value, idInterface interface{}) error {
 		}
 		val.Set(reflect.ValueOf(intID))
 
+	case reflect.Int64:
+		intID, err := strconv.ParseInt(id, 10, 64)
+		if err != nil {
+			return err
+		}
+		val.Set(reflect.ValueOf(intID))
+
 	default:
 		return errors.New("expected ID to be of type int or string in struct")
 	}
