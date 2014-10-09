@@ -3,6 +3,7 @@ package api2go
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"reflect"
 	"strconv"
 	"strings"
@@ -102,6 +103,13 @@ func idFromValue(v reflect.Value) (string, error) {
 			kind = v.Kind()
 		} else {
 			return "", err
+		}
+	} else if v.CanInterface() {
+		x := v.Interface()
+
+		switch x := x.(type) {
+		case fmt.Stringer:
+			return x.String(), nil
 		}
 	}
 
