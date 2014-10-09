@@ -266,6 +266,25 @@ var _ = Describe("Unmarshal", func() {
 		})
 	})
 
+	Context("when using uint64 ids", func() {
+		type User struct {
+			ID   uint64
+			Name string
+		}
+
+		It("will be no problem", func() {
+			var users []User
+			userMap := map[string]interface{}{
+				"users": []interface{}{
+					map[string]interface{}{
+						"id":   "1",
+						"Name": "test"}}}
+
+			err := Unmarshal(userMap, &users)
+			Expect(err).To(BeNil())
+		})
+	})
+
 	Context("when unmarshaling with int64 ids", func() {
 		type User struct {
 			ID   int64
