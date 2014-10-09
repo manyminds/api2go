@@ -156,75 +156,19 @@ func setIDValue(val reflect.Value, idInterface interface{}) error {
 	case reflect.String:
 		val.Set(reflect.ValueOf(id))
 
-	case reflect.Int:
-		intID, err := strconv.ParseInt(id, 10, 0)
-		if err != nil {
-			return err
-		}
-		val.Set(reflect.ValueOf(int(intID)))
-
-	case reflect.Int8:
-		intID, err := strconv.ParseInt(id, 10, 8)
-		if err != nil {
-			return err
-		}
-		val.Set(reflect.ValueOf(int8(intID)))
-
-	case reflect.Int16:
-		intID, err := strconv.ParseInt(id, 10, 16)
-		if err != nil {
-			return err
-		}
-		val.Set(reflect.ValueOf(int16(intID)))
-
-	case reflect.Int32:
-		intID, err := strconv.ParseInt(id, 10, 32)
-		if err != nil {
-			return err
-		}
-		val.Set(reflect.ValueOf(int32(intID)))
-
-	case reflect.Int64:
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		intID, err := strconv.ParseInt(id, 10, 64)
 		if err != nil {
 			return err
 		}
-		val.Set(reflect.ValueOf(intID))
+		val.SetInt(intID)
 
-	case reflect.Uint:
-		intID, err := strconv.ParseInt(id, 10, 0)
-		if err != nil {
-			return err
-		}
-		val.Set(reflect.ValueOf(uint(intID)))
-
-	case reflect.Uint8:
-		intID, err := strconv.ParseUint(id, 10, 8)
-		if err != nil {
-			return err
-		}
-		val.Set(reflect.ValueOf(uint8(intID)))
-
-	case reflect.Uint16:
-		intID, err := strconv.ParseUint(id, 10, 16)
-		if err != nil {
-			return err
-		}
-		val.Set(reflect.ValueOf(uint16(intID)))
-
-	case reflect.Uint32:
-		intID, err := strconv.ParseUint(id, 10, 32)
-		if err != nil {
-			return err
-		}
-		val.Set(reflect.ValueOf(uint32(intID)))
-
-	case reflect.Uint64:
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		intID, err := strconv.ParseUint(id, 10, 64)
 		if err != nil {
 			return err
 		}
-		val.Set(reflect.ValueOf(uint64(intID)))
+		val.SetUint(intID)
 
 	default:
 		return errors.New("expected ID to be of type int or string in struct")
