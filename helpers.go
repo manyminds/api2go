@@ -162,7 +162,7 @@ func setIDValue(val reflect.Value, idInterface interface{}) error {
 	}
 	switch val.Kind() {
 	case reflect.String:
-		val.Set(reflect.ValueOf(id))
+		val.SetString(id)
 
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		intID, err := strconv.ParseInt(id, 10, 64)
