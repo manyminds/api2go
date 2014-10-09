@@ -161,6 +161,11 @@ func setIDValue(val reflect.Value, idInterface interface{}) error {
 		if err != nil {
 			return err
 		}
+
+		if val.OverflowInt(intID) {
+			return errors.New("Value to high for given type")
+		}
+
 		val.SetInt(intID)
 
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
@@ -168,6 +173,11 @@ func setIDValue(val reflect.Value, idInterface interface{}) error {
 		if err != nil {
 			return err
 		}
+
+		if val.OverflowUint(intID) {
+			return errors.New("Value to high for given type")
+		}
+
 		val.SetUint(intID)
 
 	default:
