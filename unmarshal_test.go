@@ -265,10 +265,161 @@ var _ = Describe("Unmarshal", func() {
 			Expect(posts).To(Equal([]SimplePost{post}))
 		})
 	})
+	Context("when using uint ids", func() {
+		type User struct {
+			ID   uint
+			Name string
+		}
+
+		It("will be no problem", func() {
+			var users []User
+			userMap := map[string]interface{}{
+				"users": []interface{}{
+					map[string]interface{}{
+						"id":   "1",
+						"Name": "test"}}}
+
+			err := Unmarshal(userMap, &users)
+			Expect(err).To(BeNil())
+		})
+	})
+
+	Context("when using uint8 ids", func() {
+		type User struct {
+			ID   uint8
+			Name string
+		}
+
+		It("will be no problem", func() {
+			var users []User
+			userMap := map[string]interface{}{
+				"users": []interface{}{
+					map[string]interface{}{
+						"id":   "1",
+						"Name": "test"}}}
+
+			err := Unmarshal(userMap, &users)
+			Expect(err).To(BeNil())
+		})
+	})
+
+	Context("when using uint16 ids", func() {
+		type User struct {
+			ID   uint16
+			Name string
+		}
+
+		It("will be no problem", func() {
+			var users []User
+			userMap := map[string]interface{}{
+				"users": []interface{}{
+					map[string]interface{}{
+						"id":   "1",
+						"Name": "test"}}}
+
+			err := Unmarshal(userMap, &users)
+			Expect(err).To(BeNil())
+		})
+	})
+
+	Context("when using uint32 ids", func() {
+		type User struct {
+			ID   uint32
+			Name string
+		}
+
+		It("will be no problem", func() {
+			var users []User
+			userMap := map[string]interface{}{
+				"users": []interface{}{
+					map[string]interface{}{
+						"id":   "1",
+						"Name": "test"}}}
+
+			err := Unmarshal(userMap, &users)
+			Expect(err).To(BeNil())
+		})
+	})
 
 	Context("when using uint64 ids", func() {
 		type User struct {
 			ID   uint64
+			Name string
+		}
+
+		It("will be no problem", func() {
+			var users []User
+			userMap := map[string]interface{}{
+				"users": []interface{}{
+					map[string]interface{}{
+						"id":   "1",
+						"Name": "test"}}}
+
+			err := Unmarshal(userMap, &users)
+			Expect(err).To(BeNil())
+		})
+	})
+
+	Context("when using int ids", func() {
+		type User struct {
+			ID   int
+			Name string
+		}
+
+		It("will be no problem", func() {
+			var users []User
+			userMap := map[string]interface{}{
+				"users": []interface{}{
+					map[string]interface{}{
+						"id":   "1",
+						"Name": "test"}}}
+
+			err := Unmarshal(userMap, &users)
+			Expect(err).To(BeNil())
+		})
+	})
+
+	Context("when using int8 ids", func() {
+		type User struct {
+			ID   int8
+			Name string
+		}
+
+		It("will be no problem", func() {
+			var users []User
+			userMap := map[string]interface{}{
+				"users": []interface{}{
+					map[string]interface{}{
+						"id":   "1",
+						"Name": "test"}}}
+
+			err := Unmarshal(userMap, &users)
+			Expect(err).To(BeNil())
+		})
+	})
+
+	Context("when using int16 ids", func() {
+		type User struct {
+			ID   int16
+			Name string
+		}
+
+		It("will be no problem", func() {
+			var users []User
+			userMap := map[string]interface{}{
+				"users": []interface{}{
+					map[string]interface{}{
+						"id":   "1",
+						"Name": "test"}}}
+
+			err := Unmarshal(userMap, &users)
+			Expect(err).To(BeNil())
+		})
+	})
+
+	Context("when using int32 ids", func() {
+		type User struct {
+			ID   int32
 			Name string
 		}
 
