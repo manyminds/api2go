@@ -9,6 +9,16 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+type Magic struct {
+	ID MagicID
+}
+
+type MagicID string
+
+func (m MagicID) String() string {
+	return "This should be visible"
+}
+
 var _ = Describe("Marshalling", func() {
 	type SimplePost struct {
 		Title, Text string
@@ -61,6 +71,20 @@ var _ = Describe("Marshalling", func() {
 					firstPostMap,
 				},
 			}))
+		})
+
+		It("should prefer fmt.Stringer().String() over string contents", func() {
+			m := Magic{}
+			m.ID = "This should be only internal"
+
+			expected := map[string]interface{}{
+				"magics": []interface{}{
+					map[string]interface{}{
+						"id": "This should be visible"}}}
+
+			v, e := Marshal(m)
+			Expect(e).ToNot(HaveOccurred())
+			Expect(v).To(Equal(expected))
 		})
 
 		It("marshal nil value", func() {
