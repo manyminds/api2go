@@ -173,6 +173,9 @@ func setIDValue(val reflect.Value, idInterface interface{}) error {
 
 			val.Set(reflect.ValueOf(sql.NullInt64{intID, true}))
 			return nil
+		case sql.NullString:
+			val.Set(reflect.ValueOf(sql.NullString{id, true}))
+			return nil
 		}
 	}
 
@@ -191,7 +194,6 @@ func setIDValue(val reflect.Value, idInterface interface{}) error {
 		}
 
 		val.SetInt(intID)
-
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		intID, err := strconv.ParseUint(id, 10, 64)
 		if err != nil {

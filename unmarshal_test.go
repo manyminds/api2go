@@ -439,6 +439,29 @@ var _ = Describe("Unmarshal", func() {
 			Expect(err).To(BeNil())
 		})
 
+		It("Should work with sql.NullString with value", func() {
+			type User struct {
+				ID        int64
+				Name      string
+				ForeignID sql.NullString
+			}
+
+			var users []User
+			userMap := map[string]interface{}{
+				"users": []interface{}{
+					map[string]interface{}{
+						"id":   "1",
+						"Name": "test",
+						"links": map[string]interface{}{
+							"foreign": "1337",
+						}}}}
+
+			err := Unmarshal(userMap, &users)
+			Expect(err).To(BeNil())
+			Expect(len(users)).To(Equal(1))
+			Expect(users[0].ForeignID).To(Equal(sql.NullString{"1337", true}))
+		})
+
 		It("Should work with sql.NullInt64 with value", func() {
 			type User struct {
 				ID        int64
