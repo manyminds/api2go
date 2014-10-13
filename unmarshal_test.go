@@ -1,6 +1,8 @@
 package api2go
 
 import (
+	"database/sql"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -437,5 +439,25 @@ var _ = Describe("Unmarshal", func() {
 			Expect(err).To(BeNil())
 		})
 
+		It("Should work with sql.NullInt64", func() {
+			type User struct {
+				ID        int64
+				Name      string
+				ForeignID sql.NullInt64
+			}
+
+			var users []User
+			userMap := map[string]interface{}{
+				"users": []interface{}{
+					map[string]interface{}{
+						"id":   "1",
+						"Name": "test",
+						"links": map[string]interface{}{
+							"foreign": "1",
+						}}}}
+
+			err := Unmarshal(userMap, &users)
+			Expect(err).To(BeNil())
+		})
 	})
 })
