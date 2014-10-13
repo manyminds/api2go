@@ -160,6 +160,22 @@ func setIDValue(val reflect.Value, idInterface interface{}) error {
 	if !ok {
 		return errors.New("expected ID to be string in json")
 	}
+
+	if val.IsValid() && val.CanInterface() {
+		x := val.Interface()
+
+		switch x.(type) {
+		case sql.NullInt64:
+			intID, err := strconv.ParseInt(id, 10, 64)
+			if err != nil {
+				return err
+			}
+
+			val.Set(reflect.ValueOf(sql.NullInt64{intID, true}))
+			return nil
+		}
+	}
+
 	switch val.Kind() {
 	case reflect.String:
 		val.SetString(id)
