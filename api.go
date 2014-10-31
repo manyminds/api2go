@@ -30,6 +30,25 @@ type DataSource interface {
 	Update(obj interface{}) error
 }
 
+// Controller provides more customization of each route.
+// You can define a controller for every DataSource if needed
+type Controller interface {
+	// FindAll get's called after resource was called
+	FindAll(r *http.Request, objs *interface{}) error
+
+	// FindOne get's called after resource was called
+	FindOne(r *http.Request, obj *interface{}) error
+
+	// Create get's called before resource was called
+	Create(r *http.Request, obj *interface{}) error
+
+	// Delete get's called before resource was called
+	Delete(r *http.Request, id string) error
+
+	// Update get's called before resource was called
+	Update(r *http.Request, obj *interface{}) error
+}
+
 // API is a REST JSONAPI.
 type API struct {
 	router *httprouter.Router
@@ -58,11 +77,10 @@ type resource struct {
 	resourceType reflect.Type
 	source       DataSource
 	name         string
+	controller   Controller
 }
 
-// AddResource registers a data source for the given resource
-// `resource` should by an empty struct instance such as `Post{}`. The same type will be used for constructing new elements.
-func (api *API) AddResource(prototype interface{}, source DataSource) {
+func (api *API) addResource(prototype interface{}, source DataSource) *resource {
 	resourceType := reflect.TypeOf(prototype)
 	if resourceType.Kind() != reflect.Struct {
 		panic("pass an empty resource struct to AddResource!")
@@ -119,12 +137,33 @@ func (api *API) AddResource(prototype interface{}, source DataSource) {
 			handleError(err, w)
 		}
 	})
+
+	return &res
+}
+
+// AddResource registers a data source for the given resource
+// `resource` should by an empty struct instance such as `Post{}`. The same type will be used for constructing new elements.
+func (api *API) AddResource(prototype interface{}, source DataSource) {
+	api.addResource(prototype, source)
+}
+
+// AddResourceWithController does the same as `AddResource` but also couples a custom `Controller`
+// Use this controller to implement access control and other things that depend on the request
+func (api *API) AddResourceWithController(prototype interface{}, source DataSource, controller Controller) {
+	res := api.addResource(prototype, source)
+	res.controller = controller
 }
 
 func (res *resource) handleIndex(w http.ResponseWriter, r *http.Request) error {
 	objs, err := res.source.FindAll()
 	if err != nil {
 		return err
+	}
+
+	if res.controller != nil {
+		if err := res.controller.FindAll(r, &objs); err != nil {
+			return err
+		}
 	}
 	return respondWith(objs, http.StatusOK, w)
 }
@@ -133,6 +172,12 @@ func (res *resource) handleRead(w http.ResponseWriter, r *http.Request, ps httpr
 	obj, err := res.source.FindOne(ps.ByName("id"))
 	if err != nil {
 		return err
+	}
+
+	if res.controller != nil {
+		if err := res.controller.FindOne(r, &obj); err != nil {
+			return err
+		}
 	}
 	return respondWith(obj, http.StatusOK, w)
 }
@@ -150,7 +195,16 @@ func (res *resource) handleCreate(w http.ResponseWriter, r *http.Request, prefix
 	if newObjs.Len() != 1 {
 		return errors.New("expected one object in POST")
 	}
-	id, err := res.source.Create(newObjs.Index(0).Interface())
+
+	newObj := newObjs.Index(0).Interface()
+
+	if res.controller != nil {
+		if err := res.controller.Create(r, &newObj); err != nil {
+			return err
+		}
+	}
+
+	id, err := res.source.Create(newObj)
 	if err != nil {
 		return err
 	}
@@ -160,6 +214,7 @@ func (res *resource) handleCreate(w http.ResponseWriter, r *http.Request, prefix
 	if err != nil {
 		return err
 	}
+
 	return respondWith(obj, http.StatusCreated, w)
 }
 
@@ -181,7 +236,15 @@ func (res *resource) handleUpdate(w http.ResponseWriter, r *http.Request, ps htt
 	if updatingObjs.Len() != 1 {
 		return errors.New("expected one object in PUT")
 	}
-	if err := res.source.Update(updatingObjs.Index(0).Interface()); err != nil {
+
+	updatingObj := updatingObjs.Index(0).Interface()
+	if res.controller != nil {
+		if err := res.controller.Update(r, &updatingObj); err != nil {
+			return err
+		}
+	}
+
+	if err := res.source.Update(updatingObj); err != nil {
 		return err
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -189,6 +252,13 @@ func (res *resource) handleUpdate(w http.ResponseWriter, r *http.Request, ps htt
 }
 
 func (res *resource) handleDelete(w http.ResponseWriter, r *http.Request, ps httprouter.Params) error {
+	id := ps.ByName("id")
+	if res.controller != nil {
+		if err := res.controller.Delete(r, id); err != nil {
+			return err
+		}
+	}
+
 	err := res.source.Delete(ps.ByName("id"))
 	if err != nil {
 		return err
