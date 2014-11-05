@@ -69,6 +69,31 @@ func (s *fixtureSource) Update(obj interface{}) error {
 	return NewHTTPError(nil, "post not found", http.StatusNotFound)
 }
 
+type CustomController struct{}
+
+var controllerErrorText = "exciting error"
+var controllerError = NewHTTPError(nil, controllerErrorText, http.StatusInternalServerError)
+
+func (ctrl *CustomController) FindAll(r *http.Request, objs *interface{}) error {
+	return controllerError
+}
+
+func (ctrl *CustomController) FindOne(r *http.Request, obj *interface{}) error {
+	return controllerError
+}
+
+func (ctrl *CustomController) Create(r *http.Request, obj *interface{}) error {
+	return controllerError
+}
+
+func (ctrl *CustomController) Delete(r *http.Request, id string) error {
+	return controllerError
+}
+
+func (ctrl *CustomController) Update(r *http.Request, obj *interface{}) error {
+	return controllerError
+}
+
 var _ = Describe("RestHandler", func() {
 	Context("when handling requests", func() {
 
@@ -200,6 +225,75 @@ var _ = Describe("RestHandler", func() {
 			api.Handler().ServeHTTP(rec, req)
 			Expect(rec.Code).To(Equal(http.StatusNoContent))
 			Expect(source.posts["1"].Title).To(Equal("New Title"))
+		})
+	})
+
+	Context("When using custom controller", func() {
+		var (
+			controller CustomController
+			source     *fixtureSource
+
+			api *API
+			rec *httptest.ResponseRecorder
+		)
+
+		BeforeEach(func() {
+			source = &fixtureSource{map[string]*Post{
+				"1": &Post{ID: "1", Title: "Hello, World!"},
+			}}
+
+			log.SetOutput(ioutil.Discard)
+
+			api = NewAPI("")
+			controller = CustomController{}
+			api.AddResourceWithController(Post{}, source, &controller)
+
+			rec = httptest.NewRecorder()
+		})
+
+		Describe("Controller called for", func() {
+			It("FindAll", func() {
+				req, err := http.NewRequest("GET", "/posts", nil)
+				Expect(err).To(BeNil())
+				api.Handler().ServeHTTP(rec, req)
+				Expect(rec.Code).To(Equal(http.StatusInternalServerError))
+				Expect(strings.TrimSpace(rec.Body.String())).To(Equal(controllerErrorText))
+			})
+
+			It("FindOne", func() {
+				req, err := http.NewRequest("GET", "/posts/1", nil)
+				Expect(err).To(BeNil())
+				api.Handler().ServeHTTP(rec, req)
+				Expect(rec.Code).To(Equal(http.StatusInternalServerError))
+				Expect(strings.TrimSpace(rec.Body.String())).To(Equal(controllerErrorText))
+			})
+
+			It("Create", func() {
+				reqBody := strings.NewReader(`{"posts": [{"title": "New Post"}]}`)
+				req, err := http.NewRequest("POST", "/posts", reqBody)
+				Expect(err).To(BeNil())
+				api.Handler().ServeHTTP(rec, req)
+				Expect(rec.Code).To(Equal(http.StatusInternalServerError))
+				Expect(strings.TrimSpace(rec.Body.String())).To(Equal(controllerErrorText))
+			})
+
+			It("Delete", func() {
+				reqBody := strings.NewReader("")
+				req, err := http.NewRequest("DELETE", "/posts/1", reqBody)
+				Expect(err).To(BeNil())
+				api.Handler().ServeHTTP(rec, req)
+				Expect(rec.Code).To(Equal(http.StatusInternalServerError))
+				Expect(strings.TrimSpace(rec.Body.String())).To(Equal(controllerErrorText))
+			})
+
+			It("Update", func() {
+				reqBody := strings.NewReader(`{"posts": [{"id": "1", "title": "New Post"}]}`)
+				req, err := http.NewRequest("PUT", "/posts/1", reqBody)
+				Expect(err).To(BeNil())
+				api.Handler().ServeHTTP(rec, req)
+				Expect(rec.Code).To(Equal(http.StatusInternalServerError))
+				Expect(strings.TrimSpace(rec.Body.String())).To(Equal(controllerErrorText))
+			})
 		})
 	})
 

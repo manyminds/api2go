@@ -79,6 +79,56 @@ PUT     /v1/posts/<id>
 DELETE  /v1/posts/<id>
 ```
 
+### Use Custom Controllers
+
+By using the `api2go.DataSource` and registering it with `AddResource`,
+api2go will do everything for you automatically and you cannot change it. This
+means that you cannot access the request, perform some user authorization and so on...
+
+In order to register a Controller for a DataSource, implement the `api2go.Controller` interface:
+
+```go
+type Controller interface {
+  // FindAll get's called after resource was called
+  FindAll(r *http.Request, objs *interface{}) error
+
+  // FindOne get's called after resource was called
+  FindOne(r *http.Request, obj *interface{}) error
+
+  // Create get's called before resource was called
+  Create(r *http.Request, obj *interface{}) error
+
+  // Delete get's called before resource was called
+  Delete(r *http.Request, id string) error
+
+  // Update get's called before resource was called
+  Update(r *http.Request, obj *interface{}) error
+}
+```
+
+Now, you can access the request and for example perform some user authorization by reading the
+`Authorization` header or some cookies. In addition, you also have the object out of your database, in
+case you need that too.
+
+To deny access you just return a new `httpError` with `api2go.NewHTTPError`
+
+```go
+...
+func (c *yourController) FindAll(r *http.Request, objs *interface{}) error {
+  // do some authorization stuff
+  return api2go.NewHTTPError(someError, "Access denied", 403)
+}
+...
+```
+
+Register your Controller with the DataSource together
+
+```go
+api := api2go.NewAPI("v1")
+api.AddResourceWithController(Post{}, &PostsSource{}, &YourController{})
+http.ListenAndServe(":8080", api.Handler())
+```
+
 ### Manual marshaling / unmarshaling
 
 ```go
