@@ -33,19 +33,19 @@ type DataSource interface {
 // Controller provides more customization of each route.
 // You can define a controller for every DataSource if needed
 type Controller interface {
-	// FindAll get's called after resource was called
+	// FindAll gets called after resource was called
 	FindAll(r *http.Request, objs *interface{}) error
 
-	// FindOne get's called after resource was called
+	// FindOne gets called after resource was called
 	FindOne(r *http.Request, obj *interface{}) error
 
-	// Create get's called before resource was called
+	// Create gets called before resource was called
 	Create(r *http.Request, obj *interface{}) error
 
-	// Delete get's called before resource was called
+	// Delete gets called before resource was called
 	Delete(r *http.Request, id string) error
 
-	// Update get's called before resource was called
+	// Update gets called before resource was called
 	Update(r *http.Request, obj *interface{}) error
 }
 

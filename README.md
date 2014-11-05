@@ -9,7 +9,7 @@ A [JSON API](http://jsonapi.org) Implementation for Go, to be used e.g. as serve
 import "github.com/univedo/api2go"
 ```
 
-**api2go works, but we're still working on some rough edges. Things might change. Open an issue and join in!  **
+**api2go works, but we're still working on some rough edges. Things might change. Open an issue and join in!**
 
 ## Usage
 
@@ -89,19 +89,19 @@ In order to register a Controller for a DataSource, implement the `api2go.Contro
 
 ```go
 type Controller interface {
-  // FindAll get's called after resource was called
+  // FindAll gets called after resource was called
   FindAll(r *http.Request, objs *interface{}) error
 
-  // FindOne get's called after resource was called
+  // FindOne gets called after resource was called
   FindOne(r *http.Request, obj *interface{}) error
 
-  // Create get's called before resource was called
+  // Create gets called before resource was called
   Create(r *http.Request, obj *interface{}) error
 
-  // Delete get's called before resource was called
+  // Delete gets called before resource was called
   Delete(r *http.Request, id string) error
 
-  // Update get's called before resource was called
+  // Update gets called before resource was called
   Update(r *http.Request, obj *interface{}) error
 }
 ```
