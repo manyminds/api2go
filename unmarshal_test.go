@@ -162,6 +162,28 @@ var _ = Describe("Unmarshal", func() {
 			Expect(err).To(BeNil())
 			Expect(posts).To(Equal([]Post{post}))
 		})
+
+		It("unmarshals aliased links", func() {
+			post := Post{ID: 1, LikesIDs: []string{"1"}}
+			postMap := map[string]interface{}{
+				"posts": []interface{}{
+					map[string]interface{}{
+						"id":    "1",
+						"title": post.Title,
+						"links": map[string]interface{}{
+							"likes": map[string]interface{}{
+								"ids":  []interface{}{"1"},
+								"type": "votes",
+							},
+						},
+					},
+				},
+			}
+			var posts []Post
+			err := Unmarshal(postMap, &posts)
+			Expect(err).To(BeNil())
+			Expect(posts).To(Equal([]Post{post}))
+		})
 	})
 
 	Context("when unmarshaling objects with single relation", func() {
@@ -186,6 +208,28 @@ var _ = Describe("Unmarshal", func() {
 						"text": "Test",
 						"links": map[string]interface{}{
 							"author": "1",
+						},
+					},
+				},
+			}
+			var posts []BlogPost
+			err := Unmarshal(postMap, &posts)
+			Expect(err).To(BeNil())
+			Expect(posts).To(Equal([]BlogPost{post}))
+		})
+
+		It("unmarshals aliased id", func() {
+			post := BlogPost{ID: 1, Text: "Test", AuthorID: 1, Author: nil}
+			postMap := map[string]interface{}{
+				"blogPosts": []interface{}{
+					map[string]interface{}{
+						"id":   "1",
+						"text": "Test",
+						"links": map[string]interface{}{
+							"author": map[string]interface{}{
+								"id":   "1",
+								"type": "user",
+							},
 						},
 					},
 				},
