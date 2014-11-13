@@ -219,6 +219,15 @@ var _ = Describe("RestHandler", func() {
 		})
 
 		It("UPDATEs", func() {
+			reqBody := strings.NewReader(`{"posts": {"id": "1", "title": "New Title"}}`)
+			req, err := http.NewRequest("PUT", "/posts/1", reqBody)
+			Expect(err).To(BeNil())
+			api.Handler().ServeHTTP(rec, req)
+			Expect(rec.Code).To(Equal(http.StatusNoContent))
+			Expect(source.posts["1"].Title).To(Equal("New Title"))
+		})
+
+		It("UPDATEs as array", func() {
 			reqBody := strings.NewReader(`{"posts": [{"id": "1", "title": "New Title"}]}`)
 			req, err := http.NewRequest("PUT", "/posts/1", reqBody)
 			Expect(err).To(BeNil())

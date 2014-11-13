@@ -45,7 +45,7 @@ func unmarshalInto(ctx unmarshalContext, structType reflect.Type, sliceVal *refl
 	}
 	models, ok := modelsInterface.([]interface{})
 	if !ok {
-		return errors.New("expected slice under key '" + rootName + "'")
+		models = []interface{}{modelsInterface}
 	}
 
 	// Read all the models
