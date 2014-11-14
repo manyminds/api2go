@@ -208,6 +208,29 @@ var _ = Describe("Unmarshal", func() {
 			Expect(err).To(BeNil())
 			Expect(posts).To(Equal([]Post{post}))
 		})
+
+		It("unmarshals aliased links and normal links", func() {
+			post := Post{ID: 1, LikesIDs: []string{"1"}, CommentsIDs: []int{2, 3}}
+			postMap := map[string]interface{}{
+				"posts": []interface{}{
+					map[string]interface{}{
+						"id":    "1",
+						"title": post.Title,
+						"links": map[string]interface{}{
+							"likes": map[string]interface{}{
+								"ids":  []interface{}{"1"},
+								"type": "votes",
+							},
+							"comments": []interface{}{"2", "3"},
+						},
+					},
+				},
+			}
+			var posts []Post
+			err := Unmarshal(postMap, &posts)
+			Expect(err).To(BeNil())
+			Expect(posts).To(Equal([]Post{post}))
+		})
 	})
 
 	Context("when unmarshaling objects with single relation", func() {
@@ -221,6 +244,7 @@ var _ = Describe("Unmarshal", func() {
 			Text     string
 			AuthorID int
 			Author   *BlogAuthor
+			ParentID sql.NullInt64
 		}
 
 		It("unmarshals author id", func() {
@@ -254,6 +278,29 @@ var _ = Describe("Unmarshal", func() {
 								"id":   "1",
 								"type": "user",
 							},
+						},
+					},
+				},
+			}
+			var posts []BlogPost
+			err := Unmarshal(postMap, &posts)
+			Expect(err).To(BeNil())
+			Expect(posts).To(Equal([]BlogPost{post}))
+		})
+
+		It("unmarshals aliased id and normal id", func() {
+			post := BlogPost{ID: 3, Text: "Test", AuthorID: 1, Author: nil, ParentID: sql.NullInt64{Int64: 2, Valid: true}}
+			postMap := map[string]interface{}{
+				"blogPosts": []interface{}{
+					map[string]interface{}{
+						"id":   "3",
+						"text": "Test",
+						"links": map[string]interface{}{
+							"author": map[string]interface{}{
+								"id":   "1",
+								"type": "user",
+							},
+							"parent": "2",
 						},
 					},
 				},

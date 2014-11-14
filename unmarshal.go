@@ -180,7 +180,7 @@ func unmarshalLinks(val reflect.Value, linksMap map[string]interface{}) error {
 					return err
 				}
 
-				return nil
+				continue
 			}
 
 			// Has-many
@@ -201,7 +201,7 @@ func unmarshalLinks(val reflect.Value, linksMap map[string]interface{}) error {
 					}
 				}
 
-				return nil
+				continue
 			}
 
 			return errors.New("Invalid object in links object")
