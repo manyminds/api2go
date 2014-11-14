@@ -45,7 +45,7 @@ func unmarshalInto(ctx unmarshalContext, structType reflect.Type, sliceVal *refl
 	}
 	models, ok := modelsInterface.([]interface{})
 	if !ok {
-		return errors.New("expected slice under key '" + rootName + "'")
+		models = []interface{}{modelsInterface}
 	}
 
 	// Read all the models
@@ -155,8 +155,44 @@ func unmarshalLinks(val reflect.Value, linksMap map[string]interface{}) error {
 				return err
 			}
 
+		case map[string]interface{}:
+			// Belongs-to or has-one
+			// Check for field named 'FooID' for key 'foo' if the type is 'foobar'
+			if links["id"] != nil {
+				id := links["id"].(string)
+				structFieldName := dejsonify(linkName) + "ID"
+				field := val.FieldByName(structFieldName)
+				if err := setIDValue(field, id); err != nil {
+					return err
+				}
+
+				return nil
+			}
+
+			// Has-many
+			// Check for field named 'FoosIDs' for key 'foos' if the type is 'foobars'
+			if links["ids"] != nil {
+				ids := links["ids"].([]interface{})
+
+				structFieldName := dejsonify(linkName) + "IDs"
+				sliceField := val.FieldByName(structFieldName)
+				if !sliceField.IsValid() || sliceField.Kind() != reflect.Slice {
+					return errors.New("expected struct to have a " + structFieldName + " slice")
+				}
+
+				sliceField.Set(reflect.MakeSlice(sliceField.Type(), len(ids), len(ids)))
+				for i, idInterface := range ids {
+					if err := setIDValue(sliceField.Index(i), idInterface); err != nil {
+						return err
+					}
+				}
+
+				return nil
+			}
+
+			return errors.New("Invalid object in links object")
 		default:
-			return errors.New("expected string or array in links object")
+			return errors.New("expected string, array or an object with field id(s) in links object")
 		}
 	}
 	return nil
