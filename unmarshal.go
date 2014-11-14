@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"reflect"
+	"time"
 )
 
 type unmarshalContext map[string]interface{}
@@ -115,7 +116,19 @@ func unmarshalInto(ctx unmarshalContext, structType reflect.Type, sliceVal *refl
 				value := reflect.ValueOf(v)
 
 				if value.IsValid() {
-					field.Set(reflect.ValueOf(v))
+					plainValue := reflect.ValueOf(v)
+
+					switch field.Interface().(type) {
+					case time.Time:
+						t, err := time.Parse(time.RFC3339, plainValue.String())
+						if err != nil {
+							return errors.New("expected RFC3339 time string, got '" + plainValue.String() + "'")
+						}
+
+						field.Set(reflect.ValueOf(t))
+					default:
+						field.Set(plainValue)
+					}
 				}
 			}
 		}
