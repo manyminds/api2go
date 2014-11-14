@@ -2,6 +2,7 @@ package api2go
 
 import (
 	"database/sql"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -11,6 +12,7 @@ var _ = Describe("Unmarshal", func() {
 	type SimplePost struct {
 		ID          string
 		Title, Text string
+		Created     time.Time
 	}
 
 	type Post struct {
@@ -21,29 +23,33 @@ var _ = Describe("Unmarshal", func() {
 	}
 
 	Context("When unmarshaling simple objects", func() {
-		singleJSON := []byte(`{"simplePosts":[{"id": "1", "title":"First Post","text":"Lipsum"}]}`)
-		firstPost := SimplePost{ID: "1", Title: "First Post", Text: "Lipsum"}
-		secondPost := SimplePost{ID: "2", Title: "Second Post", Text: "Foobar!"}
+		t, _ := time.Parse(time.RFC3339, "2014-11-10T16:30:48.823Z")
+		singleJSON := []byte(`{"simplePosts":[{"id": "1", "title":"First Post","text":"Lipsum", "Created": "2014-11-10T16:30:48.823Z"}]}`)
+		firstPost := SimplePost{ID: "1", Title: "First Post", Text: "Lipsum", Created: t}
+		secondPost := SimplePost{ID: "2", Title: "Second Post", Text: "Foobar!", Created: t}
 		singlePostMap := map[string]interface{}{
 			"simplePosts": []interface{}{
 				map[string]interface{}{
-					"id":    "1",
-					"title": firstPost.Title,
-					"text":  firstPost.Text,
+					"id":      "1",
+					"title":   firstPost.Title,
+					"text":    firstPost.Text,
+					"created": "2014-11-10T16:30:48.823Z",
 				},
 			},
 		}
 		multiplePostMap := map[string]interface{}{
 			"simplePosts": []interface{}{
 				map[string]interface{}{
-					"id":    "1",
-					"title": firstPost.Title,
-					"text":  firstPost.Text,
+					"id":      "1",
+					"title":   firstPost.Title,
+					"text":    firstPost.Text,
+					"created": "2014-11-10T16:30:48.823Z",
 				},
 				map[string]interface{}{
-					"id":    "2",
-					"title": secondPost.Title,
-					"text":  secondPost.Text,
+					"id":      "2",
+					"title":   secondPost.Title,
+					"text":    secondPost.Text,
+					"created": "2014-11-10T16:30:48.823Z",
 				},
 			},
 		}
@@ -114,6 +120,24 @@ var _ = Describe("Unmarshal", func() {
 				},
 			}, &posts)
 			Expect(err).ToNot(BeNil())
+		})
+
+		It("errors with invalid time format", func() {
+			t, err := time.Parse(time.RFC3339, "2014-11-10T16:30:48.823Z")
+			faultyPostMap := map[string]interface{}{
+				"simplePosts": []interface{}{
+					map[string]interface{}{
+						"id":      "1",
+						"title":   firstPost.Title,
+						"text":    firstPost.Text,
+						"created": t.Format(time.RFC1123Z),
+					},
+				},
+			}
+			var posts []SimplePost
+			err = Unmarshal(faultyPostMap, &posts)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(Equal("expected RFC3339 time string, got 'Mon, 10 Nov 2014 16:30:48 +0000'"))
 		})
 
 		It("unmarshals JSON", func() {
