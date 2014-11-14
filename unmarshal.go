@@ -113,6 +113,7 @@ func unmarshalInto(ctx unmarshalContext, structType reflect.Type, sliceVal *refl
 					return errors.New("expected struct " + structType.Name() + " to have field " + fieldName)
 				}
 				value := reflect.ValueOf(v)
+
 				if value.IsValid() {
 					field.Set(reflect.ValueOf(v))
 				}

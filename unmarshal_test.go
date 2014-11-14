@@ -2,6 +2,7 @@ package api2go
 
 import (
 	"database/sql"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -11,6 +12,7 @@ var _ = Describe("Unmarshal", func() {
 	type SimplePost struct {
 		ID          string
 		Title, Text string
+		Created     time.Time
 	}
 
 	type Post struct {
@@ -21,8 +23,8 @@ var _ = Describe("Unmarshal", func() {
 	}
 
 	Context("When unmarshaling simple objects", func() {
-		singleJSON := []byte(`{"simplePosts":[{"id": "1", "title":"First Post","text":"Lipsum"}]}`)
-		firstPost := SimplePost{ID: "1", Title: "First Post", Text: "Lipsum"}
+		singleJSON := []byte(`{"simplePosts":[{"id": "1", "title":"First Post","text":"Lipsum", "Created": "2014-11-10T16:30:48.823Z"}]}`)
+		firstPost := SimplePost{ID: "1", Title: "First Post", Text: "Lipsum", Created: time.Time{}}
 		secondPost := SimplePost{ID: "2", Title: "Second Post", Text: "Foobar!"}
 		singlePostMap := map[string]interface{}{
 			"simplePosts": []interface{}{
