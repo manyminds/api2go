@@ -12,11 +12,13 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"gopkg.in/guregu/null.v2"
 )
 
 type Post struct {
 	ID    string
 	Title string
+	Value null.Float
 }
 
 type fixtureSource struct {
@@ -115,6 +117,7 @@ var _ = Describe("RestHandler", func() {
 			post1Json = map[string]interface{}{
 				"id":    "1",
 				"title": "Hello, World!",
+				"value": nil,
 			}
 
 			api = NewAPI("")
@@ -169,6 +172,7 @@ var _ = Describe("RestHandler", func() {
 					map[string]interface{}{
 						"id":    "2",
 						"title": "New Post",
+						"value": nil,
 					},
 				},
 			}))
