@@ -1,6 +1,7 @@
 package api2go
 
 import (
+	"database/sql/driver"
 	"encoding/json"
 	"errors"
 	"reflect"
@@ -118,7 +119,7 @@ func unmarshalInto(ctx unmarshalContext, structType reflect.Type, sliceVal *refl
 				if value.IsValid() {
 					plainValue := reflect.ValueOf(v)
 
-					switch field.Interface().(type) {
+					switch element := field.Interface().(type) {
 					case time.Time:
 						t, err := time.Parse(time.RFC3339, plainValue.String())
 						if err != nil {
@@ -126,6 +127,8 @@ func unmarshalInto(ctx unmarshalContext, structType reflect.Type, sliceVal *refl
 						}
 
 						field.Set(reflect.ValueOf(t))
+					case driver.Valuer:
+						field.Set(reflect.ValueOf(element))
 					default:
 						field.Set(plainValue)
 					}
