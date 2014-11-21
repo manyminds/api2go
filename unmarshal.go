@@ -1,9 +1,10 @@
 package api2go
 
 import (
-	"database/sql/driver"
+	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"reflect"
 	"time"
 )
@@ -36,6 +37,22 @@ func Unmarshal(ctx unmarshalContext, values interface{}) error {
 	}
 	sliceVal.Set(val)
 	return nil
+}
+
+// fillSqlScanner extracts the value of into the field of the target struct
+func fillSqlScanner(structField interface{}, value interface{}) (sql.Scanner, error) {
+	newTarget := reflect.TypeOf(structField)
+
+	intf := reflect.New(newTarget.Elem()).Interface()
+
+	intf2, ok := intf.(sql.Scanner)
+	if !ok {
+		return nil, fmt.Errorf("could not type cast into sql.Scanner: %#v", structField)
+	}
+
+	intf2.Scan(value)
+
+	return intf2, nil
 }
 
 func unmarshalInto(ctx unmarshalContext, structType reflect.Type, sliceVal *reflect.Value) error {
@@ -127,10 +144,29 @@ func unmarshalInto(ctx unmarshalContext, structType reflect.Type, sliceVal *refl
 						}
 
 						field.Set(reflect.ValueOf(t))
-					case driver.Valuer:
-						field.Set(reflect.ValueOf(element))
+					case sql.Scanner:
+						scanner, err := fillSqlScanner(element, plainValue.Interface())
+						if err != nil {
+							return err
+						}
+
+						field.Set(reflect.ValueOf(scanner))
 					default:
-						field.Set(plainValue)
+						if field.CanAddr() {
+							switch element := field.Addr().Interface().(type) {
+							case sql.Scanner:
+								scanner, err := fillSqlScanner(element, plainValue.Interface())
+								if err != nil {
+									return err
+								}
+
+								field.Set(reflect.ValueOf(scanner).Elem())
+							default:
+								field.Set(plainValue)
+							}
+						} else {
+							field.Set(plainValue)
+						}
 					}
 				}
 			}
