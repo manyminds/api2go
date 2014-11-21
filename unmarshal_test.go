@@ -2,6 +2,7 @@ package api2go
 
 import (
 	"database/sql"
+	"gopkg.in/guregu/null.v2/zero"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -598,6 +599,58 @@ var _ = Describe("Unmarshal", func() {
 			Expect(err).To(BeNil())
 			Expect(len(users)).To(Equal(1))
 			Expect(users[0].ForeignID).To(Equal(sql.NullInt64{1337, true}))
+		})
+	})
+
+	Context("when using zero values", func() {
+		type ZeroPost struct {
+			ID    string
+			Title string
+			Value *zero.Float
+		}
+
+		It("correctly unmarshals driver values", func() {
+			postMap := map[string]interface{}{
+				"zeroPosts": []interface{}{
+					map[string]interface{}{
+						"id":    "1",
+						"title": "test",
+						"value": 2.3,
+					},
+				},
+			}
+
+			var zeroPosts []ZeroPost
+
+			err := Unmarshal(postMap, &zeroPosts)
+			Expect(err).To(BeNil())
+			Expect(len(zeroPosts)).To(Equal(1))
+			Expect(*zeroPosts[0].Value).To(Equal(zero.NewFloat(2.3, true)))
+		})
+
+		type ZeroPostValue struct {
+			ID    string
+			Title string
+			Value zero.Float
+		}
+
+		It("correctly unmarshals driver values", func() {
+			postMap := map[string]interface{}{
+				"zeroPostValues": []interface{}{
+					map[string]interface{}{
+						"id":    "1",
+						"title": "test",
+						"value": 2.3,
+					},
+				},
+			}
+
+			var zeroPosts []ZeroPostValue
+
+			err := Unmarshal(postMap, &zeroPosts)
+			Expect(err).To(BeNil())
+			Expect(len(zeroPosts)).To(Equal(1))
+			Expect(zeroPosts[0].Value).To(Equal(zero.NewFloat(2.3, true)))
 		})
 	})
 })
