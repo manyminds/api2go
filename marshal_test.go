@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"gopkg.in/guregu/null.v2/zero"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -354,6 +355,74 @@ var _ = Describe("Marshalling", func() {
 			wrongStruct := WrongStruct{ID: 1, AuthorID: 1}
 			_, err := Marshal(wrongStruct)
 			Expect(err).To(Equal(errors.New("expected struct to have field Author")))
+		})
+	})
+
+	Context("when marshalling zero value types", func() {
+		type ZeroPost struct {
+			ID    string
+			Title string
+			Value zero.Float
+		}
+
+		type ZeroPostPointer struct {
+			ID    string
+			Title string
+			Value *zero.Float
+		}
+
+		theFloat := zero.NewFloat(2.3, true)
+		post := ZeroPost{ID: "1", Title: "test", Value: theFloat}
+		pointerPost := ZeroPostPointer{ID: "1", Title: "test", Value: &theFloat}
+
+		It("correctly unmarshals driver values", func() {
+			postMap := map[string]interface{}{
+				"zeroPosts": []interface{}{
+					map[string]interface{}{
+						"id":    "1",
+						"title": "test",
+						"value": theFloat,
+					},
+				},
+			}
+
+			marshalled, err := Marshal(post)
+
+			Expect(err).To(BeNil())
+			Expect(marshalled).To(Equal(postMap))
+		})
+
+		It("correctly unmarshals into json", func() {
+			expectedJSON := `{"zeroPosts":[{"id":"1","title":"test","value":2.3}]}`
+
+			json, err := MarshalToJSON(post)
+			Expect(err).To(BeNil())
+			Expect(string(json)).To(Equal(expectedJSON))
+		})
+
+		It("correctly unmarshals driver values with pointer", func() {
+			postMap := map[string]interface{}{
+				"zeroPostPointers": []interface{}{
+					map[string]interface{}{
+						"id":    "1",
+						"title": "test",
+						"value": &theFloat,
+					},
+				},
+			}
+
+			marshalled, err := Marshal(pointerPost)
+
+			Expect(err).To(BeNil())
+			Expect(marshalled).To(BeEquivalentTo(postMap))
+		})
+
+		It("correctly unmarshals with pointer into json", func() {
+			expectedJSON := `{"zeroPostPointers":[{"id":"1","title":"test","value":2.3}]}`
+
+			json, err := MarshalToJSON(pointerPost)
+			Expect(err).To(BeNil())
+			Expect(string(json)).To(Equal(expectedJSON))
 		})
 	})
 })

@@ -129,6 +129,9 @@ func (ctx *marshalingContext) marshalStruct(val reflect.Value) error {
 					if err := ctx.marshalStruct(field.Elem()); err != nil {
 						return err
 					}
+				} else {
+					// the field is not a referenced struct, it is a normal property, so add it to the result
+					result[keyName] = field.Interface()
 				}
 			}
 		} else if idFieldRegex.MatchString(keyName) {
