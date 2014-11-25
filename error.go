@@ -11,7 +11,7 @@ type httpError struct {
 
 //APIError can be used for
 type APIError struct {
-	ID     uint
+	ID     string
 	Href   string
 	Status string
 	Code   string
