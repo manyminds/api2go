@@ -12,7 +12,7 @@ var _ = Describe("Errors test", func() {
 		err := NewHTTPError(errors.New("hi"), "hi", 0)
 		httpErr, ok := err.(httpError)
 		for i := 0; i < 20; i++ {
-			httpErr.AddHTTPError(httpErr)
+			httpErr.AddError(errors.New("Some error"), "Invalid error error")
 		}
 		Expect(ok).To(Equal(true))
 		Expect(httpErr.errorsCount).To(Equal(20))

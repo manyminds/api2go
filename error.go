@@ -18,16 +18,19 @@ func NewHTTPError(err error, msg string, status int) error {
 	return httpError{err, msg, status, errors, 0}
 }
 
-//AddHTTPError adds an additional error to this http error
-func (e *httpError) AddHTTPError(err httpError) {
+//AddError adds an additional error to this http error
+func (e *httpError) AddError(err error, msg string) {
+	var errors []httpError
+	httpErr := httpError{err, msg, -1, errors, 0}
 	if e.errors == nil {
 		e.errors = make([]httpError, 0, 10)
 	}
 
-	e.errors = append(e.errors, err)
+	e.errors = append(e.errors, httpErr)
 	e.errorsCount++
 }
 
+//Error returns a nice string represenation including the status
 func (e httpError) Error() string {
 	msg := "http error (" + strconv.Itoa(e.status) + "): " + e.msg
 	if e.err != nil {
