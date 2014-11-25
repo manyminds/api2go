@@ -9,7 +9,10 @@ type httpError struct {
 	errors []APIError
 }
 
-//APIError can be used for
+//APIError can be used for all kind of application errors
+//e.g. you would use it to define form errors or any
+//other semantical application problems
+//for more information see http://jsonapi.org/format/#errors
 type APIError struct {
 	ID     string
 	Href   string
