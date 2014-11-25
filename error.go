@@ -6,26 +6,31 @@ type httpError struct {
 	err    error
 	msg    string
 	status int
-	errors []httpError
+	errors []APIError
+}
+
+//APIError can be used for
+type APIError struct {
+	ID     uint64
+	Href   string
+	Status string
+	Code   string
+	Title  string
+	Detail string
+	Path   string
 }
 
 // NewHTTPError creates a new error with message and status code.
 // `err` will be logged (but never sent to a client), `msg` will be sent and `status` is the http status code.
 // `err` can be nil.
 func NewHTTPError(err error, msg string, status int) error {
-	var errors []httpError
+	var errors []APIError
 	return httpError{err, msg, status, errors}
 }
 
-//AddError adds an additional error to this http error
-func (e *httpError) AddError(err error, msg string) {
-	var errors []httpError
-	httpErr := httpError{err, msg, -1, errors}
-	if e.errors == nil {
-		e.errors = make([]httpError, 0, 10)
-	}
-
-	e.errors = append(e.errors, httpErr)
+//AddAPIError adds an additional json api error
+func (e *httpError) AddAPIError(err APIError) {
+	e.errors = append(e.errors, err)
 }
 
 //Error returns a nice string represenation including the status
