@@ -3,11 +3,10 @@ package api2go
 import "strconv"
 
 type httpError struct {
-	err         error
-	msg         string
-	status      int
-	errors      []httpError
-	errorsCount int
+	err    error
+	msg    string
+	status int
+	errors []httpError
 }
 
 // NewHTTPError creates a new error with message and status code.
@@ -15,19 +14,18 @@ type httpError struct {
 // `err` can be nil.
 func NewHTTPError(err error, msg string, status int) error {
 	var errors []httpError
-	return httpError{err, msg, status, errors, 0}
+	return httpError{err, msg, status, errors}
 }
 
 //AddError adds an additional error to this http error
 func (e *httpError) AddError(err error, msg string) {
 	var errors []httpError
-	httpErr := httpError{err, msg, -1, errors, 0}
+	httpErr := httpError{err, msg, -1, errors}
 	if e.errors == nil {
 		e.errors = make([]httpError, 0, 10)
 	}
 
 	e.errors = append(e.errors, httpErr)
-	e.errorsCount++
 }
 
 //Error returns a nice string represenation including the status

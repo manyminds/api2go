@@ -8,14 +8,15 @@ import (
 )
 
 var _ = Describe("Errors test", func() {
-	It("can create array tree", func() {
-		err := NewHTTPError(errors.New("hi"), "hi", 0)
-		httpErr, ok := err.(httpError)
-		for i := 0; i < 20; i++ {
-			httpErr.AddError(errors.New("Some error"), "Invalid error error")
-		}
-		Expect(ok).To(Equal(true))
-		Expect(httpErr.errorsCount).To(Equal(20))
-		Expect(len(httpErr.errors)).To(Equal(httpErr.errorsCount))
+	Context("validate error logic", func() {
+		It("can create array tree", func() {
+			err := NewHTTPError(errors.New("hi"), "hi", 0)
+			httpErr, ok := err.(httpError)
+			for i := 0; i < 20; i++ {
+				httpErr.AddError(errors.New("Some error"), "Invalid error error")
+			}
+			Expect(ok).To(Equal(true))
+			Expect(len(httpErr.errors)).To(Equal(20))
+		})
 	})
 })
