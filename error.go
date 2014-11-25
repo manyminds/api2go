@@ -24,8 +24,7 @@ type APIError struct {
 // `err` will be logged (but never sent to a client), `msg` will be sent and `status` is the http status code.
 // `err` can be nil.
 func NewHTTPError(err error, msg string, status int) error {
-	var errors []APIError
-	return httpError{err, msg, status, errors}
+	return httpError{err: err, msg: msg, status: status}
 }
 
 //AddAPIError adds an additional json api error
