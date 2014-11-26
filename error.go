@@ -1,6 +1,6 @@
 package api2go
 
-import "strconv"
+import "fmt"
 
 //HTTPError is used for errors
 type HTTPError struct {
@@ -33,7 +33,7 @@ func NewHTTPError(err error, msg string, status int) HTTPError {
 
 //Error returns a nice string represenation including the status
 func (e HTTPError) Error() string {
-	msg := "http error (" + strconv.Itoa(e.status) + "): " + e.msg
+	msg := fmt.Sprintf("http error (%d) %s and %d more errors", e.status, e.msg, len(e.Errors))
 	if e.err != nil {
 		msg += ", " + e.err.Error()
 	}
