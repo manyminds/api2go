@@ -2,8 +2,7 @@ package api2go
 
 import (
 	"encoding/json"
-	"io/ioutil"
-	"log"
+	"errors"
 
 	"net/http"
 	"net/http/httptest"
@@ -44,6 +43,13 @@ func (s *fixtureSource) FindOne(id string) (interface{}, error) {
 
 func (s *fixtureSource) Create(obj interface{}) (string, error) {
 	p := obj.(Post)
+
+	if p.Title == "" {
+		err := NewHTTPError(errors.New("Bad request."), "Bad Request", http.StatusBadRequest)
+		err.Errors["titleError"] = Error{ID: "SomeErrorID", Path: "Title"}
+		return "", err
+	}
+
 	maxID := 0
 	for k := range s.posts {
 		id, _ := strconv.Atoi(k)
@@ -111,8 +117,6 @@ var _ = Describe("RestHandler", func() {
 			source = &fixtureSource{map[string]*Post{
 				"1": &Post{ID: "1", Title: "Hello, World!"},
 			}}
-
-			log.SetOutput(ioutil.Discard)
 
 			post1Json = map[string]interface{}{
 				"id":    "1",
@@ -255,8 +259,6 @@ var _ = Describe("RestHandler", func() {
 				"1": &Post{ID: "1", Title: "Hello, World!"},
 			}}
 
-			log.SetOutput(ioutil.Discard)
-
 			api = NewAPI("")
 			controller = CustomController{}
 			api.AddResourceWithController(Post{}, source, &controller)
@@ -322,5 +324,44 @@ var _ = Describe("RestHandler", func() {
 			Expect(rec.Code).To(Equal(http.StatusCreated))
 			Expect(rec.Header().Get("Location")).To(Equal("/v1/posts/1"))
 		})
+	})
+
+	Context("marshal errors correctly", func() {
+		var (
+			source    *fixtureSource
+			post1Json map[string]interface{}
+
+			api *API
+			rec *httptest.ResponseRecorder
+		)
+
+		BeforeEach(func() {
+			source = &fixtureSource{map[string]*Post{
+				"1": &Post{ID: "1", Title: "Hello, World!"},
+			}}
+
+			post1Json = map[string]interface{}{
+				"id":    "1",
+				"title": "Hello, World!",
+				"value": nil,
+			}
+
+			api = NewAPI("")
+			api.AddResource(Post{}, source)
+
+			rec = httptest.NewRecorder()
+		})
+
+		It("POSTSs new objects", func() {
+			reqBody := strings.NewReader(`{"posts": [{"title": ""}]}`)
+			req, err := http.NewRequest("POST", "/posts", reqBody)
+			Expect(err).To(BeNil())
+			api.Handler().ServeHTTP(rec, req)
+			Expect(rec.Code).To(Equal(http.StatusBadRequest))
+			expected := `{"errors":{"titleError":{"id":"SomeErrorID","path":"Title"}}}`
+			actual := strings.TrimSpace(string(rec.Body.Bytes()))
+			Expect(actual).To(Equal(expected))
+		})
+
 	})
 })

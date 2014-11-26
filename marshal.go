@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"reflect"
 	"regexp"
 	"strings"
@@ -20,6 +21,18 @@ func makeContext(rootName string) *marshalingContext {
 	ctx.root = map[string]interface{}{}
 	ctx.root[rootName] = []interface{}{}
 	return ctx
+}
+
+//marshalHTTPError marshals an internal httpError
+func marshalHTTPError(input HTTPError) string {
+	data, err := json.Marshal(input)
+
+	if err != nil {
+		log.Println(err)
+		return "{}"
+	}
+
+	return string(data)
 }
 
 // Marshal takes a struct (or slice of structs) and marshals them to a json encodable interface{} value
