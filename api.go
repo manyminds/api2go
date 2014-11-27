@@ -294,10 +294,15 @@ func unmarshalJSONRequest(r *http.Request) (map[string]interface{}, error) {
 
 func handleError(err error, w http.ResponseWriter) {
 	log.Println(err)
-	if e, ok := err.(httpError); ok {
-		http.Error(w, e.msg, e.status)
+	if e, ok := err.(HTTPError); ok {
+		if len(e.Errors) > 0 {
+			http.Error(w, marshalError(e), e.status)
+		} else {
+			http.Error(w, e.msg, e.status)
+		}
 		return
 	}
+
 	w.WriteHeader(500)
 }
 
