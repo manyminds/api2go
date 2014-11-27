@@ -7,7 +7,7 @@ type HTTPError struct {
 	err    error
 	msg    string
 	status int
-	Errors map[string]Error `json:"errors,omitempty"`
+	Errors []Error `json:"errors,omitempty"`
 }
 
 //Error can be used for all kind of application errors
@@ -28,7 +28,7 @@ type Error struct {
 // `err` will be logged (but never sent to a client), `msg` will be sent and `status` is the http status code.
 // `err` can be nil.
 func NewHTTPError(err error, msg string, status int) HTTPError {
-	return HTTPError{err: err, msg: msg, status: status, Errors: make(map[string]Error)}
+	return HTTPError{err: err, msg: msg, status: status}
 }
 
 //Error returns a nice string represenation including the status

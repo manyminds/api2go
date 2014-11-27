@@ -46,7 +46,7 @@ func (s *fixtureSource) Create(obj interface{}) (string, error) {
 
 	if p.Title == "" {
 		err := NewHTTPError(errors.New("Bad request."), "Bad Request", http.StatusBadRequest)
-		err.Errors["titleError"] = Error{ID: "SomeErrorID", Path: "Title"}
+		err.Errors = append(err.Errors, Error{ID: "SomeErrorID", Path: "Title"})
 		return "", err
 	}
 
@@ -358,10 +358,9 @@ var _ = Describe("RestHandler", func() {
 			Expect(err).To(BeNil())
 			api.Handler().ServeHTTP(rec, req)
 			Expect(rec.Code).To(Equal(http.StatusBadRequest))
-			expected := `{"errors":{"titleError":{"id":"SomeErrorID","path":"Title"}}}`
+			expected := `{"errors":[{"id":"SomeErrorID","path":"Title"}]}`
 			actual := strings.TrimSpace(string(rec.Body.Bytes()))
 			Expect(actual).To(Equal(expected))
 		})
-
 	})
 })
