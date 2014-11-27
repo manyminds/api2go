@@ -7,6 +7,7 @@ import (
 	"log"
 	"reflect"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -23,8 +24,24 @@ func makeContext(rootName string) *marshalingContext {
 	return ctx
 }
 
+//marshalError marshals all error types
+func marshalError(err error) string {
+	httpErr, ok := err.(HTTPError)
+	if ok {
+		return marshalHTTPError(httpErr)
+	}
+
+	httpErr = NewHTTPError(err, err.Error(), 500)
+
+	return marshalHTTPError(httpErr)
+}
+
 //marshalHTTPError marshals an internal httpError
 func marshalHTTPError(input HTTPError) string {
+	if len(input.Errors) == 0 {
+		input.Errors = []Error{Error{Title: input.msg, Status: strconv.Itoa(input.status)}}
+	}
+
 	data, err := json.Marshal(input)
 
 	if err != nil {

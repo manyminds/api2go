@@ -296,7 +296,7 @@ func handleError(err error, w http.ResponseWriter) {
 	log.Println(err)
 	if e, ok := err.(HTTPError); ok {
 		if len(e.Errors) > 0 {
-			http.Error(w, marshalHTTPError(e), e.status)
+			http.Error(w, marshalError(e), e.status)
 		} else {
 			http.Error(w, e.msg, e.status)
 		}
