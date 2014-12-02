@@ -15,10 +15,10 @@ import (
 // DataSource provides methods needed for CRUD.
 type DataSource interface {
 	// FindAll returns all objects
-	FindAll() (interface{}, error)
+	FindAll(req Request) (interface{}, error)
 
 	// FindOne returns an object by its ID
-	FindOne(ID string) (interface{}, error)
+	FindOne(ID string, req Request) (interface{}, error)
 
 	// Create a new object and return its ID
 	Create(interface{}) (string, error)
@@ -71,6 +71,11 @@ func NewAPI(prefix string) *API {
 		router: httprouter.New(),
 		prefix: prefix,
 	}
+}
+
+// Request holds additional information for FindOne and Find Requests
+type Request struct {
+	QueryParams map[string][]string
 }
 
 type resource struct {
@@ -154,8 +159,18 @@ func (api *API) AddResourceWithController(prototype interface{}, source DataSour
 	res.controller = controller
 }
 
+func buildRequest(r *http.Request) Request {
+	req := Request{}
+	params := make(map[string][]string)
+	for key, values := range r.URL.Query() {
+		params[key] = strings.Split(values[0], ",")
+	}
+	req.QueryParams = params
+	return req
+}
+
 func (res *resource) handleIndex(w http.ResponseWriter, r *http.Request) error {
-	objs, err := res.source.FindAll()
+	objs, err := res.source.FindAll(buildRequest(r))
 	if err != nil {
 		return err
 	}
@@ -169,7 +184,7 @@ func (res *resource) handleIndex(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (res *resource) handleRead(w http.ResponseWriter, r *http.Request, ps httprouter.Params) error {
-	obj, err := res.source.FindOne(ps.ByName("id"))
+	obj, err := res.source.FindOne(ps.ByName("id"), buildRequest(r))
 	if err != nil {
 		return err
 	}
@@ -210,7 +225,7 @@ func (res *resource) handleCreate(w http.ResponseWriter, r *http.Request, prefix
 	}
 	w.Header().Set("Location", prefix+res.name+"/"+id)
 
-	obj, err := res.source.FindOne(id)
+	obj, err := res.source.FindOne(id, buildRequest(r))
 	if err != nil {
 		return err
 	}
@@ -219,7 +234,7 @@ func (res *resource) handleCreate(w http.ResponseWriter, r *http.Request, prefix
 }
 
 func (res *resource) handleUpdate(w http.ResponseWriter, r *http.Request, ps httprouter.Params) error {
-	obj, err := res.source.FindOne(ps.ByName("id"))
+	obj, err := res.source.FindOne(ps.ByName("id"), buildRequest(r))
 	if err != nil {
 		return err
 	}

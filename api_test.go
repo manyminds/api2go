@@ -3,6 +3,7 @@ package api2go
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 
 	"net/http"
 	"net/http/httptest"
@@ -24,17 +25,37 @@ type fixtureSource struct {
 	posts map[string]*Post
 }
 
-func (s *fixtureSource) FindAll() (interface{}, error) {
-	postsSlice := make([]Post, len(s.posts))
-	i := 0
-	for _, p := range s.posts {
-		postsSlice[i] = *p
-		i++
+func (s *fixtureSource) FindAll(req Request) (interface{}, error) {
+	var (
+		postsSlice []Post
+	)
+
+	if limit, ok := req.QueryParams["limit"]; ok {
+		if l, err := strconv.ParseInt(limit[0], 10, 64); err == nil {
+			postsSlice = make([]Post, l)
+			length := len(s.posts)
+			for i := 0; i < length; i++ {
+				postsSlice[i] = *s.posts[strconv.Itoa(i+1)]
+				if i+1 >= int(l) {
+					break
+				}
+			}
+		} else {
+			fmt.Println("Error casting to int", err)
+			return nil, err
+		}
+	} else {
+		postsSlice = make([]Post, len(s.posts))
+		length := len(s.posts)
+		for i := 0; i < length; i++ {
+			postsSlice[i] = *s.posts[strconv.Itoa(i+1)]
+		}
 	}
+
 	return postsSlice, nil
 }
 
-func (s *fixtureSource) FindOne(id string) (interface{}, error) {
+func (s *fixtureSource) FindOne(id string, req Request) (interface{}, error) {
 	if p, ok := s.posts[id]; ok {
 		return *p, nil
 	}
@@ -361,6 +382,73 @@ var _ = Describe("RestHandler", func() {
 			expected := `{"errors":[{"id":"SomeErrorID","path":"Title"}]}`
 			actual := strings.TrimSpace(string(rec.Body.Bytes()))
 			Expect(actual).To(Equal(expected))
+		})
+	})
+
+	Context("Extracting query parameters", func() {
+		var (
+			source    *fixtureSource
+			post1JSON map[string]interface{}
+			post2JSON map[string]interface{}
+
+			api *API
+			rec *httptest.ResponseRecorder
+		)
+
+		BeforeEach(func() {
+			source = &fixtureSource{map[string]*Post{
+				"1": &Post{ID: "1", Title: "Hello, World!"},
+				"2": &Post{ID: "2", Title: "Hello, from second Post!"},
+			}}
+
+			post1JSON = map[string]interface{}{
+				"id":    "1",
+				"title": "Hello, World!",
+				"value": nil,
+			}
+
+			post2JSON = map[string]interface{}{
+				"id":    "2",
+				"title": "Hello, from second Post!",
+				"value": nil,
+			}
+
+			api = NewAPI("")
+			api.AddResource(Post{}, source)
+
+			rec = httptest.NewRecorder()
+		})
+
+		It("FindAll returns 2 posts if no limit was set", func() {
+			req, err := http.NewRequest("GET", "/posts", nil)
+			Expect(err).To(BeNil())
+			api.Handler().ServeHTTP(rec, req)
+			Expect(rec.Code).To(Equal(http.StatusOK))
+			var result map[string]interface{}
+			Expect(json.Unmarshal(rec.Body.Bytes(), &result)).To(BeNil())
+			Expect(result).To(Equal(map[string]interface{}{
+				"posts": []interface{}{post1JSON, post2JSON},
+			}))
+		})
+
+		It("FindAll returns 1 post with limit 1", func() {
+			req, err := http.NewRequest("GET", "/posts?limit=1", nil)
+			Expect(err).To(BeNil())
+			api.Handler().ServeHTTP(rec, req)
+			Expect(rec.Code).To(Equal(http.StatusOK))
+			var result map[string]interface{}
+			Expect(json.Unmarshal(rec.Body.Bytes(), &result)).To(BeNil())
+			Expect(result).To(Equal(map[string]interface{}{
+				"posts": []interface{}{post1JSON},
+			}))
+		})
+
+		It("Extracts multiple parameters correctly", func() {
+			req, err := http.NewRequest("GET", "/posts?sort=title,date", nil)
+			Expect(err).To(BeNil())
+
+			api2goReq := buildRequest(req)
+			Expect(api2goReq.QueryParams).To(Equal(map[string][]string{"sort": []string{"title", "date"}}))
 		})
 	})
 })

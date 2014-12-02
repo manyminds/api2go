@@ -36,11 +36,11 @@ First, write an implementation of `api2go.DataSource`. You have to implement 5 m
 ```go
 type fixtureSource struct {}
 
-func (s *fixtureSource) FindAll() (interface{}, error) {
+func (s *fixtureSource) FindAll(r api2go.Request) (interface{}, error) {
   // Return a slice of all posts as []Post
 }
 
-func (s *fixtureSource) FindOne(id string) (interface{}, error) {
+func (s *fixtureSource) FindOne(id string, r api2go.Request) (interface{}, error) {
   // Return a single post by ID as Post
 }
 
@@ -77,6 +77,40 @@ POST    /v1/posts
 GET     /v1/posts/<id>
 PUT     /v1/posts/<id>
 DELETE  /v1/posts/<id>
+```
+
+#### Query Params
+To support all the features mentioned in the `Fetching Resources` section of Jsonapi:
+http://jsonapi.org/format/#fetching
+
+If you want to support any parameters mentioned there, you can access them in your Resource
+via the `api2go.Request` Parameter. This currently supports `QueryParams` which holds
+all query parameters as `map[string][]string` unfiltered. So you can use it for:
+  * Filtering
+  * Inclusion of Linked Resources
+  * Sparse Fieldsets
+  * Sorting
+  * Aything else you want to do that is not in the official Jsonapi Spec
+
+```go
+type fixtureSource struct {}
+
+func (s *fixtureSource) FindAll(req api2go.Request) (interface{}, error) {
+  for key, values range r.queryParams {
+    ...
+  }
+  ...
+}
+```
+
+If there are multiple values, you have to separate them with a komma. api2go automatically
+slices the values for you.
+
+```
+Example Request
+GET /people?fields=id,name,age
+
+req["people"] contains values: ["id", "name", "age"]
 ```
 
 ### Use Custom Controllers
