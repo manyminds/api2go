@@ -27,17 +27,16 @@ type fixtureSource struct {
 
 func (s *fixtureSource) FindAll(req Request) (interface{}, error) {
 	var (
-		i          int64
 		postsSlice []Post
 	)
 
 	if limit, ok := req.QueryParams["limit"]; ok {
 		if l, err := strconv.ParseInt(limit[0], 10, 64); err == nil {
 			postsSlice = make([]Post, l)
-			for _, p := range s.posts {
-				postsSlice[i] = *p
-				i++
-				if i >= l {
+			length := len(s.posts)
+			for i := 0; i < length; i++ {
+				postsSlice[i] = *s.posts[strconv.Itoa(i+1)]
+				if i+1 >= int(l) {
 					break
 				}
 			}
@@ -47,9 +46,9 @@ func (s *fixtureSource) FindAll(req Request) (interface{}, error) {
 		}
 	} else {
 		postsSlice = make([]Post, len(s.posts))
-		for _, p := range s.posts {
-			postsSlice[i] = *p
-			i++
+		length := len(s.posts)
+		for i := 0; i < length; i++ {
+			postsSlice[i] = *s.posts[strconv.Itoa(i+1)]
 		}
 	}
 
