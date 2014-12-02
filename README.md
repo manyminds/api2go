@@ -85,7 +85,7 @@ http://jsonapi.org/format/#fetching
 
 If you want to support any parameters mentioned there, you can access them in your Resource
 via the `api2go.Request` Parameter. This currently supports `QueryParams` which holds
-all query parameters as `map[string]string` unfiltered. So you can use it for:
+all query parameters as `map[string][]string` unfiltered. So you can use it for:
   * Filtering
   * Inclusion of Linked Resources
   * Sparse Fieldsets
@@ -96,7 +96,7 @@ all query parameters as `map[string]string` unfiltered. So you can use it for:
 type fixtureSource struct {}
 
 func (s *fixtureSource) FindAll(req api2go.Request) (interface{}, error) {
-  for key, value range r.queryParams {
+  for key, values range r.queryParams {
     ...
   }
   ...
