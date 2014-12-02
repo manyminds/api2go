@@ -40,8 +40,13 @@ func (s *fixtureSource) FindAll(r api2go.Request) (interface{}, error) {
   // Return a slice of all posts as []Post
 }
 
-func (s *fixtureSource) FindOne(id string, r api2go.Request) (interface{}, error) {
+func (s *fixtureSource) FindOne(ID string, r api2go.Request) (interface{}, error) {
   // Return a single post by ID as Post
+}
+
+func (s *fixtureSource) FindMultiple(IDs string, r api2go.Request) (interface{}, error) {
+  // Return multiple posts by ID as []Post
+  // For example for Requests like GET /posts/1,2,3
 }
 
 func (s *fixtureSource) Create(obj interface{}) (string, error) {
@@ -77,6 +82,7 @@ POST    /v1/posts
 GET     /v1/posts/<id>
 PUT     /v1/posts/<id>
 DELETE  /v1/posts/<id>
+GET     /v1/posts/<id>,<id>,...
 ```
 
 #### Query Params

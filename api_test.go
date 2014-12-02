@@ -62,7 +62,7 @@ func (s *fixtureSource) FindOne(id string, req Request) (interface{}, error) {
 	return nil, NewHTTPError(nil, "post not found", http.StatusNotFound)
 }
 
-func (s *fixtureSource) FindMultiple(IDs []string) (interface{}, error) {
+func (s *fixtureSource) FindMultiple(IDs []string, req Request) (interface{}, error) {
 	var posts []Post
 
 	for _, id := range IDs {
