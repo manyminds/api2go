@@ -75,7 +75,7 @@ func Marshal(data interface{}) (interface{}, error) {
 		// We iterate using reflections to save copying the slice to a []interface{}
 		sliceValue := reflect.ValueOf(data)
 		for i := 0; i < sliceValue.Len(); i++ {
-			if err := ctx.marshalStruct(sliceValue.Index(i)); err != nil {
+			if err := ctx.marshalStruct(sliceValue.Index(i), false); err != nil {
 				return nil, err
 			}
 		}
@@ -85,7 +85,7 @@ func Marshal(data interface{}) (interface{}, error) {
 		ctx = makeContext(rootName)
 
 		// Marshal the value
-		if err := ctx.marshalStruct(reflect.ValueOf(data)); err != nil {
+		if err := ctx.marshalStruct(reflect.ValueOf(data), false); err != nil {
 			return nil, err
 		}
 	}
@@ -94,7 +94,7 @@ func Marshal(data interface{}) (interface{}, error) {
 }
 
 // marshalStruct marshals a struct and places it in the context's root
-func (ctx *marshalingContext) marshalStruct(val reflect.Value) error {
+func (ctx *marshalingContext) marshalStruct(val reflect.Value, isLinked bool) error {
 	result := map[string]interface{}{}
 	linksMap := map[string]interface{}{}
 	idFieldRegex := regexp.MustCompile("^.*ID$")
@@ -122,7 +122,7 @@ func (ctx *marshalingContext) marshalStruct(val reflect.Value) error {
 					}
 					ids = append(ids, id)
 
-					if err := ctx.marshalStruct(field.Index(i)); err != nil {
+					if err := ctx.marshalStruct(field.Index(i), true); err != nil {
 						return err
 					}
 				}
@@ -156,7 +156,7 @@ func (ctx *marshalingContext) marshalStruct(val reflect.Value) error {
 				id, err := idFromObject(field)
 				if err == nil {
 					linksMap[keyName] = id
-					if err := ctx.marshalStruct(field.Elem()); err != nil {
+					if err := ctx.marshalStruct(field.Elem(), true); err != nil {
 						return err
 					}
 				} else {
@@ -192,16 +192,15 @@ func (ctx *marshalingContext) marshalStruct(val reflect.Value) error {
 		result["links"] = linksMap
 	}
 
-	ctx.addValue(pluralize(jsonify(valType.Name())), result)
+	ctx.addValue(pluralize(jsonify(valType.Name())), result, isLinked)
 	return nil
 }
 
 // addValue adds an object to the context's root
 // `name` should be the pluralized and underscorized object type.
-func (ctx *marshalingContext) addValue(name string, val map[string]interface{}) {
-	if name == ctx.rootName {
+func (ctx *marshalingContext) addValue(name string, val map[string]interface{}, isLinked bool) {
+	if !isLinked {
 		// Root objects are placed directly into the root doc
-		// BUG(lucas): If an object links to its own type, linked objects must be placed into the linked map.
 		ctx.root[name] = append(ctx.root[name].([]interface{}), val)
 	} else {
 		// Linked objects are placed in a map under the `linked` key

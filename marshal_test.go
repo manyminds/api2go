@@ -425,4 +425,45 @@ var _ = Describe("Marshalling", func() {
 			Expect(string(json)).To(Equal(expectedJSON))
 		})
 	})
+
+	Context("When marshalling objects linking to other instances of the same type", func() {
+		type Question struct {
+			ID                  string
+			Text                string
+			InspiringQuestionID sql.NullString
+			InspiringQuestion   *Question
+		}
+
+		question1 := Question{ID: "1", Text: "Does this test work?"}
+		question2 := Question{ID: "2", Text: "Will it ever work?", InspiringQuestionID: sql.NullString{"1", true}, InspiringQuestion: &question1}
+
+		It("Correctly marshalls question1 and sets question 2 into linked", func() {
+			expected := map[string]interface{}{
+				"questions": []interface{}{
+					map[string]interface{}{
+						"id":   "2",
+						"text": "Will it ever work?",
+						"links": map[string]interface{}{
+							"inspiringQuestion": "1",
+						},
+					},
+				},
+				"linked": map[string][]interface{}{
+					"questions": []interface{}{
+						map[string]interface{}{
+							"id":   "1",
+							"text": "Does this test work?",
+							"links": map[string]interface{}{
+								"inspiringQuestion": nil,
+							},
+						},
+					},
+				},
+			}
+
+			marshalled, err := Marshal(question2)
+			Expect(err).To(BeNil())
+			Expect(marshalled).To(BeEquivalentTo(expected))
+		})
+	})
 })
