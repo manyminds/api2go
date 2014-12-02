@@ -20,6 +20,9 @@ type DataSource interface {
 	// FindOne returns an object by its ID
 	FindOne(ID string, req Request) (interface{}, error)
 
+	// FindMultiple returns all objects for the specified IDs
+	FindMultiple(IDs []string) (interface{}, error)
+
 	// Create a new object and return its ID
 	Create(interface{}) (string, error)
 
@@ -184,7 +187,19 @@ func (res *resource) handleIndex(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (res *resource) handleRead(w http.ResponseWriter, r *http.Request, ps httprouter.Params) error {
-	obj, err := res.source.FindOne(ps.ByName("id"), buildRequest(r))
+	ids := strings.Split(ps.ByName("id"), ",")
+
+	var (
+		obj interface{}
+		err error
+	)
+
+	if len(ids) == 1 {
+		obj, err = res.source.FindOne(ids[0], buildRequest(r))
+	} else {
+		obj, err = res.source.FindMultiple(ids)
+	}
+
 	if err != nil {
 		return err
 	}
