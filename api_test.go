@@ -62,6 +62,22 @@ func (s *fixtureSource) FindOne(id string, req Request) (interface{}, error) {
 	return nil, NewHTTPError(nil, "post not found", http.StatusNotFound)
 }
 
+func (s *fixtureSource) FindMultiple(IDs []string, req Request) (interface{}, error) {
+	var posts []Post
+
+	for _, id := range IDs {
+		if p, ok := s.posts[id]; ok {
+			posts = append(posts, *p)
+		}
+	}
+
+	if len(posts) > 0 {
+		return posts, nil
+	}
+
+	return nil, NewHTTPError(nil, "post not found", http.StatusNotFound)
+}
+
 func (s *fixtureSource) Create(obj interface{}) (string, error) {
 	p := obj.(Post)
 
@@ -129,6 +145,8 @@ var _ = Describe("RestHandler", func() {
 		var (
 			source    *fixtureSource
 			post1Json map[string]interface{}
+			post2Json map[string]interface{}
+			post3Json map[string]interface{}
 
 			api *API
 			rec *httptest.ResponseRecorder
@@ -137,11 +155,25 @@ var _ = Describe("RestHandler", func() {
 		BeforeEach(func() {
 			source = &fixtureSource{map[string]*Post{
 				"1": &Post{ID: "1", Title: "Hello, World!"},
+				"2": &Post{ID: "2", Title: "I am NR. 2"},
+				"3": &Post{ID: "3", Title: "I am NR. 3"},
 			}}
 
 			post1Json = map[string]interface{}{
 				"id":    "1",
 				"title": "Hello, World!",
+				"value": nil,
+			}
+
+			post2Json = map[string]interface{}{
+				"id":    "2",
+				"title": "I am NR. 2",
+				"value": nil,
+			}
+
+			post3Json = map[string]interface{}{
+				"id":    "3",
+				"title": "I am NR. 3",
 				"value": nil,
 			}
 
@@ -159,7 +191,7 @@ var _ = Describe("RestHandler", func() {
 			var result map[string]interface{}
 			Expect(json.Unmarshal(rec.Body.Bytes(), &result)).To(BeNil())
 			Expect(result).To(Equal(map[string]interface{}{
-				"posts": []interface{}{post1Json},
+				"posts": []interface{}{post1Json, post2Json, post3Json},
 			}))
 		})
 
@@ -172,6 +204,18 @@ var _ = Describe("RestHandler", func() {
 			Expect(json.Unmarshal(rec.Body.Bytes(), &result)).To(BeNil())
 			Expect(result).To(Equal(map[string]interface{}{
 				"posts": []interface{}{post1Json},
+			}))
+		})
+
+		It("GETs multiple objects", func() {
+			req, err := http.NewRequest("GET", "/posts/1,2", nil)
+			Expect(err).To(BeNil())
+			api.Handler().ServeHTTP(rec, req)
+			Expect(rec.Code).To(Equal(http.StatusOK))
+			var result map[string]interface{}
+			Expect(json.Unmarshal(rec.Body.Bytes(), &result)).To(BeNil())
+			Expect(result).To(Equal(map[string]interface{}{
+				"posts": []interface{}{post1Json, post2Json},
 			}))
 		})
 
@@ -189,13 +233,13 @@ var _ = Describe("RestHandler", func() {
 			Expect(err).To(BeNil())
 			api.Handler().ServeHTTP(rec, req)
 			Expect(rec.Code).To(Equal(http.StatusCreated))
-			Expect(rec.Header().Get("Location")).To(Equal("/posts/2"))
+			Expect(rec.Header().Get("Location")).To(Equal("/posts/4"))
 			var result map[string]interface{}
 			Expect(json.Unmarshal(rec.Body.Bytes(), &result)).To(BeNil())
 			Expect(result).To(Equal(map[string]interface{}{
 				"posts": []interface{}{
 					map[string]interface{}{
-						"id":    "2",
+						"id":    "4",
 						"title": "New Post",
 						"value": nil,
 					},
@@ -244,7 +288,7 @@ var _ = Describe("RestHandler", func() {
 			Expect(err).To(BeNil())
 			api.Handler().ServeHTTP(rec, req)
 			Expect(rec.Code).To(Equal(http.StatusNoContent))
-			Expect(len(source.posts)).To(BeZero())
+			Expect(len(source.posts)).To(Equal(2))
 		})
 
 		It("UPDATEs", func() {
