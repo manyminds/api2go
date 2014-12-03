@@ -435,7 +435,9 @@ var _ = Describe("Marshalling", func() {
 		}
 
 		question1 := Question{ID: "1", Text: "Does this test work?"}
+		question1Duplicate := Question{ID: "1", Text: "Does this test work?"}
 		question2 := Question{ID: "2", Text: "Will it ever work?", InspiringQuestionID: sql.NullString{"1", true}, InspiringQuestion: &question1}
+		question3 := Question{ID: "3", Text: "It works now", InspiringQuestionID: sql.NullString{"1", true}, InspiringQuestion: &question1Duplicate}
 
 		It("Correctly marshalls question1 and sets question 2 into linked", func() {
 			expected := map[string]interface{}{
@@ -462,6 +464,42 @@ var _ = Describe("Marshalling", func() {
 			}
 
 			marshalled, err := Marshal(question2)
+			Expect(err).To(BeNil())
+			Expect(marshalled).To(BeEquivalentTo(expected))
+		})
+
+		It("Does not marshall same dependencies multiple times", func() {
+			expected := map[string]interface{}{
+				"questions": []interface{}{
+					map[string]interface{}{
+						"id":   "3",
+						"text": "It works now",
+						"links": map[string]interface{}{
+							"inspiringQuestion": "1",
+						},
+					},
+					map[string]interface{}{
+						"id":   "2",
+						"text": "Will it ever work?",
+						"links": map[string]interface{}{
+							"inspiringQuestion": "1",
+						},
+					},
+				},
+				"linked": map[string][]interface{}{
+					"questions": []interface{}{
+						map[string]interface{}{
+							"id":   "1",
+							"text": "Does this test work?",
+							"links": map[string]interface{}{
+								"inspiringQuestion": nil,
+							},
+						},
+					},
+				},
+			}
+
+			marshalled, err := Marshal([]Question{question3, question2})
 			Expect(err).To(BeNil())
 			Expect(marshalled).To(BeEquivalentTo(expected))
 		})
