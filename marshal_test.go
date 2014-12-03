@@ -439,7 +439,7 @@ var _ = Describe("Marshalling", func() {
 		question2 := Question{ID: "2", Text: "Will it ever work?", InspiringQuestionID: sql.NullString{"1", true}, InspiringQuestion: &question1}
 		question3 := Question{ID: "3", Text: "It works now", InspiringQuestionID: sql.NullString{"1", true}, InspiringQuestion: &question1Duplicate}
 
-		It("Correctly marshalls question1 and sets question 2 into linked", func() {
+		It("Correctly marshalls question2 and sets question1 into linked", func() {
 			expected := map[string]interface{}{
 				"questions": []interface{}{
 					map[string]interface{}{
