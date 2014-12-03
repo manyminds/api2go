@@ -75,7 +75,7 @@ func Marshal(data interface{}) (interface{}, error) {
 		// We iterate using reflections to save copying the slice to a []interface{}
 		sliceValue := reflect.ValueOf(data)
 		for i := 0; i < sliceValue.Len(); i++ {
-			if err := ctx.marshalStruct(sliceValue.Index(i), false); err != nil {
+			if err := ctx.marshalRootStruct(sliceValue.Index(i)); err != nil {
 				return nil, err
 			}
 		}
@@ -85,7 +85,7 @@ func Marshal(data interface{}) (interface{}, error) {
 		ctx = makeContext(rootName)
 
 		// Marshal the value
-		if err := ctx.marshalStruct(reflect.ValueOf(data), false); err != nil {
+		if err := ctx.marshalRootStruct(reflect.ValueOf(data)); err != nil {
 			return nil, err
 		}
 	}
@@ -93,8 +93,18 @@ func Marshal(data interface{}) (interface{}, error) {
 	return ctx.root, nil
 }
 
+// marshalRootStruct is a more convenient name for marshalling structs at root level
+func (ctx *marshalingContext) marshalRootStruct(val reflect.Value) error {
+	return ctx.marshalStruct(&val, false)
+}
+
+// marshalLinkedStruct is a more convenient name for marshalling structs that were linked to a root level struct
+func (ctx *marshalingContext) marshalLinkedStruct(val reflect.Value) error {
+	return ctx.marshalStruct(&val, true)
+}
+
 // marshalStruct marshals a struct and places it in the context's root
-func (ctx *marshalingContext) marshalStruct(val reflect.Value, isLinked bool) error {
+func (ctx *marshalingContext) marshalStruct(val *reflect.Value, isLinked bool) error {
 	result := map[string]interface{}{}
 	linksMap := map[string]interface{}{}
 	idFieldRegex := regexp.MustCompile("^.*ID$")
@@ -122,7 +132,7 @@ func (ctx *marshalingContext) marshalStruct(val reflect.Value, isLinked bool) er
 					}
 					ids = append(ids, id)
 
-					if err := ctx.marshalStruct(field.Index(i), true); err != nil {
+					if err := ctx.marshalLinkedStruct(field.Index(i)); err != nil {
 						return err
 					}
 				}
@@ -156,7 +166,7 @@ func (ctx *marshalingContext) marshalStruct(val reflect.Value, isLinked bool) er
 				id, err := idFromObject(field)
 				if err == nil {
 					linksMap[keyName] = id
-					if err := ctx.marshalStruct(field.Elem(), true); err != nil {
+					if err := ctx.marshalLinkedStruct(field.Elem()); err != nil {
 						return err
 					}
 				} else {
