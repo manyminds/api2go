@@ -12,15 +12,17 @@ import (
 )
 
 type marshalingContext struct {
-	root     map[string]interface{}
-	rootName string
+	root           map[string]interface{}
+	rootName       string
+	isSingleStruct bool
 }
 
-func makeContext(rootName string) *marshalingContext {
+func makeContext(rootName string, isSingleStruct bool) *marshalingContext {
 	ctx := &marshalingContext{}
 	ctx.rootName = rootName
 	ctx.root = map[string]interface{}{}
 	ctx.root[rootName] = []interface{}{}
+	ctx.isSingleStruct = isSingleStruct
 	return ctx
 }
 
@@ -69,7 +71,7 @@ func Marshal(data interface{}) (interface{}, error) {
 		if rootName == "" {
 			return nil, errors.New("you passed a slice of interfaces []interface{}{...} to Marshal. we cannot determine key names from that. Use []YourObjectName{...} instead")
 		}
-		ctx = makeContext(rootName)
+		ctx = makeContext(rootName, false)
 
 		// Marshal all elements
 		// We iterate using reflections to save copying the slice to a []interface{}
@@ -82,7 +84,7 @@ func Marshal(data interface{}) (interface{}, error) {
 	} else {
 		// We were passed a single object
 		rootName := pluralize(jsonify(reflect.TypeOf(data).Name()))
-		ctx = makeContext(rootName)
+		ctx = makeContext(rootName, true)
 
 		// Marshal the value
 		if err := ctx.marshalRootStruct(reflect.ValueOf(data)); err != nil {
@@ -210,8 +212,12 @@ func (ctx *marshalingContext) marshalStruct(val *reflect.Value, isLinked bool) e
 // `name` should be the pluralized and underscorized object type.
 func (ctx *marshalingContext) addValue(name string, val map[string]interface{}, isLinked bool) {
 	if !isLinked {
-		// Root objects are placed directly into the root doc
-		ctx.root[name] = append(ctx.root[name].([]interface{}), val)
+		if ctx.isSingleStruct {
+			ctx.root[name] = val
+		} else {
+			// Root objects are placed directly into the root doc
+			ctx.root[name] = append(ctx.root[name].([]interface{}), val)
+		}
 	} else {
 		// Linked objects are placed in a map under the `linked` key
 		var linkedMap map[string][]interface{}
