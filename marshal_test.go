@@ -68,9 +68,7 @@ var _ = Describe("Marshalling", func() {
 			i, err := Marshal(firstPost)
 			Expect(err).To(BeNil())
 			Expect(i).To(Equal(map[string]interface{}{
-				"simplePosts": []interface{}{
-					firstPostMap,
-				},
+				"simplePosts": firstPostMap,
 			}))
 		})
 
@@ -79,9 +77,10 @@ var _ = Describe("Marshalling", func() {
 			m.ID = "This should be only internal"
 
 			expected := map[string]interface{}{
-				"magics": []interface{}{
-					map[string]interface{}{
-						"id": "This should be visible"}}}
+				"magics": map[string]interface{}{
+					"id": "This should be visible",
+				},
+			}
 
 			v, e := Marshal(m)
 			Expect(e).ToNot(HaveOccurred())
@@ -140,10 +139,8 @@ var _ = Describe("Marshalling", func() {
 				i, err := Marshal(StringID{ID: "1"})
 				Expect(err).To(BeNil())
 				Expect(i).To(Equal(map[string]interface{}{
-					"stringIDs": []interface{}{
-						map[string]interface{}{
-							"id": "1",
-						},
+					"stringIDs": map[string]interface{}{
+						"id": "1",
 					},
 				}))
 			})
@@ -153,10 +150,8 @@ var _ = Describe("Marshalling", func() {
 				i, err := Marshal(IntID{ID: 1})
 				Expect(err).To(BeNil())
 				Expect(i).To(Equal(map[string]interface{}{
-					"intIDs": []interface{}{
-						map[string]interface{}{
-							"id": "1",
-						},
+					"intIDs": map[string]interface{}{
+						"id": "1",
 					},
 				}))
 			})
@@ -166,10 +161,8 @@ var _ = Describe("Marshalling", func() {
 				i, err := Marshal(UintID{ID: 1})
 				Expect(err).To(BeNil())
 				Expect(i).To(Equal(map[string]interface{}{
-					"uintIDs": []interface{}{
-						map[string]interface{}{
-							"id": "1",
-						},
+					"uintIDs": map[string]interface{}{
+						"id": "1",
 					},
 				}))
 			})
@@ -233,14 +226,12 @@ var _ = Describe("Marshalling", func() {
 			i, err := Marshal(post)
 			Expect(err).To(BeNil())
 			Expect(i).To(Equal(map[string]interface{}{
-				"posts": []interface{}{
-					map[string]interface{}{
-						"id":    "1",
-						"title": "",
-						"links": map[string]interface{}{
-							"comments": []interface{}{"1"},
-							"author":   nil,
-						},
+				"posts": map[string]interface{}{
+					"id":    "1",
+					"title": "",
+					"links": map[string]interface{}{
+						"comments": []interface{}{"1"},
+						"author":   nil,
 					},
 				},
 			}))
@@ -253,14 +244,12 @@ var _ = Describe("Marshalling", func() {
 			i, err := Marshal(post)
 			Expect(err).To(BeNil())
 			Expect(i).To(Equal(map[string]interface{}{
-				"posts": []interface{}{
-					map[string]interface{}{
-						"id":    "1",
-						"title": "",
-						"links": map[string]interface{}{
-							"comments": []interface{}{"1"},
-							"author":   "1",
-						},
+				"posts": map[string]interface{}{
+					"id":    "1",
+					"title": "",
+					"links": map[string]interface{}{
+						"comments": []interface{}{"1"},
+						"author":   "1",
 					},
 				},
 				"linked": map[string][]interface{}{
@@ -291,12 +280,10 @@ var _ = Describe("Marshalling", func() {
 			i, err := Marshal(anotherPost)
 			Expect(err).To(BeNil())
 			Expect(i).To(Equal(map[string]interface{}{
-				"anotherPosts": []interface{}{
-					map[string]interface{}{
-						"id": "1",
-						"links": map[string]interface{}{
-							"author": "1",
-						},
+				"anotherPosts": map[string]interface{}{
+					"id": "1",
+					"links": map[string]interface{}{
+						"author": "1",
 					},
 				},
 			}))
@@ -313,12 +300,10 @@ var _ = Describe("Marshalling", func() {
 			i, err := Marshal(anotherPost)
 			Expect(err).To(BeNil())
 			Expect(i).To(Equal(map[string]interface{}{
-				"sqlTypesPosts": []interface{}{
-					map[string]interface{}{
-						"id": "1",
-						"links": map[string]interface{}{
-							"author": "1",
-						},
+				"sqlTypesPosts": map[string]interface{}{
+					"id": "1",
+					"links": map[string]interface{}{
+						"author": "1",
 					},
 				},
 			}))
@@ -335,12 +320,10 @@ var _ = Describe("Marshalling", func() {
 			i, err := Marshal(anotherPost)
 			Expect(err).To(BeNil())
 			Expect(i).To(Equal(map[string]interface{}{
-				"sqlTypesPosts": []interface{}{
-					map[string]interface{}{
-						"id": "1",
-						"links": map[string]interface{}{
-							"author": "1",
-						},
+				"sqlTypesPosts": map[string]interface{}{
+					"id": "1",
+					"links": map[string]interface{}{
+						"author": "1",
 					},
 				},
 			}))
@@ -377,12 +360,10 @@ var _ = Describe("Marshalling", func() {
 
 		It("correctly unmarshals driver values", func() {
 			postMap := map[string]interface{}{
-				"zeroPosts": []interface{}{
-					map[string]interface{}{
-						"id":    "1",
-						"title": "test",
-						"value": theFloat,
-					},
+				"zeroPosts": map[string]interface{}{
+					"id":    "1",
+					"title": "test",
+					"value": theFloat,
 				},
 			}
 
@@ -393,7 +374,7 @@ var _ = Describe("Marshalling", func() {
 		})
 
 		It("correctly unmarshals into json", func() {
-			expectedJSON := `{"zeroPosts":[{"id":"1","title":"test","value":2.3}]}`
+			expectedJSON := `{"zeroPosts":{"id":"1","title":"test","value":2.3}}`
 
 			json, err := MarshalToJSON(post)
 			Expect(err).To(BeNil())
@@ -402,12 +383,10 @@ var _ = Describe("Marshalling", func() {
 
 		It("correctly unmarshals driver values with pointer", func() {
 			postMap := map[string]interface{}{
-				"zeroPostPointers": []interface{}{
-					map[string]interface{}{
-						"id":    "1",
-						"title": "test",
-						"value": &theFloat,
-					},
+				"zeroPostPointers": map[string]interface{}{
+					"id":    "1",
+					"title": "test",
+					"value": &theFloat,
 				},
 			}
 
@@ -418,7 +397,7 @@ var _ = Describe("Marshalling", func() {
 		})
 
 		It("correctly unmarshals with pointer into json", func() {
-			expectedJSON := `{"zeroPostPointers":[{"id":"1","title":"test","value":2.3}]}`
+			expectedJSON := `{"zeroPostPointers":{"id":"1","title":"test","value":2.3}}`
 
 			json, err := MarshalToJSON(pointerPost)
 			Expect(err).To(BeNil())
@@ -441,13 +420,11 @@ var _ = Describe("Marshalling", func() {
 
 		It("Correctly marshalls question2 and sets question1 into linked", func() {
 			expected := map[string]interface{}{
-				"questions": []interface{}{
-					map[string]interface{}{
-						"id":   "2",
-						"text": "Will it ever work?",
-						"links": map[string]interface{}{
-							"inspiringQuestion": "1",
-						},
+				"questions": map[string]interface{}{
+					"id":   "2",
+					"text": "Will it ever work?",
+					"links": map[string]interface{}{
+						"inspiringQuestion": "1",
 					},
 				},
 				"linked": map[string][]interface{}{

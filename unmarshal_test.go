@@ -25,17 +25,15 @@ var _ = Describe("Unmarshal", func() {
 
 	Context("When unmarshaling simple objects", func() {
 		t, _ := time.Parse(time.RFC3339, "2014-11-10T16:30:48.823Z")
-		singleJSON := []byte(`{"simplePosts":[{"id": "1", "title":"First Post","text":"Lipsum", "Created": "2014-11-10T16:30:48.823Z"}]}`)
+		singleJSON := []byte(`{"simplePosts":{"id": "1", "title":"First Post","text":"Lipsum", "Created": "2014-11-10T16:30:48.823Z"}}`)
 		firstPost := SimplePost{ID: "1", Title: "First Post", Text: "Lipsum", Created: t}
 		secondPost := SimplePost{ID: "2", Title: "Second Post", Text: "Foobar!", Created: t}
 		singlePostMap := map[string]interface{}{
-			"simplePosts": []interface{}{
-				map[string]interface{}{
-					"id":      "1",
-					"title":   firstPost.Title,
-					"text":    firstPost.Text,
-					"created": "2014-11-10T16:30:48.823Z",
-				},
+			"simplePosts": map[string]interface{}{
+				"id":      "1",
+				"title":   firstPost.Title,
+				"text":    firstPost.Text,
+				"created": "2014-11-10T16:30:48.823Z",
 			},
 		}
 		multiplePostMap := map[string]interface{}{

@@ -203,7 +203,7 @@ var _ = Describe("RestHandler", func() {
 			var result map[string]interface{}
 			Expect(json.Unmarshal(rec.Body.Bytes(), &result)).To(BeNil())
 			Expect(result).To(Equal(map[string]interface{}{
-				"posts": []interface{}{post1Json},
+				"posts": post1Json,
 			}))
 		})
 
@@ -237,12 +237,10 @@ var _ = Describe("RestHandler", func() {
 			var result map[string]interface{}
 			Expect(json.Unmarshal(rec.Body.Bytes(), &result)).To(BeNil())
 			Expect(result).To(Equal(map[string]interface{}{
-				"posts": []interface{}{
-					map[string]interface{}{
-						"id":    "4",
-						"title": "New Post",
-						"value": nil,
-					},
+				"posts": map[string]interface{}{
+					"id":    "4",
+					"title": "New Post",
+					"value": nil,
 				},
 			}))
 		})
