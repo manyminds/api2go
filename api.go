@@ -79,6 +79,7 @@ func NewAPI(prefix string) *API {
 // Request holds additional information for FindOne and Find Requests
 type Request struct {
 	QueryParams map[string][]string
+	Header      http.Header
 }
 
 type resource struct {
@@ -169,6 +170,7 @@ func buildRequest(r *http.Request) Request {
 		params[key] = strings.Split(values[0], ",")
 	}
 	req.QueryParams = params
+	req.Header = r.Header
 	return req
 }
 
