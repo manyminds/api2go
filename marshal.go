@@ -139,8 +139,8 @@ func (ctx *marshalingContext) marshalStruct(val *reflect.Value, isLinked bool) e
 					}
 				}
 				linksMap[keyName] = ids
-			} else {
-				// Treat slices of non-struct type as lists of IDs
+			} else if strings.HasSuffix(keyName, "IDs") {
+				// Treat slices of non-struct type as lists of IDs if the suffix is IDs
 				keyName = strings.TrimSuffix(keyName, "IDs")
 				linksMapReflect := reflect.TypeOf(linksMap[keyName])
 				// Don't overwrite any existing links, since they came from nested structs
@@ -155,6 +155,9 @@ func (ctx *marshalingContext) marshalStruct(val *reflect.Value, isLinked bool) e
 					}
 					linksMap[keyName] = ids
 				}
+			} else {
+				result[keyName] = field.Interface()
+
 			}
 		} else if keyName == "id" {
 			// ID needs to be converted to string
