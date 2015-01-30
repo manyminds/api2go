@@ -488,6 +488,11 @@ var _ = Describe("Marshalling", func() {
 			Scopes []string `json:"scopes"`
 		}
 
+		type Unicorn struct {
+			UnicornId int64    `json:"unicorn_id"` //Annotations are ignored
+			Scopes    []string `json:"scopes"`
+		}
+
 		It("Marshalls the slice field correctly", func() {
 			expected := map[string]interface{}{
 				"identities": map[string]interface{}{
@@ -499,6 +504,21 @@ var _ = Describe("Marshalling", func() {
 			}
 
 			marshalled, err := Marshal(Identity{1234, []string{"user_global"}})
+			Expect(err).To(BeNil())
+			Expect(marshalled).To(BeEquivalentTo(expected))
+		})
+
+		It("Marshalls correctly without an ID field", func() {
+			expected := map[string]interface{}{
+				"unicorns": map[string]interface{}{
+					"unicornId": int64(1234), // this must not be unicornID, because that is the convention for a link to another struct...
+					"scopes": []string{
+						"user_global",
+					},
+				},
+			}
+
+			marshalled, err := Marshal(Unicorn{1234, []string{"user_global"}})
 			Expect(err).To(BeNil())
 			Expect(marshalled).To(BeEquivalentTo(expected))
 		})
