@@ -55,6 +55,20 @@ func fillSqlScanner(structField interface{}, value interface{}) (sql.Scanner, er
 	return intf2, nil
 }
 
+// setFieldValue in a json object, there is only the number type, which defaults to float64. This method convertes float64 to the value
+// of the underlying struct field, for example uint64, or int32 etc...
+// If the field type is not one of the integers, it just sets the value
+func setFieldValue(field *reflect.Value, value reflect.Value) {
+	switch field.Type().Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		field.SetInt(int64(value.Float()))
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		field.SetUint(uint64(value.Float()))
+	default:
+		field.Set(value)
+	}
+}
+
 func unmarshalInto(ctx unmarshalContext, structType reflect.Type, sliceVal *reflect.Value) error {
 	// Read models slice
 	rootName := pluralize(jsonify(structType.Name()))
@@ -162,10 +176,10 @@ func unmarshalInto(ctx unmarshalContext, structType reflect.Type, sliceVal *refl
 
 								field.Set(reflect.ValueOf(scanner).Elem())
 							default:
-								field.Set(plainValue)
+								setFieldValue(&field, plainValue)
 							}
 						} else {
-							field.Set(plainValue)
+							setFieldValue(&field, plainValue)
 						}
 					}
 				}
