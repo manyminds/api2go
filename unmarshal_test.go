@@ -2,8 +2,9 @@ package api2go
 
 import (
 	"database/sql"
-	"gopkg.in/guregu/null.v2/zero"
 	"time"
+
+	"gopkg.in/guregu/null.v2/zero"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -649,6 +650,78 @@ var _ = Describe("Unmarshal", func() {
 			Expect(err).To(BeNil())
 			Expect(len(zeroPosts)).To(Equal(1))
 			Expect(zeroPosts[0].Value).To(Equal(zero.NewFloat(2.3, true)))
+		})
+	})
+
+	Context("when unmarshalling objects with numbers", func() {
+		type NumberPost struct {
+			ID             string
+			Title          string
+			Number         int64
+			UnsignedNumber uint64
+		}
+
+		It("correctly converts number to int64", func() {
+			json := `
+				{
+					"numberPosts": [
+						{
+							"id": "test",
+							"title": "Blubb",
+							"number": 1337
+						}
+					]
+				}
+			`
+
+			var numberPosts []NumberPost
+
+			err := UnmarshalFromJSON([]byte(json), &numberPosts)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(len(numberPosts)).To(Equal(1))
+			Expect(numberPosts[0].Number).To(Equal(int64(1337)))
+		})
+
+		It("correctly converts negative number to int64", func() {
+			json := `
+				{
+					"numberPosts": [
+						{
+							"id": "test",
+							"title": "Blubb",
+							"number": -1337
+						}
+					]
+				}
+			`
+
+			var numberPosts []NumberPost
+
+			err := UnmarshalFromJSON([]byte(json), &numberPosts)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(len(numberPosts)).To(Equal(1))
+			Expect(numberPosts[0].Number).To(Equal(int64(-1337)))
+		})
+
+		It("correctly converts number to uint64", func() {
+			json := `
+				{
+					"numberPosts": [
+						{
+							"id": "test",
+							"title": "Blubb",
+							"unsignedNumber": 1337
+						}
+					]
+				}
+			`
+
+			var numberPosts []NumberPost
+
+			err := UnmarshalFromJSON([]byte(json), &numberPosts)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(len(numberPosts)).To(Equal(1))
+			Expect(numberPosts[0].UnsignedNumber).To(Equal(uint64(1337)))
 		})
 	})
 })
