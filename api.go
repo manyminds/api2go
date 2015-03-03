@@ -304,7 +304,7 @@ func respondWith(obj interface{}, status int, w http.ResponseWriter) error {
 	if err != nil {
 		return err
 	}
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Type", "application/vnd.api+json")
 	w.WriteHeader(status)
 	w.Write(data)
 	return nil
@@ -327,11 +327,7 @@ func unmarshalJSONRequest(r *http.Request) (map[string]interface{}, error) {
 func handleError(err error, w http.ResponseWriter) {
 	log.Println(err)
 	if e, ok := err.(HTTPError); ok {
-		if len(e.Errors) > 0 {
-			http.Error(w, marshalError(e), e.status)
-		} else {
-			http.Error(w, e.msg, e.status)
-		}
+		http.Error(w, marshalError(e), e.status)
 		return
 	}
 

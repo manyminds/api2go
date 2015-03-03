@@ -118,6 +118,7 @@ type CustomController struct{}
 
 var controllerErrorText = "exciting error"
 var controllerError = NewHTTPError(nil, controllerErrorText, http.StatusInternalServerError)
+var controllerErrorJSON = []byte(`{"errors":[{"status":"500","title":"exciting error"}]}`)
 
 func (ctrl *CustomController) FindAll(r *http.Request, objs *interface{}) error {
 	return controllerError
@@ -161,18 +162,21 @@ var _ = Describe("RestHandler", func() {
 
 			post1Json = map[string]interface{}{
 				"id":    "1",
+				"type":  "posts",
 				"title": "Hello, World!",
 				"value": nil,
 			}
 
 			post2Json = map[string]interface{}{
 				"id":    "2",
+				"type":  "posts",
 				"title": "I am NR. 2",
 				"value": nil,
 			}
 
 			post3Json = map[string]interface{}{
 				"id":    "3",
+				"type":  "posts",
 				"title": "I am NR. 3",
 				"value": nil,
 			}
@@ -191,7 +195,7 @@ var _ = Describe("RestHandler", func() {
 			var result map[string]interface{}
 			Expect(json.Unmarshal(rec.Body.Bytes(), &result)).To(BeNil())
 			Expect(result).To(Equal(map[string]interface{}{
-				"posts": []interface{}{post1Json, post2Json, post3Json},
+				"data": []interface{}{post1Json, post2Json, post3Json},
 			}))
 		})
 
@@ -203,7 +207,7 @@ var _ = Describe("RestHandler", func() {
 			var result map[string]interface{}
 			Expect(json.Unmarshal(rec.Body.Bytes(), &result)).To(BeNil())
 			Expect(result).To(Equal(map[string]interface{}{
-				"posts": post1Json,
+				"data": post1Json,
 			}))
 		})
 
@@ -215,7 +219,7 @@ var _ = Describe("RestHandler", func() {
 			var result map[string]interface{}
 			Expect(json.Unmarshal(rec.Body.Bytes(), &result)).To(BeNil())
 			Expect(result).To(Equal(map[string]interface{}{
-				"posts": []interface{}{post1Json, post2Json},
+				"data": []interface{}{post1Json, post2Json},
 			}))
 		})
 
@@ -224,7 +228,8 @@ var _ = Describe("RestHandler", func() {
 			Expect(err).To(BeNil())
 			api.Handler().ServeHTTP(rec, req)
 			Expect(rec.Code).To(Equal(http.StatusNotFound))
-			Expect(rec.Body.String()).To(Equal("post not found\n"))
+			errorJSON := []byte(`{"errors":[{"status":"404","title":"post not found"}]}`)
+			Expect(rec.Body.Bytes()).To(MatchJSON(errorJSON))
 		})
 
 		It("POSTSs new objects", func() {
@@ -237,8 +242,9 @@ var _ = Describe("RestHandler", func() {
 			var result map[string]interface{}
 			Expect(json.Unmarshal(rec.Body.Bytes(), &result)).To(BeNil())
 			Expect(result).To(Equal(map[string]interface{}{
-				"posts": map[string]interface{}{
+				"data": map[string]interface{}{
 					"id":    "4",
+					"type":  "posts",
 					"title": "New Post",
 					"value": nil,
 				},
@@ -335,7 +341,7 @@ var _ = Describe("RestHandler", func() {
 				Expect(err).To(BeNil())
 				api.Handler().ServeHTTP(rec, req)
 				Expect(rec.Code).To(Equal(http.StatusInternalServerError))
-				Expect(strings.TrimSpace(rec.Body.String())).To(Equal(controllerErrorText))
+				Expect(rec.Body.Bytes()).To(MatchJSON(controllerErrorJSON))
 			})
 
 			It("FindOne", func() {
@@ -343,7 +349,7 @@ var _ = Describe("RestHandler", func() {
 				Expect(err).To(BeNil())
 				api.Handler().ServeHTTP(rec, req)
 				Expect(rec.Code).To(Equal(http.StatusInternalServerError))
-				Expect(strings.TrimSpace(rec.Body.String())).To(Equal(controllerErrorText))
+				Expect(rec.Body.Bytes()).To(MatchJSON(controllerErrorJSON))
 			})
 
 			It("Create", func() {
@@ -352,7 +358,7 @@ var _ = Describe("RestHandler", func() {
 				Expect(err).To(BeNil())
 				api.Handler().ServeHTTP(rec, req)
 				Expect(rec.Code).To(Equal(http.StatusInternalServerError))
-				Expect(strings.TrimSpace(rec.Body.String())).To(Equal(controllerErrorText))
+				Expect(rec.Body.Bytes()).To(MatchJSON(controllerErrorJSON))
 			})
 
 			It("Delete", func() {
@@ -361,7 +367,7 @@ var _ = Describe("RestHandler", func() {
 				Expect(err).To(BeNil())
 				api.Handler().ServeHTTP(rec, req)
 				Expect(rec.Code).To(Equal(http.StatusInternalServerError))
-				Expect(strings.TrimSpace(rec.Body.String())).To(Equal(controllerErrorText))
+				Expect(rec.Body.Bytes()).To(MatchJSON(controllerErrorJSON))
 			})
 
 			It("Update", func() {
@@ -370,7 +376,7 @@ var _ = Describe("RestHandler", func() {
 				Expect(err).To(BeNil())
 				api.Handler().ServeHTTP(rec, req)
 				Expect(rec.Code).To(Equal(http.StatusInternalServerError))
-				Expect(strings.TrimSpace(rec.Body.String())).To(Equal(controllerErrorText))
+				Expect(rec.Body.Bytes()).To(MatchJSON(controllerErrorJSON))
 			})
 		})
 	})
@@ -445,12 +451,14 @@ var _ = Describe("RestHandler", func() {
 
 			post1JSON = map[string]interface{}{
 				"id":    "1",
+				"type":  "posts",
 				"title": "Hello, World!",
 				"value": nil,
 			}
 
 			post2JSON = map[string]interface{}{
 				"id":    "2",
+				"type":  "posts",
 				"title": "Hello, from second Post!",
 				"value": nil,
 			}
@@ -469,7 +477,7 @@ var _ = Describe("RestHandler", func() {
 			var result map[string]interface{}
 			Expect(json.Unmarshal(rec.Body.Bytes(), &result)).To(BeNil())
 			Expect(result).To(Equal(map[string]interface{}{
-				"posts": []interface{}{post1JSON, post2JSON},
+				"data": []interface{}{post1JSON, post2JSON},
 			}))
 		})
 
@@ -481,7 +489,7 @@ var _ = Describe("RestHandler", func() {
 			var result map[string]interface{}
 			Expect(json.Unmarshal(rec.Body.Bytes(), &result)).To(BeNil())
 			Expect(result).To(Equal(map[string]interface{}{
-				"posts": []interface{}{post1JSON},
+				"data": []interface{}{post1JSON},
 			}))
 		})
 

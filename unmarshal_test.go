@@ -26,27 +26,30 @@ var _ = Describe("Unmarshal", func() {
 
 	Context("When unmarshaling simple objects", func() {
 		t, _ := time.Parse(time.RFC3339, "2014-11-10T16:30:48.823Z")
-		singleJSON := []byte(`{"simplePosts":{"id": "1", "title":"First Post","text":"Lipsum", "Created": "2014-11-10T16:30:48.823Z"}}`)
+		singleJSON := []byte(`{"data":{"id": "1", "type": "simplePosts", "title":"First Post","text":"Lipsum", "Created": "2014-11-10T16:30:48.823Z"}}`)
 		firstPost := SimplePost{ID: "1", Title: "First Post", Text: "Lipsum", Created: t}
 		secondPost := SimplePost{ID: "2", Title: "Second Post", Text: "Foobar!", Created: t}
 		singlePostMap := map[string]interface{}{
-			"simplePosts": map[string]interface{}{
+			"data": map[string]interface{}{
 				"id":      "1",
+				"type":    "simplePosts",
 				"title":   firstPost.Title,
 				"text":    firstPost.Text,
 				"created": "2014-11-10T16:30:48.823Z",
 			},
 		}
 		multiplePostMap := map[string]interface{}{
-			"simplePosts": []interface{}{
+			"data": []interface{}{
 				map[string]interface{}{
 					"id":      "1",
+					"type":    "simplePosts",
 					"title":   firstPost.Title,
 					"text":    firstPost.Text,
 					"created": "2014-11-10T16:30:48.823Z",
 				},
 				map[string]interface{}{
 					"id":      "2",
+					"type":    "simplePosts",
 					"title":   secondPost.Title,
 					"text":    secondPost.Text,
 					"created": "2014-11-10T16:30:48.823Z",
@@ -125,9 +128,10 @@ var _ = Describe("Unmarshal", func() {
 		It("errors with invalid time format", func() {
 			t, err := time.Parse(time.RFC3339, "2014-11-10T16:30:48.823Z")
 			faultyPostMap := map[string]interface{}{
-				"simplePosts": []interface{}{
+				"data": []interface{}{
 					map[string]interface{}{
 						"id":      "1",
+						"type":    "simplePosts",
 						"title":   firstPost.Title,
 						"text":    firstPost.Text,
 						"created": t.Format(time.RFC1123Z),
@@ -152,9 +156,10 @@ var _ = Describe("Unmarshal", func() {
 		It("unmarshals into integer links", func() {
 			post := Post{ID: 1, CommentsIDs: []int{1}}
 			postMap := map[string]interface{}{
-				"posts": []interface{}{
+				"data": []interface{}{
 					map[string]interface{}{
 						"id":    "1",
+						"type":  "posts",
 						"title": post.Title,
 						"links": map[string]interface{}{
 							"comments": []interface{}{"1"},
@@ -171,12 +176,16 @@ var _ = Describe("Unmarshal", func() {
 		It("unmarshals into string links", func() {
 			post := Post{ID: 1, LikesIDs: []string{"1"}}
 			postMap := map[string]interface{}{
-				"posts": []interface{}{
+				"data": []interface{}{
 					map[string]interface{}{
 						"id":    "1",
+						"type":  "posts",
 						"title": post.Title,
 						"links": map[string]interface{}{
-							"likes": []interface{}{"1"},
+							"likes": map[string]interface{}{
+								"ids":  []interface{}{"1"},
+								"type": "likes",
+							},
 						},
 					},
 				},
@@ -190,9 +199,10 @@ var _ = Describe("Unmarshal", func() {
 		It("unmarshals aliased links", func() {
 			post := Post{ID: 1, LikesIDs: []string{"1"}}
 			postMap := map[string]interface{}{
-				"posts": []interface{}{
+				"data": []interface{}{
 					map[string]interface{}{
 						"id":    "1",
+						"type":  "posts",
 						"title": post.Title,
 						"links": map[string]interface{}{
 							"likes": map[string]interface{}{
@@ -212,9 +222,10 @@ var _ = Describe("Unmarshal", func() {
 		It("unmarshals aliased links and normal links", func() {
 			post := Post{ID: 1, LikesIDs: []string{"1"}, CommentsIDs: []int{2, 3}}
 			postMap := map[string]interface{}{
-				"posts": []interface{}{
+				"data": []interface{}{
 					map[string]interface{}{
 						"id":    "1",
+						"type":  "posts",
 						"title": post.Title,
 						"links": map[string]interface{}{
 							"likes": map[string]interface{}{
@@ -222,6 +233,10 @@ var _ = Describe("Unmarshal", func() {
 								"type": "votes",
 							},
 							"comments": []interface{}{"2", "3"},
+							// "comments": map[string]interface{}{
+							// 	"ids": []interface{}{"2", "3"},
+							// 	"type": "comments",
+							// },
 						},
 					},
 				},
@@ -250,12 +265,16 @@ var _ = Describe("Unmarshal", func() {
 		It("unmarshals author id", func() {
 			post := BlogPost{ID: 1, Text: "Test", AuthorID: 1, Author: nil}
 			postMap := map[string]interface{}{
-				"blogPosts": []interface{}{
+				"data": []interface{}{
 					map[string]interface{}{
 						"id":   "1",
+						"type": "blogPosts",
 						"text": "Test",
 						"links": map[string]interface{}{
-							"author": "1",
+							"author": map[string]interface{}{
+								"id":   "1",
+								"type": "blogAuthors",
+							},
 						},
 					},
 				},
@@ -269,9 +288,10 @@ var _ = Describe("Unmarshal", func() {
 		It("unmarshals aliased id", func() {
 			post := BlogPost{ID: 1, Text: "Test", AuthorID: 1, Author: nil}
 			postMap := map[string]interface{}{
-				"blogPosts": []interface{}{
+				"data": []interface{}{
 					map[string]interface{}{
 						"id":   "1",
+						"type": "bogPosts",
 						"text": "Test",
 						"links": map[string]interface{}{
 							"author": map[string]interface{}{
@@ -291,9 +311,10 @@ var _ = Describe("Unmarshal", func() {
 		It("unmarshals aliased id and normal id", func() {
 			post := BlogPost{ID: 3, Text: "Test", AuthorID: 1, Author: nil, ParentID: sql.NullInt64{Int64: 2, Valid: true}}
 			postMap := map[string]interface{}{
-				"blogPosts": []interface{}{
+				"data": []interface{}{
 					map[string]interface{}{
 						"id":   "3",
+						"type": "blogPosts",
 						"text": "Test",
 						"links": map[string]interface{}{
 							"author": map[string]interface{}{
@@ -314,9 +335,10 @@ var _ = Describe("Unmarshal", func() {
 		It("unmarshal no linked content", func() {
 			post := BlogPost{ID: 1, Text: "Test", AuthorID: 0, Author: nil}
 			postMap := map[string]interface{}{
-				"blogPosts": []interface{}{
+				"data": []interface{}{
 					map[string]interface{}{
 						"id":    "1",
+						"type":  "blogPosts",
 						"text":  "Test",
 						"links": map[string]interface{}{},
 					},
@@ -333,9 +355,10 @@ var _ = Describe("Unmarshal", func() {
 		It("updates existing entries", func() {
 			post := Post{ID: 1, Title: "Old Title"}
 			postMap := map[string]interface{}{
-				"posts": []interface{}{
+				"data": []interface{}{
 					map[string]interface{}{
 						"id":    "1",
+						"type":  "posts",
 						"title": "New Title",
 					},
 				},
@@ -351,9 +374,10 @@ var _ = Describe("Unmarshal", func() {
 		It("adding a new entry", func() {
 			post := SimplePost{ID: "1", Title: "Nice Title"}
 			postMap := map[string]interface{}{
-				"simplePosts": []interface{}{
+				"data": []interface{}{
 					map[string]interface{}{
 						"id":    "1",
+						"type":  "simplePosts",
 						"title": "Nice Title",
 						"text":  nil,
 					},
@@ -370,9 +394,10 @@ var _ = Describe("Unmarshal", func() {
 		It("adding a new entry", func() {
 			post := SimplePost{Title: "Nice Title"}
 			postMap := map[string]interface{}{
-				"simplePosts": []interface{}{
+				"data": []interface{}{
 					map[string]interface{}{
 						"title": "Nice Title",
+						"type":  "simplePosts",
 					},
 				},
 			}
