@@ -71,7 +71,7 @@ func Marshal(data interface{}) (interface{}, error) {
 		if rootName == "" {
 			return nil, errors.New("you passed a slice of interfaces []interface{}{...} to Marshal. we cannot determine key names from that. Use []YourObjectName{...} instead")
 		}
-		ctx = makeContext(rootName, false)
+		ctx = makeContext("data", false)
 
 		// Marshal all elements
 		// We iterate using reflections to save copying the slice to a []interface{}
@@ -83,8 +83,7 @@ func Marshal(data interface{}) (interface{}, error) {
 		}
 	} else {
 		// We were passed a single object
-		rootName := pluralize(jsonify(reflect.TypeOf(data).Name()))
-		ctx = makeContext(rootName, true)
+		ctx = makeContext("data", true)
 
 		// Marshal the value
 		if err := ctx.marshalRootStruct(reflect.ValueOf(data)); err != nil {
@@ -138,13 +137,18 @@ func (ctx *marshalingContext) marshalStruct(val *reflect.Value, isLinked bool) e
 						return err
 					}
 				}
-				linksMap[keyName] = ids
+
+				linksMap[keyName] = map[string]interface{}{
+					"ids":  ids,
+					"type": pluralize(jsonify(field.Type().Elem().Name())),
+				}
 			} else if strings.HasSuffix(keyName, "IDs") {
 				// Treat slices of non-struct type as lists of IDs if the suffix is IDs
 				keyName = strings.TrimSuffix(keyName, "IDs")
-				linksMapReflect := reflect.TypeOf(linksMap[keyName])
+				linksMapReflect := reflect.TypeOf(linksMap[keyName].(map[string]interface{})["ids"])
+
 				// Don't overwrite any existing links, since they came from nested structs
-				if linksMap[keyName] == nil || linksMapReflect.Kind() == reflect.Slice && len(linksMap[keyName].([]interface{})) == 0 {
+				if linksMap[keyName] == nil || linksMapReflect.Kind() == reflect.Slice && len(linksMap[keyName].(map[string]interface{})["ids"].([]interface{})) == 0 {
 					ids := []interface{}{}
 					for i := 0; i < field.Len(); i++ {
 						id, err := idFromValue(field.Index(i))
@@ -153,7 +157,18 @@ func (ctx *marshalingContext) marshalStruct(val *reflect.Value, isLinked bool) e
 						}
 						ids = append(ids, id)
 					}
-					linksMap[keyName] = ids
+
+					structFieldName := dejsonify(keyName)
+					typeField := val.FieldByName(structFieldName)
+
+					if typeField.IsValid() {
+						linksMap[keyName] = map[string]interface{}{
+							"ids":  ids,
+							"type": pluralize(jsonify(typeField.Type().Elem().Name())),
+						}
+					} else {
+						return fmt.Errorf("expected struct to have field %s", structFieldName)
+					}
 				}
 			} else {
 				result[keyName] = field.Interface()
@@ -170,7 +185,11 @@ func (ctx *marshalingContext) marshalStruct(val *reflect.Value, isLinked bool) e
 			if !field.IsNil() {
 				id, err := idFromObject(field)
 				if err == nil {
-					linksMap[keyName] = id
+					linksMap[keyName] = map[string]interface{}{
+						"id":   id,
+						"type": pluralize(jsonify(field.Type().Elem().Name())),
+					}
+
 					if err := ctx.marshalLinkedStruct(field.Elem()); err != nil {
 						return err
 					}
@@ -193,7 +212,10 @@ func (ctx *marshalingContext) marshalStruct(val *reflect.Value, isLinked bool) e
 					return err
 				}
 				if id != "" {
-					linksMap[keyNameWithoutID] = id
+					linksMap[keyNameWithoutID] = map[string]interface{}{
+						"id":   id,
+						"type": pluralize(jsonify(structFieldValue.Type().Elem().Name())),
+					}
 				} else {
 					linksMap[keyNameWithoutID] = nil
 				}
@@ -203,47 +225,49 @@ func (ctx *marshalingContext) marshalStruct(val *reflect.Value, isLinked bool) e
 		}
 	}
 
+	// add object type
+	result["type"] = pluralize(jsonify(valType.Name()))
+
 	if len(linksMap) > 0 {
 		result["links"] = linksMap
 	}
 
-	ctx.addValue(pluralize(jsonify(valType.Name())), result, isLinked)
+	ctx.addValue(result, isLinked)
 	return nil
 }
 
 // addValue adds an object to the context's root
 // `name` should be the pluralized and underscorized object type.
-func (ctx *marshalingContext) addValue(name string, val map[string]interface{}, isLinked bool) {
+func (ctx *marshalingContext) addValue(val map[string]interface{}, isLinked bool) {
 	if !isLinked {
 		if ctx.isSingleStruct {
-			ctx.root[name] = val
+			ctx.root["data"] = val
 		} else {
 			// Root objects are placed directly into the root doc
-			ctx.root[name] = append(ctx.root[name].([]interface{}), val)
+			ctx.root["data"] = append(ctx.root["data"].([]interface{}), val)
 		}
 	} else {
-		// Linked objects are placed in a map under the `linked` key
-		var linkedMap map[string][]interface{}
+		// Linked objects are placed in a slice under the `linked` key
+		var linkedSlice []interface{}
+
 		if ctx.root["linked"] == nil {
-			linkedMap = map[string][]interface{}{}
-			ctx.root["linked"] = linkedMap
+			linkedSlice = []interface{}{}
+			ctx.root["linked"] = linkedSlice
 		} else {
-			linkedMap = ctx.root["linked"].(map[string][]interface{})
+			linkedSlice = ctx.root["linked"].([]interface{})
 		}
-		if s := linkedMap[name]; s != nil {
-			// check if already in linked list
-			alreadyLinked := false
-			for _, linked := range s {
-				m := reflect.ValueOf(linked).Interface().(map[string]interface{})
-				if val["id"] == m["id"] {
-					alreadyLinked = true
-				}
+
+		// add to linked slice if not already present
+		alreadyLinked := false
+		for _, linked := range linkedSlice {
+			m := reflect.ValueOf(linked).Interface().(map[string]interface{})
+			if val["id"] == m["id"] && val["type"] == m["type"] {
+				alreadyLinked = true
 			}
-			if !alreadyLinked {
-				linkedMap[name] = append(s, val)
-			}
-		} else {
-			linkedMap[name] = []interface{}{val}
+		}
+
+		if alreadyLinked == false {
+			ctx.root["linked"] = append(linkedSlice, val)
 		}
 	}
 }

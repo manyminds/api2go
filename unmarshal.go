@@ -71,11 +71,16 @@ func setFieldValue(field *reflect.Value, value reflect.Value) {
 
 func unmarshalInto(ctx unmarshalContext, structType reflect.Type, sliceVal *reflect.Value) error {
 	// Read models slice
-	rootName := pluralize(jsonify(structType.Name()))
 	var modelsInterface interface{}
+	rootName := pluralize(jsonify(structType.Name()))
+
 	if modelsInterface = ctx[rootName]; modelsInterface == nil {
-		return errors.New("expected root document to include a '" + rootName + "' key but it didn't.")
+		rootName = "data"
+		if modelsInterface = ctx[rootName]; modelsInterface == nil {
+			return errors.New("expected root document to include a '" + rootName + "' key but it didn't.")
+		}
 	}
+
 	models, ok := modelsInterface.([]interface{})
 	if !ok {
 		models = []interface{}{modelsInterface}
@@ -138,6 +143,9 @@ func unmarshalInto(ctx unmarshalContext, structType reflect.Type, sliceVal *refl
 				if err := setObjectID(val, id); err != nil {
 					return err
 				}
+
+			case "type":
+				// do not unmarshal the `type` field
 
 			default:
 				fieldName := dejsonify(k)

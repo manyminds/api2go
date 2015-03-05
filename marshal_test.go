@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+
 	"gopkg.in/guregu/null.v2/zero"
 
 	. "github.com/onsi/ginkgo"
@@ -30,7 +31,7 @@ var _ = Describe("Marshalling", func() {
 		Text string
 	}
 
-	type Author struct {
+	type User struct {
 		ID       int
 		Name     string
 		Password string `json:"-"`
@@ -41,7 +42,7 @@ var _ = Describe("Marshalling", func() {
 		Title       string
 		Comments    []Comment
 		CommentsIDs []int
-		Author      *Author
+		Author      *User
 		AuthorID    sql.NullInt64
 	}
 
@@ -54,11 +55,13 @@ var _ = Describe("Marshalling", func() {
 		BeforeEach(func() {
 			firstPost = SimplePost{Title: "First Post", Text: "Lipsum"}
 			firstPostMap = map[string]interface{}{
+				"type":  "simplePosts",
 				"title": firstPost.Title,
 				"text":  firstPost.Text,
 			}
 			secondPost = SimplePost{Title: "Second Post", Text: "Getting more advanced!"}
 			secondPostMap = map[string]interface{}{
+				"type":  "simplePosts",
 				"title": secondPost.Title,
 				"text":  secondPost.Text,
 			}
@@ -68,7 +71,7 @@ var _ = Describe("Marshalling", func() {
 			i, err := Marshal(firstPost)
 			Expect(err).To(BeNil())
 			Expect(i).To(Equal(map[string]interface{}{
-				"simplePosts": firstPostMap,
+				"data": firstPostMap,
 			}))
 		})
 
@@ -77,8 +80,9 @@ var _ = Describe("Marshalling", func() {
 			m.ID = "This should be only internal"
 
 			expected := map[string]interface{}{
-				"magics": map[string]interface{}{
-					"id": "This should be visible",
+				"data": map[string]interface{}{
+					"type": "magics",
+					"id":   "This should be visible",
 				},
 			}
 
@@ -96,7 +100,7 @@ var _ = Describe("Marshalling", func() {
 			i, err := Marshal([]SimplePost{firstPost, secondPost})
 			Expect(err).To(BeNil())
 			Expect(i).To(Equal(map[string]interface{}{
-				"simplePosts": []interface{}{
+				"data": []interface{}{
 					firstPostMap,
 					secondPostMap,
 				},
@@ -107,7 +111,7 @@ var _ = Describe("Marshalling", func() {
 			i, err := Marshal([]SimplePost{})
 			Expect(err).To(BeNil())
 			Expect(i).To(Equal(map[string]interface{}{
-				"simplePosts": []interface{}{},
+				"data": []interface{}{},
 			}))
 		})
 
@@ -127,7 +131,7 @@ var _ = Describe("Marshalling", func() {
 			var m map[string]interface{}
 			Expect(json.Unmarshal(j, &m)).To(BeNil())
 			Expect(m).To(Equal(map[string]interface{}{
-				"simplePosts": []interface{}{
+				"data": []interface{}{
 					firstPostMap,
 				},
 			}))
@@ -139,8 +143,9 @@ var _ = Describe("Marshalling", func() {
 				i, err := Marshal(StringID{ID: "1"})
 				Expect(err).To(BeNil())
 				Expect(i).To(Equal(map[string]interface{}{
-					"stringIDs": map[string]interface{}{
-						"id": "1",
+					"data": map[string]interface{}{
+						"type": "stringIDs",
+						"id":   "1",
 					},
 				}))
 			})
@@ -150,8 +155,9 @@ var _ = Describe("Marshalling", func() {
 				i, err := Marshal(IntID{ID: 1})
 				Expect(err).To(BeNil())
 				Expect(i).To(Equal(map[string]interface{}{
-					"intIDs": map[string]interface{}{
-						"id": "1",
+					"data": map[string]interface{}{
+						"type": "intIDs",
+						"id":   "1",
 					},
 				}))
 			})
@@ -161,8 +167,9 @@ var _ = Describe("Marshalling", func() {
 				i, err := Marshal(UintID{ID: 1})
 				Expect(err).To(BeNil())
 				Expect(i).To(Equal(map[string]interface{}{
-					"uintIDs": map[string]interface{}{
-						"id": "1",
+					"data": map[string]interface{}{
+						"type": "uintIDs",
+						"id":   "1",
 					},
 				}))
 			})
@@ -173,7 +180,7 @@ var _ = Describe("Marshalling", func() {
 		It("marshals nested objects", func() {
 			comment1 := Comment{ID: 1, Text: "First!"}
 			comment2 := Comment{ID: 2, Text: "Second!"}
-			author := Author{ID: 1, Name: "Test Author"}
+			author := User{ID: 1, Name: "Test Author"}
 			post1 := Post{ID: 1, Title: "Foobar", Comments: []Comment{comment1, comment2}, Author: &author}
 			post2 := Post{ID: 2, Title: "Foobarbarbar", Comments: []Comment{comment1, comment2}, Author: &author}
 
@@ -181,44 +188,68 @@ var _ = Describe("Marshalling", func() {
 
 			i, err := Marshal(posts)
 			Expect(err).To(BeNil())
-			Expect(i).To(Equal(map[string]interface{}{
-				"posts": []interface{}{
+
+			expected := map[string]interface{}{
+				"data": []interface{}{
 					map[string]interface{}{
-						"id":    "1",
+						"id": "1",
+						"links": map[string]interface{}{
+							"comments": map[string]interface{}{
+								// "self":     "/posts/1/links/comments",
+								// "resource": "/posts/1/comments",
+								"ids":  []interface{}{"1", "2"},
+								"type": "comments",
+							},
+							"author": map[string]interface{}{
+								// "self":     "/posts/1/links/author",
+								// "resource": "/posts/1/author",
+								"id":   "1",
+								"type": "users",
+							},
+						},
 						"title": "Foobar",
-						"links": map[string]interface{}{
-							"comments": []interface{}{"1", "2"},
-							"author":   "1",
-						},
+						"type":  "posts",
 					},
 					map[string]interface{}{
-						"id":    "2",
-						"title": "Foobarbarbar",
+						"id": "2",
 						"links": map[string]interface{}{
-							"comments": []interface{}{"1", "2"},
-							"author":   "1",
+							"comments": map[string]interface{}{
+								// "self":     "/posts/1/links/comments",
+								// "resource": "/posts/1/comments",
+								"ids":  []interface{}{"1", "2"},
+								"type": "comments",
+							},
+							"author": map[string]interface{}{
+								// "self":     "/posts/1/links/author",
+								// "resource": "/posts/1/author",
+								"id":   "1",
+								"type": "users",
+							},
 						},
+						"title": "Foobarbarbar",
+						"type":  "posts",
 					},
 				},
-				"linked": map[string][]interface{}{
-					"comments": []interface{}{
-						map[string]interface{}{
-							"id":   "1",
-							"text": "First!",
-						},
-						map[string]interface{}{
-							"id":   "2",
-							"text": "Second!",
-						},
+				"linked": []interface{}{
+					map[string]interface{}{
+						"id":   "1",
+						"text": "First!",
+						"type": "comments",
 					},
-					"authors": []interface{}{
-						map[string]interface{}{
-							"id":   "1",
-							"name": "Test Author",
-						},
+					map[string]interface{}{
+						"id":   "2",
+						"text": "Second!",
+						"type": "comments",
+					},
+					map[string]interface{}{
+						"id":   "1",
+						"name": "Test Author",
+						"type": "users",
 					},
 				},
-			}))
+			}
+
+			Expect(i).To(Equal(expected))
 		})
 
 		It("adds IDs", func() {
@@ -226,12 +257,16 @@ var _ = Describe("Marshalling", func() {
 			i, err := Marshal(post)
 			Expect(err).To(BeNil())
 			Expect(i).To(Equal(map[string]interface{}{
-				"posts": map[string]interface{}{
+				"data": map[string]interface{}{
 					"id":    "1",
+					"type":  "posts",
 					"title": "",
 					"links": map[string]interface{}{
-						"comments": []interface{}{"1"},
-						"author":   nil,
+						"comments": map[string]interface{}{
+							"ids":  []interface{}{"1"},
+							"type": "comments",
+						},
+						"author": nil,
 					},
 				},
 			}))
@@ -239,31 +274,36 @@ var _ = Describe("Marshalling", func() {
 
 		It("prefers nested structs when given both, structs and IDs", func() {
 			comment := Comment{ID: 1}
-			author := Author{ID: 1, Name: "Tester"}
+			author := User{ID: 1, Name: "Tester"}
 			post := Post{ID: 1, Comments: []Comment{comment}, CommentsIDs: []int{2}, Author: &author, AuthorID: sql.NullInt64{Int64: 1337}}
 			i, err := Marshal(post)
 			Expect(err).To(BeNil())
 			Expect(i).To(Equal(map[string]interface{}{
-				"posts": map[string]interface{}{
+				"data": map[string]interface{}{
 					"id":    "1",
+					"type":  "posts",
 					"title": "",
 					"links": map[string]interface{}{
-						"comments": []interface{}{"1"},
-						"author":   "1",
+						"comments": map[string]interface{}{
+							"ids":  []interface{}{"1"},
+							"type": "comments",
+						},
+						"author": map[string]interface{}{
+							"id":   "1",
+							"type": "users",
+						},
 					},
 				},
-				"linked": map[string][]interface{}{
-					"comments": []interface{}{
-						map[string]interface{}{
-							"id":   "1",
-							"text": "",
-						},
+				"linked": []interface{}{
+					map[string]interface{}{
+						"id":   "1",
+						"type": "comments",
+						"text": "",
 					},
-					"authors": []interface{}{
-						map[string]interface{}{
-							"id":   "1",
-							"name": "Tester",
-						},
+					map[string]interface{}{
+						"id":   "1",
+						"type": "users",
+						"name": "Tester",
 					},
 				},
 			}))
@@ -273,17 +313,21 @@ var _ = Describe("Marshalling", func() {
 			type AnotherPost struct {
 				ID       int
 				AuthorID int
-				Author   *Author
+				Author   *User
 			}
 
 			anotherPost := AnotherPost{ID: 1, AuthorID: 1}
 			i, err := Marshal(anotherPost)
 			Expect(err).To(BeNil())
 			Expect(i).To(Equal(map[string]interface{}{
-				"anotherPosts": map[string]interface{}{
-					"id": "1",
+				"data": map[string]interface{}{
+					"id":   "1",
+					"type": "anotherPosts",
 					"links": map[string]interface{}{
-						"author": "1",
+						"author": map[string]interface{}{
+							"id":   "1",
+							"type": "users",
+						},
 					},
 				},
 			}))
@@ -293,17 +337,21 @@ var _ = Describe("Marshalling", func() {
 			type SqlTypesPost struct {
 				ID       int
 				AuthorID sql.NullInt64
-				Author   *Author
+				Author   *User
 			}
 
 			anotherPost := SqlTypesPost{ID: 1, AuthorID: sql.NullInt64{1, true}}
 			i, err := Marshal(anotherPost)
 			Expect(err).To(BeNil())
 			Expect(i).To(Equal(map[string]interface{}{
-				"sqlTypesPosts": map[string]interface{}{
-					"id": "1",
+				"data": map[string]interface{}{
+					"id":   "1",
+					"type": "sqlTypesPosts",
 					"links": map[string]interface{}{
-						"author": "1",
+						"author": map[string]interface{}{
+							"id":   "1",
+							"type": "users",
+						},
 					},
 				},
 			}))
@@ -313,17 +361,21 @@ var _ = Describe("Marshalling", func() {
 			type SqlTypesPost struct {
 				ID       int
 				AuthorID sql.NullString
-				Author   *Author
+				Author   *User
 			}
 
 			anotherPost := SqlTypesPost{ID: 1, AuthorID: sql.NullString{"1", true}}
 			i, err := Marshal(anotherPost)
 			Expect(err).To(BeNil())
 			Expect(i).To(Equal(map[string]interface{}{
-				"sqlTypesPosts": map[string]interface{}{
-					"id": "1",
+				"data": map[string]interface{}{
+					"id":   "1",
+					"type": "sqlTypesPosts",
 					"links": map[string]interface{}{
-						"author": "1",
+						"author": map[string]interface{}{
+							"id":   "1",
+							"type": "users",
+						},
 					},
 				},
 			}))
@@ -360,8 +412,9 @@ var _ = Describe("Marshalling", func() {
 
 		It("correctly unmarshals driver values", func() {
 			postMap := map[string]interface{}{
-				"zeroPosts": map[string]interface{}{
+				"data": map[string]interface{}{
 					"id":    "1",
+					"type":  "zeroPosts",
 					"title": "test",
 					"value": theFloat,
 				},
@@ -374,17 +427,18 @@ var _ = Describe("Marshalling", func() {
 		})
 
 		It("correctly unmarshals into json", func() {
-			expectedJSON := `{"zeroPosts":{"id":"1","title":"test","value":2.3}}`
+			expectedJSON := []byte(`{"data":{"id":"1","type":"zeroPosts","title":"test","value":2.3}}`)
 
 			json, err := MarshalToJSON(post)
 			Expect(err).To(BeNil())
-			Expect(string(json)).To(Equal(expectedJSON))
+			Expect(json).To(MatchJSON(expectedJSON))
 		})
 
 		It("correctly unmarshals driver values with pointer", func() {
 			postMap := map[string]interface{}{
-				"zeroPostPointers": map[string]interface{}{
+				"data": map[string]interface{}{
 					"id":    "1",
+					"type":  "zeroPostPointers",
 					"title": "test",
 					"value": &theFloat,
 				},
@@ -397,11 +451,11 @@ var _ = Describe("Marshalling", func() {
 		})
 
 		It("correctly unmarshals with pointer into json", func() {
-			expectedJSON := `{"zeroPostPointers":{"id":"1","title":"test","value":2.3}}`
+			expectedJSON := []byte(`{"data":{"id":"1","type":"zeroPostPointers","title":"test","value":2.3}}`)
 
 			json, err := MarshalToJSON(pointerPost)
 			Expect(err).To(BeNil())
-			Expect(string(json)).To(Equal(expectedJSON))
+			Expect(json).To(MatchJSON(expectedJSON))
 		})
 	})
 
@@ -420,21 +474,24 @@ var _ = Describe("Marshalling", func() {
 
 		It("Correctly marshalls question2 and sets question1 into linked", func() {
 			expected := map[string]interface{}{
-				"questions": map[string]interface{}{
+				"data": map[string]interface{}{
 					"id":   "2",
+					"type": "questions",
 					"text": "Will it ever work?",
 					"links": map[string]interface{}{
-						"inspiringQuestion": "1",
+						"inspiringQuestion": map[string]interface{}{
+							"id":   "1",
+							"type": "questions",
+						},
 					},
 				},
-				"linked": map[string][]interface{}{
-					"questions": []interface{}{
-						map[string]interface{}{
-							"id":   "1",
-							"text": "Does this test work?",
-							"links": map[string]interface{}{
-								"inspiringQuestion": nil,
-							},
+				"linked": []interface{}{
+					map[string]interface{}{
+						"id":   "1",
+						"type": "questions",
+						"text": "Does this test work?",
+						"links": map[string]interface{}{
+							"inspiringQuestion": nil,
 						},
 					},
 				},
@@ -447,30 +504,37 @@ var _ = Describe("Marshalling", func() {
 
 		It("Does not marshall same dependencies multiple times", func() {
 			expected := map[string]interface{}{
-				"questions": []interface{}{
+				"data": []interface{}{
 					map[string]interface{}{
 						"id":   "3",
+						"type": "questions",
 						"text": "It works now",
 						"links": map[string]interface{}{
-							"inspiringQuestion": "1",
+							"inspiringQuestion": map[string]interface{}{
+								"id":   "1",
+								"type": "questions",
+							},
 						},
 					},
 					map[string]interface{}{
 						"id":   "2",
+						"type": "questions",
 						"text": "Will it ever work?",
 						"links": map[string]interface{}{
-							"inspiringQuestion": "1",
+							"inspiringQuestion": map[string]interface{}{
+								"id":   "1",
+								"type": "questions",
+							},
 						},
 					},
 				},
-				"linked": map[string][]interface{}{
-					"questions": []interface{}{
-						map[string]interface{}{
-							"id":   "1",
-							"text": "Does this test work?",
-							"links": map[string]interface{}{
-								"inspiringQuestion": nil,
-							},
+				"linked": []interface{}{
+					map[string]interface{}{
+						"id":   "1",
+						"type": "questions",
+						"text": "Does this test work?",
+						"links": map[string]interface{}{
+							"inspiringQuestion": nil,
 						},
 					},
 				},
@@ -495,8 +559,9 @@ var _ = Describe("Marshalling", func() {
 
 		It("Marshalls the slice field correctly", func() {
 			expected := map[string]interface{}{
-				"identities": map[string]interface{}{
-					"id": "1234",
+				"data": map[string]interface{}{
+					"id":   "1234",
+					"type": "identities",
 					"scopes": []string{
 						"user_global",
 					},
@@ -510,8 +575,9 @@ var _ = Describe("Marshalling", func() {
 
 		It("Marshalls correctly without an ID field", func() {
 			expected := map[string]interface{}{
-				"unicorns": map[string]interface{}{
-					"unicornId": int64(1234), // this must not be unicornID, because that is the convention for a link to another struct...
+				"data": map[string]interface{}{
+					"unicornId": int64(1234), // this must not be unicornID or unicorn_id, because that is the convention for a link to another struct...
+					"type":      "unicorns",
 					"scopes": []string{
 						"user_global",
 					},

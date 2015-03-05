@@ -116,7 +116,7 @@ slices the values for you.
 Example Request
 GET /people?fields=id,name,age
 
-req["people"] contains values: ["id", "name", "age"]
+req.QueryParams["fields"] contains values: ["id", "name", "age"]
 ```
 
 ### Use Custom Controllers
@@ -183,19 +183,23 @@ will yield
 
 ```json
 {
-  "posts": [
+  "data": [
     {
       "id": "1",
-      "links": {"comments": ["1", "2"]},
+      "type": "posts",
+      "links": {
+        "comments": {
+          "ids": ["1", "2"],
+          "type": "comments"
+        },
+      },
       "title": "Foobar"
     }
   ],
-  "linked": {
-    "comments": [
-      {"id": "1", "text": "First!"},
-      {"id": "2", "text": "Second!"}
-    ]
-  }
+  "linked": [
+    {"id": "1", "type: "comments", "text": "First!"},
+    {"id": "2", "type: "comments", "text": "Second!"}
+  ]
 }
 ```
 

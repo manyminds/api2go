@@ -46,6 +46,7 @@ var commonInitialisms = map[string]bool{
 	"UTF8":  true,
 	"VM":    true,
 	"XML":   true,
+	"JWT":   true,
 }
 
 // dejsonify returns a go struct key name from a JSON key name
