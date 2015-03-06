@@ -102,7 +102,7 @@ all query parameters as `map[string][]string` unfiltered. So you can use it for:
 type fixtureSource struct {}
 
 func (s *fixtureSource) FindAll(req api2go.Request) (interface{}, error) {
-  for key, values range r.queryParams {
+  for key, values range req.QueryParams {
     ...
   }
   ...
