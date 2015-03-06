@@ -111,6 +111,8 @@ func (ctx *marshalingContext) marshalStruct(val *reflect.Value, isLinked bool) e
 	idFieldRegex := regexp.MustCompile("^.*ID$")
 
 	valType := val.Type()
+	name := jsonify(pluralize(valType.Name()))
+
 	for i := 0; i < val.NumField(); i++ {
 		tag := valType.Field(i).Tag.Get("json")
 		if tag == "-" {
@@ -139,8 +141,9 @@ func (ctx *marshalingContext) marshalStruct(val *reflect.Value, isLinked bool) e
 				}
 
 				linksMap[keyName] = map[string]interface{}{
-					"ids":  ids,
-					"type": pluralize(jsonify(field.Type().Elem().Name())),
+					"ids":      ids,
+					"type":     pluralize(jsonify(field.Type().Elem().Name())),
+					"resource": fmt.Sprintf("/%s/%s/%s", name, result["id"], keyName),
 				}
 			} else if strings.HasSuffix(keyName, "IDs") {
 				// Treat slices of non-struct type as lists of IDs if the suffix is IDs
@@ -163,8 +166,9 @@ func (ctx *marshalingContext) marshalStruct(val *reflect.Value, isLinked bool) e
 
 					if typeField.IsValid() {
 						linksMap[keyName] = map[string]interface{}{
-							"ids":  ids,
-							"type": pluralize(jsonify(typeField.Type().Elem().Name())),
+							"ids":      ids,
+							"type":     pluralize(jsonify(typeField.Type().Elem().Name())),
+							"resource": fmt.Sprintf("/%s/%s/%s", name, result["id"], keyName),
 						}
 					} else {
 						return fmt.Errorf("expected struct to have field %s", structFieldName)
@@ -186,8 +190,9 @@ func (ctx *marshalingContext) marshalStruct(val *reflect.Value, isLinked bool) e
 				id, err := idFromObject(field)
 				if err == nil {
 					linksMap[keyName] = map[string]interface{}{
-						"id":   id,
-						"type": pluralize(jsonify(field.Type().Elem().Name())),
+						"id":       id,
+						"type":     pluralize(jsonify(field.Type().Elem().Name())),
+						"resource": fmt.Sprintf("/%s/%s/%s", name, result["id"], keyName),
 					}
 
 					if err := ctx.marshalLinkedStruct(field.Elem()); err != nil {
@@ -213,11 +218,15 @@ func (ctx *marshalingContext) marshalStruct(val *reflect.Value, isLinked bool) e
 				}
 				if id != "" {
 					linksMap[keyNameWithoutID] = map[string]interface{}{
-						"id":   id,
-						"type": pluralize(jsonify(structFieldValue.Type().Elem().Name())),
+						"id":       id,
+						"type":     pluralize(jsonify(structFieldValue.Type().Elem().Name())),
+						"resource": fmt.Sprintf("/%s/%s/%s", name, result["id"], keyNameWithoutID),
 					}
 				} else {
-					linksMap[keyNameWithoutID] = nil
+					linksMap[keyNameWithoutID] = map[string]interface{}{
+						"type":     pluralize(jsonify(structFieldValue.Type().Elem().Name())),
+						"resource": fmt.Sprintf("/%s/%s/%s", name, result["id"], keyNameWithoutID),
+					}
 				}
 			}
 		} else {
