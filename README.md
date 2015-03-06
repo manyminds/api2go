@@ -109,7 +109,7 @@ func (s *fixtureSource) FindAll(req api2go.Request) (interface{}, error) {
 }
 ```
 
-If there are multiple values, you have to separate them with a komma. api2go automatically
+If there are multiple values, you have to separate them with a comma. api2go automatically
 slices the values for you.
 
 ```
