@@ -61,7 +61,7 @@ func Marshal(data interface{}) (interface{}, error) {
 	return marshal(data, "")
 }
 
-// MarshalPrefix does the same as Marshal but with additional fields with links like resource
+// MarshalPrefix does the same as Marshal but adds a prefix to generated URLs
 func MarshalPrefix(data interface{}, prefix string) (interface{}, error) {
 	return marshal(data, prefix)
 }
@@ -313,7 +313,7 @@ func MarshalToJSON(val interface{}) ([]byte, error) {
 	return json.Marshal(result)
 }
 
-// MarshalToJSONPrefix does the same as MarshalToJSON but with additional link fields like resource
+// MarshalToJSONPrefix does the same as MarshalToJSON but adds a prefix to generated URLs
 func MarshalToJSONPrefix(val interface{}, prefix string) ([]byte, error) {
 	result, err := marshal(val, prefix)
 	if err != nil {
