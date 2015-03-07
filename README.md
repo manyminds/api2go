@@ -221,15 +221,16 @@ will yield
       "links": {
         "comments": {
           "ids": ["1", "2"],
-          "type": "comments"
-        },
+          "type": "comments",
+          "resource": "/posts/1/comments"
+        }
       },
       "title": "Foobar"
     }
   ],
   "linked": [
-    {"id": "1", "type: "comments", "text": "First!"},
-    {"id": "2", "type: "comments", "text": "Second!"}
+    {"id": "1", "type": "comments", "text": "First!"},
+    {"id": "2", "type": "comments", "text": "Second!"}
   ]
 }
 ```
