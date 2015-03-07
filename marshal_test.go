@@ -276,6 +276,30 @@ var _ = Describe("Marshalling", func() {
 			}))
 		})
 
+		It("marshal correctly with prefix", func() {
+			post := Post{ID: 1, Comments: []Comment{}, CommentsIDs: []int{1}}
+			i, err := MarshalPrefix(post, "/v1")
+			Expect(err).To(BeNil())
+			Expect(i).To(Equal(map[string]interface{}{
+				"data": map[string]interface{}{
+					"id":    "1",
+					"type":  "posts",
+					"title": "",
+					"links": map[string]interface{}{
+						"comments": map[string]interface{}{
+							"ids":      []interface{}{"1"},
+							"type":     "comments",
+							"resource": "/v1/posts/1/comments",
+						},
+						"author": map[string]interface{}{
+							"type":     "users",
+							"resource": "/v1/posts/1/author",
+						},
+					},
+				},
+			}))
+		})
+
 		It("prefers nested structs when given both, structs and IDs", func() {
 			comment := Comment{ID: 1}
 			author := User{ID: 1, Name: "Tester"}

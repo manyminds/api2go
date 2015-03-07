@@ -16,9 +16,23 @@ import (
 )
 
 type Post struct {
+	ID          string
+	Title       string
+	Value       null.Float
+	Author      *User
+	AuthorID    string
+	Comments    []Comment
+	CommentsIDs []string
+}
+
+type Comment struct {
 	ID    string
-	Title string
-	Value null.Float
+	Value string
+}
+
+type User struct {
+	ID   string
+	Name string
 }
 
 type fixtureSource struct {
@@ -114,6 +128,75 @@ func (s *fixtureSource) Update(obj interface{}) error {
 	return NewHTTPError(nil, "post not found", http.StatusNotFound)
 }
 
+type userSource struct{}
+
+func (s *userSource) FindAll(req Request) (interface{}, error) {
+	postsIDs, ok := req.QueryParams["postsID"]
+	if ok {
+		if postsIDs[0] == "1" {
+			return User{ID: "1", Name: "Dieter"}, nil
+		}
+	}
+
+	return []User{}, errors.New("Did not receive query parameter")
+}
+
+func (s *userSource) FindOne(id string, req Request) (interface{}, error) {
+	return nil, nil
+}
+
+func (s *userSource) FindMultiple(IDs []string, req Request) (interface{}, error) {
+	return nil, nil
+}
+
+func (s *userSource) Create(obj interface{}) (string, error) {
+	return "", nil
+}
+
+func (s *userSource) Delete(id string) error {
+	return nil
+}
+
+func (s *userSource) Update(obj interface{}) error {
+	return NewHTTPError(nil, "user not found", http.StatusNotFound)
+}
+
+type commentSource struct{}
+
+func (s *commentSource) FindAll(req Request) (interface{}, error) {
+	postsIDs, ok := req.QueryParams["postsID"]
+	if ok {
+		if postsIDs[0] == "1" {
+			return []Comment{Comment{
+				ID:    "1",
+				Value: "This is a stupid post!",
+			}}, nil
+		}
+	}
+
+	return []Comment{}, errors.New("Did not receive query parameter")
+}
+
+func (s *commentSource) FindOne(id string, req Request) (interface{}, error) {
+	return nil, nil
+}
+
+func (s *commentSource) FindMultiple(IDs []string, req Request) (interface{}, error) {
+	return nil, nil
+}
+
+func (s *commentSource) Create(obj interface{}) (string, error) {
+	return "", nil
+}
+
+func (s *commentSource) Delete(id string) error {
+	return nil
+}
+
+func (s *commentSource) Update(obj interface{}) error {
+	return NewHTTPError(nil, "comment not found", http.StatusNotFound)
+}
+
 type CustomController struct{}
 
 var controllerErrorText = "exciting error"
@@ -144,10 +227,11 @@ var _ = Describe("RestHandler", func() {
 	Context("when handling requests", func() {
 
 		var (
-			source    *fixtureSource
-			post1Json map[string]interface{}
-			post2Json map[string]interface{}
-			post3Json map[string]interface{}
+			source          *fixtureSource
+			post1Json       map[string]interface{}
+			post1LinkedJSON []map[string]interface{}
+			post2Json       map[string]interface{}
+			post3Json       map[string]interface{}
 
 			api *API
 			rec *httptest.ResponseRecorder
@@ -155,7 +239,18 @@ var _ = Describe("RestHandler", func() {
 
 		BeforeEach(func() {
 			source = &fixtureSource{map[string]*Post{
-				"1": &Post{ID: "1", Title: "Hello, World!"},
+				"1": &Post{
+					ID:    "1",
+					Title: "Hello, World!",
+					Author: &User{
+						ID:   "1",
+						Name: "Dieter",
+					},
+					Comments: []Comment{Comment{
+						ID:    "1",
+						Value: "This is a stupid post!",
+					}},
+				},
 				"2": &Post{ID: "2", Title: "I am NR. 2"},
 				"3": &Post{ID: "3", Title: "I am NR. 3"},
 			}}
@@ -165,6 +260,31 @@ var _ = Describe("RestHandler", func() {
 				"type":  "posts",
 				"title": "Hello, World!",
 				"value": nil,
+				"links": map[string]interface{}{
+					"author": map[string]interface{}{
+						"id":       "1",
+						"type":     "users",
+						"resource": "/posts/1/author",
+					},
+					"comments": map[string]interface{}{
+						"ids":      []interface{}{"1"},
+						"type":     "comments",
+						"resource": "/posts/1/comments",
+					},
+				},
+			}
+
+			post1LinkedJSON = []map[string]interface{}{
+				map[string]interface{}{
+					"id":   "1",
+					"name": "Dieter",
+					"type": "users",
+				},
+				map[string]interface{}{
+					"id":    "1",
+					"type":  "comments",
+					"value": "This is a stupid post!",
+				},
 			}
 
 			post2Json = map[string]interface{}{
@@ -172,6 +292,17 @@ var _ = Describe("RestHandler", func() {
 				"type":  "posts",
 				"title": "I am NR. 2",
 				"value": nil,
+				"links": map[string]interface{}{
+					"author": map[string]interface{}{
+						"type":     "users",
+						"resource": "/posts/2/author",
+					},
+					"comments": map[string]interface{}{
+						"ids":      []interface{}{},
+						"type":     "comments",
+						"resource": "/posts/2/comments",
+					},
+				},
 			}
 
 			post3Json = map[string]interface{}{
@@ -179,10 +310,23 @@ var _ = Describe("RestHandler", func() {
 				"type":  "posts",
 				"title": "I am NR. 3",
 				"value": nil,
+				"links": map[string]interface{}{
+					"author": map[string]interface{}{
+						"type":     "users",
+						"resource": "/posts/3/author",
+					},
+					"comments": map[string]interface{}{
+						"ids":      []interface{}{},
+						"type":     "comments",
+						"resource": "/posts/3/comments",
+					},
+				},
 			}
 
 			api = NewAPI("")
 			api.AddResource(Post{}, source)
+			api.AddResource(User{}, &userSource{})
+			api.AddResource(Comment{}, &commentSource{})
 
 			rec = httptest.NewRecorder()
 		})
@@ -192,11 +336,12 @@ var _ = Describe("RestHandler", func() {
 			Expect(err).To(BeNil())
 			api.Handler().ServeHTTP(rec, req)
 			Expect(rec.Code).To(Equal(http.StatusOK))
-			var result map[string]interface{}
-			Expect(json.Unmarshal(rec.Body.Bytes(), &result)).To(BeNil())
-			Expect(result).To(Equal(map[string]interface{}{
-				"data": []interface{}{post1Json, post2Json, post3Json},
-			}))
+			expected, err := json.Marshal(map[string]interface{}{
+				"data":   []interface{}{post1Json, post2Json, post3Json},
+				"linked": post1LinkedJSON,
+			})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(rec.Body.Bytes()).To(MatchJSON(expected))
 		})
 
 		It("GETs single objects", func() {
@@ -204,11 +349,12 @@ var _ = Describe("RestHandler", func() {
 			Expect(err).To(BeNil())
 			api.Handler().ServeHTTP(rec, req)
 			Expect(rec.Code).To(Equal(http.StatusOK))
-			var result map[string]interface{}
-			Expect(json.Unmarshal(rec.Body.Bytes(), &result)).To(BeNil())
-			Expect(result).To(Equal(map[string]interface{}{
-				"data": post1Json,
-			}))
+			expected, err := json.Marshal(map[string]interface{}{
+				"data":   post1Json,
+				"linked": post1LinkedJSON,
+			})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(rec.Body.Bytes()).To(MatchJSON(expected))
 		})
 
 		It("GETs multiple objects", func() {
@@ -216,11 +362,36 @@ var _ = Describe("RestHandler", func() {
 			Expect(err).To(BeNil())
 			api.Handler().ServeHTTP(rec, req)
 			Expect(rec.Code).To(Equal(http.StatusOK))
-			var result map[string]interface{}
-			Expect(json.Unmarshal(rec.Body.Bytes(), &result)).To(BeNil())
-			Expect(result).To(Equal(map[string]interface{}{
-				"data": []interface{}{post1Json, post2Json},
-			}))
+			expected, err := json.Marshal(map[string]interface{}{
+				"data":   []interface{}{post1Json, post2Json},
+				"linked": post1LinkedJSON,
+			})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(rec.Body.Bytes()).To(MatchJSON(expected))
+		})
+
+		It("GETs related struct from resource url", func() {
+			req, err := http.NewRequest("GET", "/posts/1/author", nil)
+			Expect(err).ToNot(HaveOccurred())
+			api.Handler().ServeHTTP(rec, req)
+			Expect(rec.Code).To(Equal(http.StatusOK))
+			Expect(rec.Body.Bytes()).To(MatchJSON(`{"data": {"id": "1", "name": "Dieter", "type": "users"}}`))
+		})
+
+		It("GETs related structs from resource url", func() {
+			req, err := http.NewRequest("GET", "/posts/1/comments", nil)
+			Expect(err).ToNot(HaveOccurred())
+			api.Handler().ServeHTTP(rec, req)
+			Expect(rec.Code).To(Equal(http.StatusOK))
+			Expect(rec.Body.Bytes()).To(MatchJSON(`{"data": [{"id": "1", "value": "This is a stupid post!", "type": "comments"}]}`))
+		})
+
+		It("Gets 404 if a related struct was not found", func() {
+			req, err := http.NewRequest("GET", "/posts/1/unicorns", nil)
+			Expect(err).ToNot(HaveOccurred())
+			api.Handler().ServeHTTP(rec, req)
+			Expect(rec.Code).To(Equal(http.StatusNotFound))
+			Expect(rec.Body.Bytes()).ToNot(BeEmpty())
 		})
 
 		It("404s", func() {
@@ -247,6 +418,17 @@ var _ = Describe("RestHandler", func() {
 					"type":  "posts",
 					"title": "New Post",
 					"value": nil,
+					"links": map[string]interface{}{
+						"author": map[string]interface{}{
+							"type":     "users",
+							"resource": "/posts/4/author",
+						},
+						"comments": map[string]interface{}{
+							"ids":      []interface{}{},
+							"type":     "comments",
+							"resource": "/posts/4/comments",
+						},
+					},
 				},
 			}))
 		})
@@ -454,6 +636,17 @@ var _ = Describe("RestHandler", func() {
 				"type":  "posts",
 				"title": "Hello, World!",
 				"value": nil,
+				"links": map[string]interface{}{
+					"author": map[string]interface{}{
+						"type":     "users",
+						"resource": "/posts/1/author",
+					},
+					"comments": map[string]interface{}{
+						"ids":      []interface{}{},
+						"type":     "comments",
+						"resource": "/posts/1/comments",
+					},
+				},
 			}
 
 			post2JSON = map[string]interface{}{
@@ -461,6 +654,17 @@ var _ = Describe("RestHandler", func() {
 				"type":  "posts",
 				"title": "Hello, from second Post!",
 				"value": nil,
+				"links": map[string]interface{}{
+					"author": map[string]interface{}{
+						"type":     "users",
+						"resource": "/posts/2/author",
+					},
+					"comments": map[string]interface{}{
+						"ids":      []interface{}{},
+						"type":     "comments",
+						"resource": "/posts/2/comments",
+					},
+				},
 			}
 
 			api = NewAPI("")
