@@ -125,9 +125,11 @@ func (ctx *marshalingContext) marshalStruct(val *reflect.Value, isLinked bool) e
 	name := jsonify(pluralize(valType.Name()))
 
 	buildLinksMap := func(referenceIDs []interface{}, single bool, field reflect.Value, name, keyName string) map[string]interface{} {
-		resource := fmt.Sprintf("/%s/%s/%s", name, result["id"], keyName)
-		if ctx.prefix != "/" {
-			resource = fmt.Sprintf("%s%s", ctx.prefix, resource)
+		var resource string
+		if ctx.prefix != "/" && ctx.prefix != "" {
+			resource = fmt.Sprintf("%s%s/%s/%s", ctx.prefix, name, result["id"], keyName)
+		} else {
+			resource = fmt.Sprintf("/%s/%s/%s", name, result["id"], keyName)
 		}
 
 		result := make(map[string]interface{})

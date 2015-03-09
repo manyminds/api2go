@@ -278,7 +278,7 @@ var _ = Describe("Marshalling", func() {
 
 		It("marshal correctly with prefix", func() {
 			post := Post{ID: 1, Comments: []Comment{}, CommentsIDs: []int{1}}
-			i, err := MarshalPrefix(post, "/v1")
+			i, err := MarshalPrefix(post, "/v1/")
 			Expect(err).To(BeNil())
 			Expect(i).To(Equal(map[string]interface{}{
 				"data": map[string]interface{}{
