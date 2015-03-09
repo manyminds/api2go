@@ -124,6 +124,27 @@ func (ctx *marshalingContext) marshalStruct(val *reflect.Value, isLinked bool) e
 	valType := val.Type()
 	name := jsonify(pluralize(valType.Name()))
 
+	buildLinksMap := func(referenceIDs []interface{}, single bool, field reflect.Value, name, keyName string) map[string]interface{} {
+		resource := fmt.Sprintf("/%s/%s/%s", name, result["id"], keyName)
+		if ctx.prefix != "/" {
+			resource = fmt.Sprintf("%s%s", ctx.prefix, resource)
+		}
+
+		result := make(map[string]interface{})
+		result["type"] = pluralize(jsonify(field.Type().Elem().Name()))
+		result["resource"] = resource
+
+		if single {
+			if referenceIDs[0] != "" {
+				result["id"] = referenceIDs[0]
+			}
+		} else {
+			result["ids"] = referenceIDs
+		}
+
+		return result
+	}
+
 	for i := 0; i < val.NumField(); i++ {
 		tag := valType.Field(i).Tag.Get("json")
 		if tag == "-" {
@@ -151,14 +172,7 @@ func (ctx *marshalingContext) marshalStruct(val *reflect.Value, isLinked bool) e
 					}
 				}
 
-				linksMap[keyName] = map[string]interface{}{
-					"ids":      ids,
-					"type":     pluralize(jsonify(field.Type().Elem().Name())),
-					"resource": fmt.Sprintf("/%s/%s/%s", name, result["id"], keyName),
-				}
-				if ctx.prefix != "/" {
-					linksMap[keyName].(map[string]interface{})["resource"] = fmt.Sprintf("%s%s", ctx.prefix, linksMap[keyName].(map[string]interface{})["resource"])
-				}
+				linksMap[keyName] = buildLinksMap(ids, false, field, name, keyName)
 			} else if strings.HasSuffix(keyName, "IDs") {
 				// Treat slices of non-struct type as lists of IDs if the suffix is IDs
 				keyName = strings.TrimSuffix(keyName, "IDs")
@@ -179,14 +193,7 @@ func (ctx *marshalingContext) marshalStruct(val *reflect.Value, isLinked bool) e
 					typeField := val.FieldByName(structFieldName)
 
 					if typeField.IsValid() {
-						linksMap[keyName] = map[string]interface{}{
-							"ids":      ids,
-							"type":     pluralize(jsonify(typeField.Type().Elem().Name())),
-							"resource": fmt.Sprintf("/%s/%s/%s", name, result["id"], keyName),
-						}
-						if ctx.prefix != "/" {
-							linksMap[keyName].(map[string]interface{})["resource"] = fmt.Sprintf("%s%s", ctx.prefix, linksMap[keyName].(map[string]interface{})["resource"])
-						}
+						linksMap[keyName] = buildLinksMap(ids, false, typeField, name, keyName)
 					} else {
 						return fmt.Errorf("expected struct to have field %s", structFieldName)
 					}
@@ -206,14 +213,7 @@ func (ctx *marshalingContext) marshalStruct(val *reflect.Value, isLinked bool) e
 			if !field.IsNil() {
 				id, err := idFromObject(field)
 				if err == nil {
-					linksMap[keyName] = map[string]interface{}{
-						"id":       id,
-						"type":     pluralize(jsonify(field.Type().Elem().Name())),
-						"resource": fmt.Sprintf("/%s/%s/%s", name, result["id"], keyName),
-					}
-					if ctx.prefix != "/" {
-						linksMap[keyName].(map[string]interface{})["resource"] = fmt.Sprintf("%s%s", ctx.prefix, linksMap[keyName].(map[string]interface{})["resource"])
-					}
+					linksMap[keyName] = buildLinksMap([]interface{}{id}, true, field, name, keyName)
 
 					if err := ctx.marshalLinkedStruct(field.Elem()); err != nil {
 						return err
@@ -236,21 +236,8 @@ func (ctx *marshalingContext) marshalStruct(val *reflect.Value, isLinked bool) e
 				if err != nil {
 					return err
 				}
-				if id != "" {
-					linksMap[keyNameWithoutID] = map[string]interface{}{
-						"id":       id,
-						"type":     pluralize(jsonify(structFieldValue.Type().Elem().Name())),
-						"resource": fmt.Sprintf("/%s/%s/%s", name, result["id"], keyNameWithoutID),
-					}
-				} else {
-					linksMap[keyNameWithoutID] = map[string]interface{}{
-						"type":     pluralize(jsonify(structFieldValue.Type().Elem().Name())),
-						"resource": fmt.Sprintf("/%s/%s/%s", name, result["id"], keyNameWithoutID),
-					}
-				}
-				if ctx.prefix != "/" {
-					linksMap[keyNameWithoutID].(map[string]interface{})["resource"] = fmt.Sprintf("%s%s", ctx.prefix, linksMap[keyNameWithoutID].(map[string]interface{})["resource"])
-				}
+
+				linksMap[keyNameWithoutID] = buildLinksMap([]interface{}{id}, true, structFieldValue, name, keyNameWithoutID)
 			}
 		} else {
 			result[keyName] = field.Interface()
