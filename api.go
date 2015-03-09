@@ -56,7 +56,8 @@ type Controller interface {
 type API struct {
 	router *httprouter.Router
 	// Route prefix, including slashes
-	prefix string
+	prefix    string
+	resources []resource
 }
 
 // NewAPI returns an initialized API instance
@@ -113,14 +114,21 @@ func (api *API) addResource(prototype interface{}, source DataSource) *resource 
 	})
 
 	api.router.GET(api.prefix+name, func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-		err := res.handleIndex(w, r)
+		err := res.handleIndex(w, r, api.prefix)
 		if err != nil {
 			handleError(err, w)
 		}
 	})
 
 	api.router.GET(api.prefix+name+"/:id", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		err := res.handleRead(w, r, ps)
+		err := res.handleRead(w, r, ps, api.prefix)
+		if err != nil {
+			handleError(err, w)
+		}
+	})
+
+	api.router.GET(api.prefix+name+"/:id/:linked", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+		err := res.handleLinked(api, w, r, ps, api.prefix)
 		if err != nil {
 			handleError(err, w)
 		}
@@ -146,6 +154,8 @@ func (api *API) addResource(prototype interface{}, source DataSource) *resource 
 			handleError(err, w)
 		}
 	})
+
+	api.resources = append(api.resources, res)
 
 	return &res
 }
@@ -174,7 +184,7 @@ func buildRequest(r *http.Request) Request {
 	return req
 }
 
-func (res *resource) handleIndex(w http.ResponseWriter, r *http.Request) error {
+func (res *resource) handleIndex(w http.ResponseWriter, r *http.Request, prefix string) error {
 	objs, err := res.source.FindAll(buildRequest(r))
 	if err != nil {
 		return err
@@ -185,10 +195,10 @@ func (res *resource) handleIndex(w http.ResponseWriter, r *http.Request) error {
 			return err
 		}
 	}
-	return respondWith(objs, http.StatusOK, w)
+	return respondWith(objs, prefix, http.StatusOK, w)
 }
 
-func (res *resource) handleRead(w http.ResponseWriter, r *http.Request, ps httprouter.Params) error {
+func (res *resource) handleRead(w http.ResponseWriter, r *http.Request, ps httprouter.Params, prefix string) error {
 	ids := strings.Split(ps.ByName("id"), ",")
 
 	var (
@@ -211,7 +221,46 @@ func (res *resource) handleRead(w http.ResponseWriter, r *http.Request, ps httpr
 			return err
 		}
 	}
-	return respondWith(obj, http.StatusOK, w)
+	return respondWith(obj, prefix, http.StatusOK, w)
+}
+
+// try to find the referenced resource and call the findAll Method with referencing resource id as param
+func (res *resource) handleLinked(api *API, w http.ResponseWriter, r *http.Request, ps httprouter.Params, prefix string) error {
+	id := ps.ByName("id")
+	linked := ps.ByName("linked")
+
+	// Iterate over all struct fields and determine the type of linked
+	for i := 0; i < res.resourceType.NumField(); i++ {
+		field := res.resourceType.Field(i)
+		fieldName := jsonify(field.Name)
+		kind := field.Type.Kind()
+		if (kind == reflect.Ptr || kind == reflect.Slice) && fieldName == linked {
+			// Check if there is a resource for this type
+			fieldType := pluralize(jsonify(field.Type.Elem().Name()))
+			for _, resource := range api.resources {
+				if resource.name == fieldType {
+					request := Request{
+						Header: r.Header,
+						QueryParams: map[string][]string{
+							res.name + "ID": []string{id},
+						},
+					}
+					obj, err := resource.source.FindAll(request)
+					if err != nil {
+						return err
+					}
+					return respondWith(obj, prefix, http.StatusOK, w)
+				}
+			}
+		}
+	}
+
+	err := Error{
+		Status: string(http.StatusNotFound),
+		Title:  "Not Found",
+		Detail: "No resource handler is registered to handle the linked resource " + linked,
+	}
+	return respondWith(err, prefix, http.StatusNotFound, w)
 }
 
 func (res *resource) handleCreate(w http.ResponseWriter, r *http.Request, prefix string) error {
@@ -247,7 +296,7 @@ func (res *resource) handleCreate(w http.ResponseWriter, r *http.Request, prefix
 		return err
 	}
 
-	return respondWith(obj, http.StatusCreated, w)
+	return respondWith(obj, prefix, http.StatusCreated, w)
 }
 
 func (res *resource) handleUpdate(w http.ResponseWriter, r *http.Request, ps httprouter.Params) error {
@@ -299,8 +348,8 @@ func (res *resource) handleDelete(w http.ResponseWriter, r *http.Request, ps htt
 	return nil
 }
 
-func respondWith(obj interface{}, status int, w http.ResponseWriter) error {
-	data, err := MarshalToJSON(obj)
+func respondWith(obj interface{}, prefix string, status int, w http.ResponseWriter) error {
+	data, err := MarshalToJSONPrefix(obj, prefix)
 	if err != nil {
 		return err
 	}

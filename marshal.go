@@ -15,14 +15,16 @@ type marshalingContext struct {
 	root           map[string]interface{}
 	rootName       string
 	isSingleStruct bool
+	prefix         string
 }
 
-func makeContext(rootName string, isSingleStruct bool) *marshalingContext {
+func makeContext(rootName string, isSingleStruct bool, prefix string) *marshalingContext {
 	ctx := &marshalingContext{}
 	ctx.rootName = rootName
 	ctx.root = map[string]interface{}{}
 	ctx.root[rootName] = []interface{}{}
 	ctx.isSingleStruct = isSingleStruct
+	ctx.prefix = prefix
 	return ctx
 }
 
@@ -56,6 +58,15 @@ func marshalHTTPError(input HTTPError) string {
 
 // Marshal takes a struct (or slice of structs) and marshals them to a json encodable interface{} value
 func Marshal(data interface{}) (interface{}, error) {
+	return marshal(data, "")
+}
+
+// MarshalPrefix does the same as Marshal but adds a prefix to generated URLs
+func MarshalPrefix(data interface{}, prefix string) (interface{}, error) {
+	return marshal(data, prefix)
+}
+
+func marshal(data interface{}, prefix string) (interface{}, error) {
 	if data == nil || data == "" {
 		return nil, errors.New("marshal only works with objects")
 	}
@@ -71,7 +82,7 @@ func Marshal(data interface{}) (interface{}, error) {
 		if rootName == "" {
 			return nil, errors.New("you passed a slice of interfaces []interface{}{...} to Marshal. we cannot determine key names from that. Use []YourObjectName{...} instead")
 		}
-		ctx = makeContext("data", false)
+		ctx = makeContext("data", false, prefix)
 
 		// Marshal all elements
 		// We iterate using reflections to save copying the slice to a []interface{}
@@ -83,7 +94,7 @@ func Marshal(data interface{}) (interface{}, error) {
 		}
 	} else {
 		// We were passed a single object
-		ctx = makeContext("data", true)
+		ctx = makeContext("data", true, prefix)
 
 		// Marshal the value
 		if err := ctx.marshalRootStruct(reflect.ValueOf(data)); err != nil {
@@ -111,6 +122,29 @@ func (ctx *marshalingContext) marshalStruct(val *reflect.Value, isLinked bool) e
 	idFieldRegex := regexp.MustCompile("^.*ID$")
 
 	valType := val.Type()
+	name := jsonify(pluralize(valType.Name()))
+
+	buildLinksMap := func(referenceIDs []interface{}, single bool, field reflect.Value, name, keyName string) map[string]interface{} {
+		resource := fmt.Sprintf("/%s/%s/%s", name, result["id"], keyName)
+		if ctx.prefix != "/" {
+			resource = fmt.Sprintf("%s%s", ctx.prefix, resource)
+		}
+
+		result := make(map[string]interface{})
+		result["type"] = pluralize(jsonify(field.Type().Elem().Name()))
+		result["resource"] = resource
+
+		if single {
+			if referenceIDs[0] != "" {
+				result["id"] = referenceIDs[0]
+			}
+		} else {
+			result["ids"] = referenceIDs
+		}
+
+		return result
+	}
+
 	for i := 0; i < val.NumField(); i++ {
 		tag := valType.Field(i).Tag.Get("json")
 		if tag == "-" {
@@ -138,10 +172,7 @@ func (ctx *marshalingContext) marshalStruct(val *reflect.Value, isLinked bool) e
 					}
 				}
 
-				linksMap[keyName] = map[string]interface{}{
-					"ids":  ids,
-					"type": pluralize(jsonify(field.Type().Elem().Name())),
-				}
+				linksMap[keyName] = buildLinksMap(ids, false, field, name, keyName)
 			} else if strings.HasSuffix(keyName, "IDs") {
 				// Treat slices of non-struct type as lists of IDs if the suffix is IDs
 				keyName = strings.TrimSuffix(keyName, "IDs")
@@ -162,10 +193,7 @@ func (ctx *marshalingContext) marshalStruct(val *reflect.Value, isLinked bool) e
 					typeField := val.FieldByName(structFieldName)
 
 					if typeField.IsValid() {
-						linksMap[keyName] = map[string]interface{}{
-							"ids":  ids,
-							"type": pluralize(jsonify(typeField.Type().Elem().Name())),
-						}
+						linksMap[keyName] = buildLinksMap(ids, false, typeField, name, keyName)
 					} else {
 						return fmt.Errorf("expected struct to have field %s", structFieldName)
 					}
@@ -185,10 +213,7 @@ func (ctx *marshalingContext) marshalStruct(val *reflect.Value, isLinked bool) e
 			if !field.IsNil() {
 				id, err := idFromObject(field)
 				if err == nil {
-					linksMap[keyName] = map[string]interface{}{
-						"id":   id,
-						"type": pluralize(jsonify(field.Type().Elem().Name())),
-					}
+					linksMap[keyName] = buildLinksMap([]interface{}{id}, true, field, name, keyName)
 
 					if err := ctx.marshalLinkedStruct(field.Elem()); err != nil {
 						return err
@@ -211,14 +236,8 @@ func (ctx *marshalingContext) marshalStruct(val *reflect.Value, isLinked bool) e
 				if err != nil {
 					return err
 				}
-				if id != "" {
-					linksMap[keyNameWithoutID] = map[string]interface{}{
-						"id":   id,
-						"type": pluralize(jsonify(structFieldValue.Type().Elem().Name())),
-					}
-				} else {
-					linksMap[keyNameWithoutID] = nil
-				}
+
+				linksMap[keyNameWithoutID] = buildLinksMap([]interface{}{id}, true, structFieldValue, name, keyNameWithoutID)
 			}
 		} else {
 			result[keyName] = field.Interface()
@@ -275,6 +294,15 @@ func (ctx *marshalingContext) addValue(val map[string]interface{}, isLinked bool
 // MarshalToJSON takes a struct and marshals it to JSONAPI compliant JSON
 func MarshalToJSON(val interface{}) ([]byte, error) {
 	result, err := Marshal(val)
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(result)
+}
+
+// MarshalToJSONPrefix does the same as MarshalToJSON but adds a prefix to generated URLs
+func MarshalToJSONPrefix(val interface{}, prefix string) ([]byte, error) {
+	result, err := marshal(val, prefix)
 	if err != nil {
 		return nil, err
 	}

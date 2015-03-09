@@ -83,6 +83,7 @@ GET     /v1/posts/<id>
 PUT     /v1/posts/<id>
 DELETE  /v1/posts/<id>
 GET     /v1/posts/<id>,<id>,...
+GET     /v1/posts/<id>/comments
 ```
 
 #### Query Params
@@ -118,6 +119,36 @@ GET /people?fields=id,name,age
 
 req.QueryParams["fields"] contains values: ["id", "name", "age"]
 ```
+
+### Loading related resources
+Api2go always creates a `resource` property for elements in the `links` property of the result. This is like it's
+specified on jsonapi.org. Post example:
+
+```json
+{
+  "data": [
+    {
+      "id": "1",
+      "type": "posts",
+      "title": "Foobar",
+      "links": {
+        "comments": {
+          "resource": "/v1/posts/1/comments",
+          "ids": ["1", "2"],
+          "type": "comments",
+        }
+      }
+    }
+  ]
+}
+```
+
+If a client requests this `resource` url, the `FindAll` method of the comments resource will be called with a query
+parameter `postsID`.
+
+So if you implement the `FindAll` method, do not forget to check for all possible query Parameters. This means you have
+to check all your other structs and if it references the one for that you are implementing `FindAll`, check for the
+query Paramter and only return comments that belong to it. In this example, return the comments for the Post.
 
 ### Use Custom Controllers
 
@@ -190,15 +221,16 @@ will yield
       "links": {
         "comments": {
           "ids": ["1", "2"],
-          "type": "comments"
-        },
+          "type": "comments",
+          "resource": "/posts/1/comments"
+        }
       },
       "title": "Foobar"
     }
   ],
   "linked": [
-    {"id": "1", "type: "comments", "text": "First!"},
-    {"id": "2", "type: "comments", "text": "Second!"}
+    {"id": "1", "type": "comments", "text": "First!"},
+    {"id": "2", "type": "comments", "text": "Second!"}
   ]
 }
 ```

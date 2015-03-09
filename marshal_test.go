@@ -196,15 +196,15 @@ var _ = Describe("Marshalling", func() {
 						"links": map[string]interface{}{
 							"comments": map[string]interface{}{
 								// "self":     "/posts/1/links/comments",
-								// "resource": "/posts/1/comments",
-								"ids":  []interface{}{"1", "2"},
-								"type": "comments",
+								"resource": "/posts/1/comments",
+								"ids":      []interface{}{"1", "2"},
+								"type":     "comments",
 							},
 							"author": map[string]interface{}{
 								// "self":     "/posts/1/links/author",
-								// "resource": "/posts/1/author",
-								"id":   "1",
-								"type": "users",
+								"resource": "/posts/1/author",
+								"id":       "1",
+								"type":     "users",
 							},
 						},
 						"title": "Foobar",
@@ -214,16 +214,16 @@ var _ = Describe("Marshalling", func() {
 						"id": "2",
 						"links": map[string]interface{}{
 							"comments": map[string]interface{}{
-								// "self":     "/posts/1/links/comments",
-								// "resource": "/posts/1/comments",
-								"ids":  []interface{}{"1", "2"},
-								"type": "comments",
+								// "self":     "/posts/2/links/comments",
+								"resource": "/posts/2/comments",
+								"ids":      []interface{}{"1", "2"},
+								"type":     "comments",
 							},
 							"author": map[string]interface{}{
-								// "self":     "/posts/1/links/author",
-								// "resource": "/posts/1/author",
-								"id":   "1",
-								"type": "users",
+								// "self":     "/posts/2/links/author",
+								"resource": "/posts/2/author",
+								"id":       "1",
+								"type":     "users",
 							},
 						},
 						"title": "Foobarbarbar",
@@ -263,10 +263,38 @@ var _ = Describe("Marshalling", func() {
 					"title": "",
 					"links": map[string]interface{}{
 						"comments": map[string]interface{}{
-							"ids":  []interface{}{"1"},
-							"type": "comments",
+							"ids":      []interface{}{"1"},
+							"type":     "comments",
+							"resource": "/posts/1/comments",
 						},
-						"author": nil,
+						"author": map[string]interface{}{
+							"type":     "users",
+							"resource": "/posts/1/author",
+						},
+					},
+				},
+			}))
+		})
+
+		It("marshal correctly with prefix", func() {
+			post := Post{ID: 1, Comments: []Comment{}, CommentsIDs: []int{1}}
+			i, err := MarshalPrefix(post, "/v1")
+			Expect(err).To(BeNil())
+			Expect(i).To(Equal(map[string]interface{}{
+				"data": map[string]interface{}{
+					"id":    "1",
+					"type":  "posts",
+					"title": "",
+					"links": map[string]interface{}{
+						"comments": map[string]interface{}{
+							"ids":      []interface{}{"1"},
+							"type":     "comments",
+							"resource": "/v1/posts/1/comments",
+						},
+						"author": map[string]interface{}{
+							"type":     "users",
+							"resource": "/v1/posts/1/author",
+						},
 					},
 				},
 			}))
@@ -285,12 +313,14 @@ var _ = Describe("Marshalling", func() {
 					"title": "",
 					"links": map[string]interface{}{
 						"comments": map[string]interface{}{
-							"ids":  []interface{}{"1"},
-							"type": "comments",
+							"ids":      []interface{}{"1"},
+							"type":     "comments",
+							"resource": "/posts/1/comments",
 						},
 						"author": map[string]interface{}{
-							"id":   "1",
-							"type": "users",
+							"id":       "1",
+							"type":     "users",
+							"resource": "/posts/1/author",
 						},
 					},
 				},
@@ -325,8 +355,9 @@ var _ = Describe("Marshalling", func() {
 					"type": "anotherPosts",
 					"links": map[string]interface{}{
 						"author": map[string]interface{}{
-							"id":   "1",
-							"type": "users",
+							"id":       "1",
+							"type":     "users",
+							"resource": "/anotherPosts/1/author",
 						},
 					},
 				},
@@ -349,8 +380,9 @@ var _ = Describe("Marshalling", func() {
 					"type": "sqlTypesPosts",
 					"links": map[string]interface{}{
 						"author": map[string]interface{}{
-							"id":   "1",
-							"type": "users",
+							"id":       "1",
+							"type":     "users",
+							"resource": "/sqlTypesPosts/1/author",
 						},
 					},
 				},
@@ -373,8 +405,9 @@ var _ = Describe("Marshalling", func() {
 					"type": "sqlTypesPosts",
 					"links": map[string]interface{}{
 						"author": map[string]interface{}{
-							"id":   "1",
-							"type": "users",
+							"id":       "1",
+							"type":     "users",
+							"resource": "/sqlTypesPosts/1/author",
 						},
 					},
 				},
@@ -480,8 +513,9 @@ var _ = Describe("Marshalling", func() {
 					"text": "Will it ever work?",
 					"links": map[string]interface{}{
 						"inspiringQuestion": map[string]interface{}{
-							"id":   "1",
-							"type": "questions",
+							"id":       "1",
+							"type":     "questions",
+							"resource": "/questions/2/inspiringQuestion",
 						},
 					},
 				},
@@ -491,7 +525,10 @@ var _ = Describe("Marshalling", func() {
 						"type": "questions",
 						"text": "Does this test work?",
 						"links": map[string]interface{}{
-							"inspiringQuestion": nil,
+							"inspiringQuestion": map[string]interface{}{
+								"type":     "questions",
+								"resource": "/questions/1/inspiringQuestion",
+							},
 						},
 					},
 				},
@@ -511,8 +548,9 @@ var _ = Describe("Marshalling", func() {
 						"text": "It works now",
 						"links": map[string]interface{}{
 							"inspiringQuestion": map[string]interface{}{
-								"id":   "1",
-								"type": "questions",
+								"id":       "1",
+								"type":     "questions",
+								"resource": "/questions/3/inspiringQuestion",
 							},
 						},
 					},
@@ -522,8 +560,9 @@ var _ = Describe("Marshalling", func() {
 						"text": "Will it ever work?",
 						"links": map[string]interface{}{
 							"inspiringQuestion": map[string]interface{}{
-								"id":   "1",
-								"type": "questions",
+								"id":       "1",
+								"type":     "questions",
+								"resource": "/questions/2/inspiringQuestion",
 							},
 						},
 					},
@@ -534,7 +573,10 @@ var _ = Describe("Marshalling", func() {
 						"type": "questions",
 						"text": "Does this test work?",
 						"links": map[string]interface{}{
-							"inspiringQuestion": nil,
+							"inspiringQuestion": map[string]interface{}{
+								"type":     "questions",
+								"resource": "/questions/1/inspiringQuestion",
+							},
 						},
 					},
 				},
