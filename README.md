@@ -44,7 +44,7 @@ func (s *fixtureSource) FindOne(ID string, r api2go.Request) (interface{}, error
   // Return a single post by ID as Post
 }
 
-func (s *fixtureSource) FindMultiple(IDs string, r api2go.Request) (interface{}, error) {
+func (s *fixtureSource) FindMultiple(IDs []string, r api2go.Request) (interface{}, error) {
   // Return multiple posts by ID as []Post
   // For example for Requests like GET /posts/1,2,3
 }
