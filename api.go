@@ -77,6 +77,16 @@ func NewAPI(prefix string) *API {
 	}
 }
 
+//SetRedirectTrailingSlash enables 307 redirects on urls ending with /
+//when disabled, an URL ending with / will 404
+func (api *API) SetRedirectTrailingSlash(enabled bool) {
+	if api.router == nil {
+		panic("router must not be nil")
+	}
+
+	api.router.RedirectTrailingSlash = enabled
+}
+
 // Request holds additional information for FindOne and Find Requests
 type Request struct {
 	QueryParams map[string][]string
