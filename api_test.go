@@ -433,6 +433,24 @@ var _ = Describe("RestHandler", func() {
 			}))
 		})
 
+		It("POSTSs new objects with trailing slash automatic redirect enabled", func() {
+			reqBody := strings.NewReader(`{"posts": [{"title": "New Post"}]}`)
+			req, err := http.NewRequest("POST", "/posts/", reqBody)
+			Expect(err).To(BeNil())
+			api.SetRedirectTrailingSlash(true)
+			api.Handler().ServeHTTP(rec, req)
+			Expect(rec.Code).To(Equal(http.StatusTemporaryRedirect))
+		})
+
+		It("POSTSs new objects with trailing slash automatic redirect disabled", func() {
+			reqBody := strings.NewReader(`{"posts": [{"title": "New Post"}]}`)
+			req, err := http.NewRequest("POST", "/posts/", reqBody)
+			Expect(err).To(BeNil())
+			api.SetRedirectTrailingSlash(false)
+			api.Handler().ServeHTTP(rec, req)
+			Expect(rec.Code).To(Equal(http.StatusNotFound))
+		})
+
 		It("POSTSs multiple objects", func() {
 			reqBody := strings.NewReader(`{"posts": [{"title": "New Post"}, {"title" : "Second New Post"}]}`)
 			req, err := http.NewRequest("POST", "/posts", reqBody)
