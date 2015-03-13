@@ -1,13 +1,11 @@
-package api2go
+package jsonapi
 
 import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"reflect"
 	"regexp"
-	"strconv"
 	"strings"
 )
 
@@ -26,34 +24,6 @@ func makeContext(rootName string, isSingleStruct bool, prefix string) *marshalin
 	ctx.isSingleStruct = isSingleStruct
 	ctx.prefix = prefix
 	return ctx
-}
-
-//marshalError marshals all error types
-func marshalError(err error) string {
-	httpErr, ok := err.(HTTPError)
-	if ok {
-		return marshalHTTPError(httpErr)
-	}
-
-	httpErr = NewHTTPError(err, err.Error(), 500)
-
-	return marshalHTTPError(httpErr)
-}
-
-//marshalHTTPError marshals an internal httpError
-func marshalHTTPError(input HTTPError) string {
-	if len(input.Errors) == 0 {
-		input.Errors = []Error{Error{Title: input.msg, Status: strconv.Itoa(input.status)}}
-	}
-
-	data, err := json.Marshal(input)
-
-	if err != nil {
-		log.Println(err)
-		return "{}"
-	}
-
-	return string(data)
 }
 
 // Marshal takes a struct (or slice of structs) and marshals them to a json encodable interface{} value
@@ -76,7 +46,7 @@ func marshal(data interface{}, prefix string) (interface{}, error) {
 	if reflect.TypeOf(data).Kind() == reflect.Slice {
 		// We were passed a slice
 		// Using Elem() here to get the slice's element type
-		rootName := pluralize(jsonify(reflect.TypeOf(data).Elem().Name()))
+		rootName := Pluralize(Jsonify(reflect.TypeOf(data).Elem().Name()))
 
 		// Error on empty string, i.e. passed []interface{}
 		if rootName == "" {
@@ -122,7 +92,7 @@ func (ctx *marshalingContext) marshalStruct(val *reflect.Value, isLinked bool) e
 	idFieldRegex := regexp.MustCompile("^.*ID$")
 
 	valType := val.Type()
-	name := jsonify(pluralize(valType.Name()))
+	name := Jsonify(Pluralize(valType.Name()))
 
 	buildLinksMap := func(referenceIDs []interface{}, single bool, field reflect.Value, name, keyName string) map[string]interface{} {
 		var resource string
@@ -133,7 +103,7 @@ func (ctx *marshalingContext) marshalStruct(val *reflect.Value, isLinked bool) e
 		}
 
 		result := make(map[string]interface{})
-		result["type"] = pluralize(jsonify(field.Type().Elem().Name()))
+		result["type"] = Pluralize(Jsonify(field.Type().Elem().Name()))
 		result["resource"] = resource
 
 		if single {
@@ -154,7 +124,7 @@ func (ctx *marshalingContext) marshalStruct(val *reflect.Value, isLinked bool) e
 		}
 
 		field := val.Field(i)
-		keyName := jsonify(valType.Field(i).Name)
+		keyName := Jsonify(valType.Field(i).Name)
 
 		if field.Kind() == reflect.Slice {
 			// A slice indicates nested objects.
@@ -191,7 +161,7 @@ func (ctx *marshalingContext) marshalStruct(val *reflect.Value, isLinked bool) e
 						ids = append(ids, id)
 					}
 
-					structFieldName := dejsonify(keyName)
+					structFieldName := Dejsonify(keyName)
 					typeField := val.FieldByName(structFieldName)
 
 					if typeField.IsValid() {
@@ -227,7 +197,7 @@ func (ctx *marshalingContext) marshalStruct(val *reflect.Value, isLinked bool) e
 			}
 		} else if idFieldRegex.MatchString(keyName) {
 			keyNameWithoutID := strings.TrimSuffix(keyName, "ID")
-			structFieldName := dejsonify(keyNameWithoutID)
+			structFieldName := Dejsonify(keyNameWithoutID)
 			// struct must be preferred, only use this field if struct ptr is nil
 			structFieldValue := val.FieldByName(structFieldName)
 			if !structFieldValue.IsValid() {
@@ -247,7 +217,7 @@ func (ctx *marshalingContext) marshalStruct(val *reflect.Value, isLinked bool) e
 	}
 
 	// add object type
-	result["type"] = pluralize(jsonify(valType.Name()))
+	result["type"] = Pluralize(Jsonify(valType.Name()))
 
 	if len(linksMap) > 0 {
 		result["links"] = linksMap
@@ -258,7 +228,7 @@ func (ctx *marshalingContext) marshalStruct(val *reflect.Value, isLinked bool) e
 }
 
 // addValue adds an object to the context's root
-// `name` should be the pluralized and underscorized object type.
+// `name` should be the Pluralized and underscorized object type.
 func (ctx *marshalingContext) addValue(val map[string]interface{}, isLinked bool) {
 	if !isLinked {
 		if ctx.isSingleStruct {

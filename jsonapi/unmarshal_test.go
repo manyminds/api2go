@@ -1,4 +1,4 @@
-package api2go
+package jsonapi
 
 import (
 	"database/sql"
