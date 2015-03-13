@@ -207,6 +207,11 @@ func setIDValue(val reflect.Value, idInterface interface{}) error {
 
 		val.SetUint(intID)
 
+	case reflect.Invalid:
+		{
+			return fmt.Errorf("Invalid type given for %#v.", idInterface)
+		}
+
 	default:
 		return errors.New("expected ID to be of type int or string in struct")
 	}
