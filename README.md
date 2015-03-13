@@ -11,6 +11,11 @@ import "github.com/univedo/api2go"
 
 **api2go works, but we're still working on some rough edges. Things might change. Open an issue and join in!**
 
+Note: if you only need the marshaling functionality, you can install the subpackage via
+ ```go
+go get github.com/univedo/api2go/jsonapi
+``` 
+
 ## Usage
 
 Take the simple structs:

@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/julienschmidt/httprouter"
+	"github.com/univedo/api2go/jsonapi"
 )
 
 // DataSource provides methods needed for CRUD.
@@ -106,7 +107,7 @@ func (api *API) addResource(prototype interface{}, source DataSource) *resource 
 		panic("pass an empty resource struct to AddResource!")
 	}
 
-	name := jsonify(pluralize(resourceType.Name()))
+	name := jsonapi.Jsonify(jsonapi.Pluralize(resourceType.Name()))
 	res := resource{
 		resourceType: resourceType,
 		name:         name,
@@ -242,11 +243,11 @@ func (res *resource) handleLinked(api *API, w http.ResponseWriter, r *http.Reque
 	// Iterate over all struct fields and determine the type of linked
 	for i := 0; i < res.resourceType.NumField(); i++ {
 		field := res.resourceType.Field(i)
-		fieldName := jsonify(field.Name)
+		fieldName := jsonapi.Jsonify(field.Name)
 		kind := field.Type.Kind()
 		if (kind == reflect.Ptr || kind == reflect.Slice) && fieldName == linked {
 			// Check if there is a resource for this type
-			fieldType := pluralize(jsonify(field.Type.Elem().Name()))
+			fieldType := jsonapi.Pluralize(jsonapi.Jsonify(field.Type.Elem().Name()))
 			for _, resource := range api.resources {
 				if resource.name == fieldType {
 					request := Request{
@@ -279,7 +280,9 @@ func (res *resource) handleCreate(w http.ResponseWriter, r *http.Request, prefix
 		return err
 	}
 	newObjs := reflect.MakeSlice(reflect.SliceOf(res.resourceType), 0, 0)
-	err = unmarshalInto(ctx, res.resourceType, &newObjs)
+
+	//TODO remove necessecity to call unmarshal into
+	err = jsonapi.UnmarshalInto(ctx, res.resourceType, &newObjs)
 	if err != nil {
 		return err
 	}
@@ -320,7 +323,9 @@ func (res *resource) handleUpdate(w http.ResponseWriter, r *http.Request, ps htt
 	}
 	updatingObjs := reflect.MakeSlice(reflect.SliceOf(res.resourceType), 1, 1)
 	updatingObjs.Index(0).Set(reflect.ValueOf(obj))
-	err = unmarshalInto(ctx, res.resourceType, &updatingObjs)
+
+	//TODO remove call to unmarshalInto
+	err = jsonapi.UnmarshalInto(ctx, res.resourceType, &updatingObjs)
 	if err != nil {
 		return err
 	}
@@ -359,7 +364,7 @@ func (res *resource) handleDelete(w http.ResponseWriter, r *http.Request, ps htt
 }
 
 func respondWith(obj interface{}, prefix string, status int, w http.ResponseWriter) error {
-	data, err := MarshalToJSONPrefix(obj, prefix)
+	data, err := jsonapi.MarshalToJSONPrefix(obj, prefix)
 	if err != nil {
 		return err
 	}

@@ -1,4 +1,4 @@
-package api2go
+package jsonapi
 
 import (
 	"database/sql"
@@ -31,7 +31,7 @@ func Unmarshal(ctx unmarshalContext, values interface{}) error {
 	// Copy the value, then write into the new variable.
 	// Later Set() the actual value of the pointee.
 	val := sliceVal
-	err := unmarshalInto(ctx, structType, &val)
+	err := UnmarshalInto(ctx, structType, &val)
 	if err != nil {
 		return err
 	}
@@ -69,10 +69,12 @@ func setFieldValue(field *reflect.Value, value reflect.Value) {
 	}
 }
 
-func unmarshalInto(ctx unmarshalContext, structType reflect.Type, sliceVal *reflect.Value) error {
+// UnmarshalInto this must be private. We have some tight coupling problems here
+// DEPRECATED this method will be private in further releases, so please do not use it
+func UnmarshalInto(ctx unmarshalContext, structType reflect.Type, sliceVal *reflect.Value) error {
 	// Read models slice
 	var modelsInterface interface{}
-	rootName := pluralize(jsonify(structType.Name()))
+	rootName := Pluralize(Jsonify(structType.Name()))
 
 	if modelsInterface = ctx[rootName]; modelsInterface == nil {
 		rootName = "data"
@@ -148,7 +150,7 @@ func unmarshalInto(ctx unmarshalContext, structType reflect.Type, sliceVal *refl
 				// do not unmarshal the `type` field
 
 			default:
-				fieldName := dejsonify(k)
+				fieldName := Dejsonify(k)
 				field := val.FieldByName(fieldName)
 				if !field.IsValid() {
 					return errors.New("expected struct " + structType.Name() + " to have field " + fieldName)
@@ -208,7 +210,7 @@ func unmarshalLinks(val reflect.Value, linksMap map[string]interface{}) error {
 		case []interface{}:
 			// Has-many
 			// Check for field named 'FoobarsIDs' for key 'foobars'
-			structFieldName := dejsonify(linkName) + "IDs"
+			structFieldName := Dejsonify(linkName) + "IDs"
 			sliceField := val.FieldByName(structFieldName)
 			if !sliceField.IsValid() || sliceField.Kind() != reflect.Slice {
 				return errors.New("expected struct to have a " + structFieldName + " slice")
@@ -224,7 +226,7 @@ func unmarshalLinks(val reflect.Value, linksMap map[string]interface{}) error {
 		case string:
 			// Belongs-to or has-one
 			// Check for field named 'FoobarID' for key 'foobar'
-			structFieldName := dejsonify(linkName) + "ID"
+			structFieldName := Dejsonify(linkName) + "ID"
 			field := val.FieldByName(structFieldName)
 			if err := setIDValue(field, links); err != nil {
 				return err
@@ -235,7 +237,7 @@ func unmarshalLinks(val reflect.Value, linksMap map[string]interface{}) error {
 			// Check for field named 'FooID' for key 'foo' if the type is 'foobar'
 			if links["id"] != nil {
 				id := links["id"].(string)
-				structFieldName := dejsonify(linkName) + "ID"
+				structFieldName := Dejsonify(linkName) + "ID"
 				field := val.FieldByName(structFieldName)
 				if err := setIDValue(field, id); err != nil {
 					return err
@@ -249,7 +251,7 @@ func unmarshalLinks(val reflect.Value, linksMap map[string]interface{}) error {
 			if links["ids"] != nil {
 				ids := links["ids"].([]interface{})
 
-				structFieldName := dejsonify(linkName) + "IDs"
+				structFieldName := Dejsonify(linkName) + "IDs"
 				sliceField := val.FieldByName(structFieldName)
 				if !sliceField.IsValid() || sliceField.Kind() != reflect.Slice {
 					return errors.New("expected struct to have a " + structFieldName + " slice")

@@ -1,4 +1,4 @@
-package api2go
+package jsonapi
 
 import (
 	"database/sql"
@@ -49,8 +49,8 @@ var commonInitialisms = map[string]bool{
 	"JWT":   true,
 }
 
-// dejsonify returns a go struct key name from a JSON key name
-func dejsonify(s string) string {
+// Dejsonify returns a go struct key name from a JSON key name
+func Dejsonify(s string) string {
 	if s == "" {
 		return ""
 	}
@@ -62,8 +62,8 @@ func dejsonify(s string) string {
 	return string(rs)
 }
 
-// jsonify returns a JSON formatted key name from a go struct field name
-func jsonify(s string) string {
+// Jsonify returns a JSON formatted key name from a go struct field name
+func Jsonify(s string) string {
 	if s == "" {
 		return ""
 	}
@@ -75,13 +75,13 @@ func jsonify(s string) string {
 	return string(rs)
 }
 
-// pluralize a noun
-func pluralize(word string) string {
+// Pluralize a noun
+func Pluralize(word string) string {
 	return inflector.Pluralize(word)
 }
 
-// singularize a noun
-func singularize(word string) string {
+// Singularize a noun
+func Singularize(word string) string {
 	return inflector.Singularize(word)
 }
 
@@ -206,6 +206,11 @@ func setIDValue(val reflect.Value, idInterface interface{}) error {
 		}
 
 		val.SetUint(intID)
+
+	case reflect.Invalid:
+		{
+			return fmt.Errorf("Invalid type given for %#v.", idInterface)
+		}
 
 	default:
 		return errors.New("expected ID to be of type int or string in struct")

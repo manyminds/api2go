@@ -6,7 +6,12 @@ go:
   - 1.4
   - tip
 
-install: go get -t -d -v ./... && go build -v ./...
+install: 
+  - go get -t -d -v ./...
+  - go get github.com/onsi/ginkgo/ginkgo
+
+script:
+  - ginkgo -r --randomizeAllSpecs --randomizeSuites --failOnPending --trace --race --progress
 
 notifications:
   slack:

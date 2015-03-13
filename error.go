@@ -1,6 +1,11 @@
 package api2go
 
-import "fmt"
+import (
+	"encoding/json"
+	"fmt"
+	"log"
+	"strconv"
+)
 
 //HTTPError is used for errors
 type HTTPError struct {
@@ -22,6 +27,34 @@ type Error struct {
 	Title  string `json:"title,omitempty"`
 	Detail string `json:"detail,omitempty"`
 	Path   string `json:"path,omitempty"`
+}
+
+//marshalError marshals all error types
+func marshalError(err error) string {
+	httpErr, ok := err.(HTTPError)
+	if ok {
+		return marshalHTTPError(httpErr)
+	}
+
+	httpErr = NewHTTPError(err, err.Error(), 500)
+
+	return marshalHTTPError(httpErr)
+}
+
+//marshalHTTPError marshals an internal httpError
+func marshalHTTPError(input HTTPError) string {
+	if len(input.Errors) == 0 {
+		input.Errors = []Error{Error{Title: input.msg, Status: strconv.Itoa(input.status)}}
+	}
+
+	data, err := json.Marshal(input)
+
+	if err != nil {
+		log.Println(err)
+		return "{}"
+	}
+
+	return string(data)
 }
 
 // NewHTTPError creates a new error with message and status code.
