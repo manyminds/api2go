@@ -69,8 +69,8 @@ func setFieldValue(field *reflect.Value, value reflect.Value) {
 	}
 }
 
-//UnmarshalInto this must be private. We have some tight coupling problems here
-//TODO fixme
+// UnmarshalInto this must be private. We have some tight coupling problems here
+// DEPRECATED this method will be private in further releases, so please do not use it
 func UnmarshalInto(ctx unmarshalContext, structType reflect.Type, sliceVal *reflect.Value) error {
 	// Read models slice
 	var modelsInterface interface{}
