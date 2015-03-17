@@ -264,12 +264,12 @@ var _ = Describe("RestHandler", func() {
 					"author": map[string]interface{}{
 						"id":       "1",
 						"type":     "users",
-						"resource": "/posts/1/author",
+						"resource": "/v1/posts/1/author",
 					},
 					"comments": map[string]interface{}{
 						"ids":      []interface{}{"1"},
 						"type":     "comments",
-						"resource": "/posts/1/comments",
+						"resource": "/v1/posts/1/comments",
 					},
 				},
 			}
@@ -295,12 +295,12 @@ var _ = Describe("RestHandler", func() {
 				"links": map[string]interface{}{
 					"author": map[string]interface{}{
 						"type":     "users",
-						"resource": "/posts/2/author",
+						"resource": "/v1/posts/2/author",
 					},
 					"comments": map[string]interface{}{
 						"ids":      []interface{}{},
 						"type":     "comments",
-						"resource": "/posts/2/comments",
+						"resource": "/v1/posts/2/comments",
 					},
 				},
 			}
@@ -313,17 +313,17 @@ var _ = Describe("RestHandler", func() {
 				"links": map[string]interface{}{
 					"author": map[string]interface{}{
 						"type":     "users",
-						"resource": "/posts/3/author",
+						"resource": "/v1/posts/3/author",
 					},
 					"comments": map[string]interface{}{
 						"ids":      []interface{}{},
 						"type":     "comments",
-						"resource": "/posts/3/comments",
+						"resource": "/v1/posts/3/comments",
 					},
 				},
 			}
 
-			api = NewAPI("")
+			api = NewAPI("v1")
 			api.AddResource(Post{}, source)
 			api.AddResource(User{}, &userSource{})
 			api.AddResource(Comment{}, &commentSource{})
@@ -332,7 +332,7 @@ var _ = Describe("RestHandler", func() {
 		})
 
 		It("GETs collections", func() {
-			req, err := http.NewRequest("GET", "/posts", nil)
+			req, err := http.NewRequest("GET", "/v1/posts", nil)
 			Expect(err).To(BeNil())
 			api.Handler().ServeHTTP(rec, req)
 			Expect(rec.Code).To(Equal(http.StatusOK))
@@ -345,7 +345,7 @@ var _ = Describe("RestHandler", func() {
 		})
 
 		It("GETs single objects", func() {
-			req, err := http.NewRequest("GET", "/posts/1", nil)
+			req, err := http.NewRequest("GET", "/v1/posts/1", nil)
 			Expect(err).To(BeNil())
 			api.Handler().ServeHTTP(rec, req)
 			Expect(rec.Code).To(Equal(http.StatusOK))
@@ -358,7 +358,7 @@ var _ = Describe("RestHandler", func() {
 		})
 
 		It("GETs multiple objects", func() {
-			req, err := http.NewRequest("GET", "/posts/1,2", nil)
+			req, err := http.NewRequest("GET", "/v1/posts/1,2", nil)
 			Expect(err).To(BeNil())
 			api.Handler().ServeHTTP(rec, req)
 			Expect(rec.Code).To(Equal(http.StatusOK))
@@ -371,7 +371,7 @@ var _ = Describe("RestHandler", func() {
 		})
 
 		It("GETs related struct from resource url", func() {
-			req, err := http.NewRequest("GET", "/posts/1/author", nil)
+			req, err := http.NewRequest("GET", "/v1/posts/1/author", nil)
 			Expect(err).ToNot(HaveOccurred())
 			api.Handler().ServeHTTP(rec, req)
 			Expect(rec.Code).To(Equal(http.StatusOK))
@@ -379,7 +379,7 @@ var _ = Describe("RestHandler", func() {
 		})
 
 		It("GETs related structs from resource url", func() {
-			req, err := http.NewRequest("GET", "/posts/1/comments", nil)
+			req, err := http.NewRequest("GET", "/v1/posts/1/comments", nil)
 			Expect(err).ToNot(HaveOccurred())
 			api.Handler().ServeHTTP(rec, req)
 			Expect(rec.Code).To(Equal(http.StatusOK))
@@ -387,7 +387,7 @@ var _ = Describe("RestHandler", func() {
 		})
 
 		It("Gets 404 if a related struct was not found", func() {
-			req, err := http.NewRequest("GET", "/posts/1/unicorns", nil)
+			req, err := http.NewRequest("GET", "/v1/posts/1/unicorns", nil)
 			Expect(err).ToNot(HaveOccurred())
 			api.Handler().ServeHTTP(rec, req)
 			Expect(rec.Code).To(Equal(http.StatusNotFound))
@@ -395,7 +395,7 @@ var _ = Describe("RestHandler", func() {
 		})
 
 		It("404s", func() {
-			req, err := http.NewRequest("GET", "/posts/23", nil)
+			req, err := http.NewRequest("GET", "/v1/posts/23", nil)
 			Expect(err).To(BeNil())
 			api.Handler().ServeHTTP(rec, req)
 			Expect(rec.Code).To(Equal(http.StatusNotFound))
@@ -405,11 +405,11 @@ var _ = Describe("RestHandler", func() {
 
 		It("POSTSs new objects", func() {
 			reqBody := strings.NewReader(`{"posts": [{"title": "New Post"}]}`)
-			req, err := http.NewRequest("POST", "/posts", reqBody)
+			req, err := http.NewRequest("POST", "/v1/posts", reqBody)
 			Expect(err).To(BeNil())
 			api.Handler().ServeHTTP(rec, req)
 			Expect(rec.Code).To(Equal(http.StatusCreated))
-			Expect(rec.Header().Get("Location")).To(Equal("/posts/4"))
+			Expect(rec.Header().Get("Location")).To(Equal("/v1/posts/4"))
 			var result map[string]interface{}
 			Expect(json.Unmarshal(rec.Body.Bytes(), &result)).To(BeNil())
 			Expect(result).To(Equal(map[string]interface{}{
@@ -421,12 +421,12 @@ var _ = Describe("RestHandler", func() {
 					"links": map[string]interface{}{
 						"author": map[string]interface{}{
 							"type":     "users",
-							"resource": "/posts/4/author",
+							"resource": "/v1/posts/4/author",
 						},
 						"comments": map[string]interface{}{
 							"ids":      []interface{}{},
 							"type":     "comments",
-							"resource": "/posts/4/comments",
+							"resource": "/v1/posts/4/comments",
 						},
 					},
 				},
@@ -435,7 +435,7 @@ var _ = Describe("RestHandler", func() {
 
 		It("POSTSs new objects with trailing slash automatic redirect enabled", func() {
 			reqBody := strings.NewReader(`{"posts": [{"title": "New Post"}]}`)
-			req, err := http.NewRequest("POST", "/posts/", reqBody)
+			req, err := http.NewRequest("POST", "/v1/posts/", reqBody)
 			Expect(err).To(BeNil())
 			api.SetRedirectTrailingSlash(true)
 			api.Handler().ServeHTTP(rec, req)
@@ -444,7 +444,7 @@ var _ = Describe("RestHandler", func() {
 
 		It("POSTSs new objects with trailing slash automatic redirect disabled", func() {
 			reqBody := strings.NewReader(`{"posts": [{"title": "New Post"}]}`)
-			req, err := http.NewRequest("POST", "/posts/", reqBody)
+			req, err := http.NewRequest("POST", "/v1/posts/", reqBody)
 			Expect(err).To(BeNil())
 			api.SetRedirectTrailingSlash(false)
 			api.Handler().ServeHTTP(rec, req)
@@ -453,7 +453,7 @@ var _ = Describe("RestHandler", func() {
 
 		It("POSTSs multiple objects", func() {
 			reqBody := strings.NewReader(`{"posts": [{"title": "New Post"}, {"title" : "Second New Post"}]}`)
-			req, err := http.NewRequest("POST", "/posts", reqBody)
+			req, err := http.NewRequest("POST", "/v1/posts", reqBody)
 			Expect(err).To(BeNil())
 			api.Handler().ServeHTTP(rec, req)
 			Expect(rec.Code).To(Equal(http.StatusInternalServerError))
@@ -463,7 +463,7 @@ var _ = Describe("RestHandler", func() {
 
 		It("PUTSs multiple objects", func() {
 			reqBody := strings.NewReader(`{"posts": [{"title": "New Post"}, {"title" : "Second New Post"}]}`)
-			req, err := http.NewRequest("PUT", "/posts/1", reqBody)
+			req, err := http.NewRequest("PUT", "/v1/posts/1", reqBody)
 			Expect(err).To(BeNil())
 			api.Handler().ServeHTTP(rec, req)
 			Expect(rec.Code).To(Equal(http.StatusInternalServerError))
@@ -472,7 +472,7 @@ var _ = Describe("RestHandler", func() {
 		})
 
 		It("OPTIONS on collection route", func() {
-			req, err := http.NewRequest("OPTIONS", "/posts", nil)
+			req, err := http.NewRequest("OPTIONS", "/v1/posts", nil)
 			api.Handler().ServeHTTP(rec, req)
 			Expect(err).To(BeNil())
 			Expect(rec.Code).To(Equal(http.StatusNoContent))
@@ -480,7 +480,7 @@ var _ = Describe("RestHandler", func() {
 		})
 
 		It("OPTIONS on element route", func() {
-			req, err := http.NewRequest("OPTIONS", "/posts/1", nil)
+			req, err := http.NewRequest("OPTIONS", "/v1/posts/1", nil)
 			api.Handler().ServeHTTP(rec, req)
 			Expect(err).To(BeNil())
 			Expect(rec.Code).To(Equal(http.StatusNoContent))
@@ -488,7 +488,7 @@ var _ = Describe("RestHandler", func() {
 		})
 
 		It("DELETEs", func() {
-			req, err := http.NewRequest("DELETE", "/posts/1", nil)
+			req, err := http.NewRequest("DELETE", "/v1/posts/1", nil)
 			Expect(err).To(BeNil())
 			api.Handler().ServeHTTP(rec, req)
 			Expect(rec.Code).To(Equal(http.StatusNoContent))
@@ -497,7 +497,7 @@ var _ = Describe("RestHandler", func() {
 
 		It("UPDATEs", func() {
 			reqBody := strings.NewReader(`{"posts": {"id": "1", "title": "New Title"}}`)
-			req, err := http.NewRequest("PUT", "/posts/1", reqBody)
+			req, err := http.NewRequest("PUT", "/v1/posts/1", reqBody)
 			Expect(err).To(BeNil())
 			api.Handler().ServeHTTP(rec, req)
 			Expect(rec.Code).To(Equal(http.StatusNoContent))
@@ -506,7 +506,7 @@ var _ = Describe("RestHandler", func() {
 
 		It("UPDATEs as array", func() {
 			reqBody := strings.NewReader(`{"posts": [{"id": "1", "title": "New Title"}]}`)
-			req, err := http.NewRequest("PUT", "/posts/1", reqBody)
+			req, err := http.NewRequest("PUT", "/v1/posts/1", reqBody)
 			Expect(err).To(BeNil())
 			api.Handler().ServeHTTP(rec, req)
 			Expect(rec.Code).To(Equal(http.StatusNoContent))
@@ -578,20 +578,6 @@ var _ = Describe("RestHandler", func() {
 				Expect(rec.Code).To(Equal(http.StatusInternalServerError))
 				Expect(rec.Body.Bytes()).To(MatchJSON(controllerErrorJSON))
 			})
-		})
-	})
-
-	Context("when prefixing routes", func() {
-		It("has correct Location when creating", func() {
-			api := NewAPI("v1")
-			api.AddResource(Post{}, &fixtureSource{map[string]*Post{}})
-			rec := httptest.NewRecorder()
-			reqBody := strings.NewReader(`{"posts": [{"title": "New Post"}]}`)
-			req, err := http.NewRequest("POST", "/v1/posts", reqBody)
-			Expect(err).To(BeNil())
-			api.Handler().ServeHTTP(rec, req)
-			Expect(rec.Code).To(Equal(http.StatusCreated))
-			Expect(rec.Header().Get("Location")).To(Equal("/v1/posts/1"))
 		})
 	})
 
