@@ -31,13 +31,25 @@ func Marshal(data interface{}) (interface{}, error) {
 	return marshal(data, "")
 }
 
-//Identifier interface is necessary to give an element
-//a unique ID. This interface must be implemented for
-//marshal and unmarshal in order to let them store
-//elements
+// Identifier interface is necessary to give an element
+// a unique ID. This interface must be implemented for
+// marshal and unmarshal in order to let them store
+// elements
 type Identifier interface {
 	GetID() string
 	SetID(string) error
+}
+
+// ReferenceID todo later
+type ReferenceID struct {
+	ID   string
+	Type string
+}
+
+// Relations TODO blub
+type Relations interface {
+	GetReferencedIDs() []ReferenceID
+	SetReferencedIDs([]ReferenceID) error
 }
 
 // MarshalPrefix2 does the same as Marshal but adds a prefix to generated URLs
@@ -55,23 +67,67 @@ func Marshal2(data Identifier) (interface{}, error) {
 	return marshal2(data, "")
 }
 
-func marshal2(data Identifier, prefix string) (interface{}, error) {
-	result := make(map[string]map[string]interface{})
-	result["data"] = make(map[string]interface{})
+// MarshalSlice marshals a slice TODO
+func MarshalSlice(data interface{}) (interface{}, error) {
+	result := make(map[string]interface{})
+
+	val := reflect.ValueOf(data)
+	if val.Kind() != reflect.Slice {
+		return result, errors.New("data must be a slice")
+	}
+
+	var dataElements []map[string]interface{}
+
+	for i := 0; i < val.Len(); i++ {
+		k := val.Index(i).Interface()
+		element, ok := k.(Identifier)
+		if !ok {
+			return result, errors.New("all elements within the slice must implement api2go.Identifier")
+		}
+
+		content, err := marshalData(element)
+		if err != nil {
+			return result, err
+		}
+
+		dataElements = append(dataElements, content)
+	}
+
+	result["data"] = dataElements
+
+	return result, nil
+}
+
+func marshalData(data Identifier) (map[string]interface{}, error) {
+	result := make(map[string]interface{})
 
 	if element, ok := data.(Identifier); ok {
 		id := element.GetID()
 		content := getStructFields(data)
 		for k, v := range content {
-			result["data"][k] = v
+			result[k] = v
 		}
 
-		result["data"]["id"] = id
-		result["data"]["type"] = getStructType(data)
+		//its important that the id from the interface
+		//gets added afterwards, otherwise an ID field
+		//could conflict with the actual marshalling
+		result["id"] = id
+		result["type"] = getStructType(data)
 	} else {
 		return result, errors.New("data must implement api2go.Identifier interface")
 	}
 
+	return result, nil
+}
+
+func marshal2(data Identifier, prefix string) (interface{}, error) {
+	result := make(map[string]map[string]interface{})
+	contentData, err := marshalData(data)
+	if err != nil {
+		return result, err
+	}
+
+	result["data"] = contentData
 	return result, nil
 }
 

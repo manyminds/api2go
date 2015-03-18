@@ -64,19 +64,35 @@ func (u *User) SetID(stringID string) error {
 	return nil
 }
 
-var _ = Describe("Marshalling", func() {
-	type SimplePost struct {
-		Title, Text string
-	}
-	type Post struct {
-		ID          int
-		Title       string
-		Comments    []Comment
-		CommentsIDs []int
-		Author      *User
-		AuthorID    sql.NullInt64
+type SimplePost struct {
+	Title, Text string
+}
+
+type Post struct {
+	ID          int
+	Title       string
+	Comments    []Comment     `json:"-"`
+	CommentsIDs []int         `json:"-"`
+	Author      *User         `json:"-"`
+	AuthorID    sql.NullInt64 `json:"-"`
+}
+
+func (c Post) GetID() string {
+	return fmt.Sprintf("%d", c.ID)
+}
+
+func (c *Post) SetID(stringID string) error {
+	id, err := strconv.Atoi(stringID)
+	if err != nil {
+		return err
 	}
 
+	c.ID = id
+
+	return nil
+}
+
+var _ = Describe("Marshalling", func() {
 	Context("When marshaling simple objects", func() {
 		var (
 			firstPost, secondPost                     SimplePost
@@ -114,7 +130,7 @@ var _ = Describe("Marshalling", func() {
 
 		})
 
-		It("marshals single object", func() {
+		FIt("marshals single object", func() {
 			i, err := Marshal(firstPost)
 			Expect(err).To(BeNil())
 			Expect(i).To(Equal(map[string]interface{}{
@@ -224,16 +240,16 @@ var _ = Describe("Marshalling", func() {
 	})
 
 	Context("When marshaling compound objects", func() {
-		It("marshals nested objects", func() {
+		FIt("marshals nested objects", func() {
 			comment1 := Comment{ID: 1, Text: "First!"}
 			comment2 := Comment{ID: 2, Text: "Second!"}
 			author := User{ID: 1, Name: "Test Author"}
 			post1 := Post{ID: 1, Title: "Foobar", Comments: []Comment{comment1, comment2}, Author: &author}
 			post2 := Post{ID: 2, Title: "Foobarbarbar", Comments: []Comment{comment1, comment2}, Author: &author}
 
-			posts := []Post{post1, post2}
+			posts := []*Post{&post1, &post2}
 
-			i, err := Marshal(posts)
+			i, err := MarshalSlice(posts)
 			Expect(err).To(BeNil())
 
 			expected := map[string]interface{}{
