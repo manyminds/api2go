@@ -606,4 +606,17 @@ var _ = FDescribe("Marshalling", func() {
 			Expect(marshalled).To(BeEquivalentTo(expected))
 		})
 	})
+
+	Context("Test getStructTypes method", func() {
+		comment := Comment{ID: 100, Text: "some text"}
+		It("should work with normal value", func() {
+			result := getStructType(comment)
+			Expect(result).To(Equal("comments"))
+		})
+
+		It("should work with pointer to value", func() {
+			result := getStructType(&comment)
+			Expect(result).To(Equal("comments"))
+		})
+	})
 })
