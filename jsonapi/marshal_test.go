@@ -11,7 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Marshalling", func() {
+var _ = FDescribe("Marshalling", func() {
 	Context("When marshaling simple objects", func() {
 		var (
 			firstPost, secondPost                     SimplePost
@@ -19,15 +19,17 @@ var _ = Describe("Marshalling", func() {
 		)
 
 		BeforeEach(func() {
-			firstPost = SimplePost{Title: "First Post", Text: "Lipsum"}
+			firstPost = SimplePost{ID: "first", Title: "First Post", Text: "Lipsum"}
 			firstPostMap = map[string]interface{}{
 				"type":  "simplePosts",
+				"id":    "first",
 				"title": firstPost.Title,
 				"text":  firstPost.Text,
 			}
-			secondPost = SimplePost{Title: "Second Post", Text: "Getting more advanced!"}
+			secondPost = SimplePost{ID: "second", Title: "Second Post", Text: "Getting more advanced!"}
 			secondPostMap = map[string]interface{}{
 				"type":  "simplePosts",
+				"id":    "second",
 				"title": secondPost.Title,
 				"text":  secondPost.Text,
 			}
@@ -39,18 +41,18 @@ var _ = Describe("Marshalling", func() {
 			}
 		})
 
-		FIt("marshals single object without relationships", func() {
+		It("marshals single object without relationships", func() {
 			user := User{ID: 100, Name: "Nino", Password: "babymaus"}
-			i, err := Marshal2(user)
+			i, err := Marshal(user)
 			Expect(err).To(BeNil())
 			Expect(i).To(Equal(map[string]interface{}{
 				"data": firstUserMap,
 			}))
 		})
 
-		FIt("marshals single object without relationships as pointer", func() {
+		It("marshals single object without relationships as pointer", func() {
 			user := User{ID: 100, Name: "Nino", Password: "babymaus"}
-			i, err := Marshal2(&user)
+			i, err := Marshal(&user)
 			Expect(err).To(BeNil())
 			Expect(i).To(Equal(map[string]interface{}{
 				"data": firstUserMap,
@@ -90,7 +92,7 @@ var _ = Describe("Marshalling", func() {
 			i, err := Marshal([]SimplePost{firstPost, secondPost})
 			Expect(err).To(BeNil())
 			Expect(i).To(Equal(map[string]interface{}{
-				"data": []interface{}{
+				"data": []map[string]interface{}{
 					firstPostMap,
 					secondPostMap,
 				},
@@ -101,13 +103,34 @@ var _ = Describe("Marshalling", func() {
 			i, err := Marshal([]SimplePost{})
 			Expect(err).To(BeNil())
 			Expect(i).To(Equal(map[string]interface{}{
-				"data": []interface{}{},
+				"data": []map[string]interface{}{},
 			}))
 		})
 
-		It("returns an error when passing interface{} slices", func() {
-			_, err := Marshal([]interface{}{})
-			Expect(err).To(HaveOccurred())
+		It("marshalls slices of interface with one struct", func() {
+			i, err := Marshal([]interface{}{firstPost})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(i).To(Equal(map[string]interface{}{
+				"data": []map[string]interface{}{
+					firstPostMap,
+				},
+			}))
+		})
+
+		It("marshalls slices of interface with structs", func() {
+			i, err := Marshal([]interface{}{firstPost, secondPost, User{ID: 1337, Name: "Nino", Password: "God"}})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(i).To(Equal(map[string]interface{}{
+				"data": []map[string]interface{}{
+					firstPostMap,
+					secondPostMap,
+					map[string]interface{}{
+						"id":   "1337",
+						"name": "Nino",
+						"type": "users",
+					},
+				},
+			}))
 		})
 
 		It("returns an error when passing an empty string", func() {
@@ -126,48 +149,10 @@ var _ = Describe("Marshalling", func() {
 				},
 			}))
 		})
-
-		Context("when converting IDs to string", func() {
-			It("leaves string", func() {
-				type StringID struct{ ID string }
-				i, err := Marshal(StringID{ID: "1"})
-				Expect(err).To(BeNil())
-				Expect(i).To(Equal(map[string]interface{}{
-					"data": map[string]interface{}{
-						"type": "stringIDs",
-						"id":   "1",
-					},
-				}))
-			})
-
-			It("converts ints", func() {
-				type IntID struct{ ID int }
-				i, err := Marshal(IntID{ID: 1})
-				Expect(err).To(BeNil())
-				Expect(i).To(Equal(map[string]interface{}{
-					"data": map[string]interface{}{
-						"type": "intIDs",
-						"id":   "1",
-					},
-				}))
-			})
-
-			It("converts uints", func() {
-				type UintID struct{ ID uint }
-				i, err := Marshal(UintID{ID: 1})
-				Expect(err).To(BeNil())
-				Expect(i).To(Equal(map[string]interface{}{
-					"data": map[string]interface{}{
-						"type": "uintIDs",
-						"id":   "1",
-					},
-				}))
-			})
-		})
 	})
 
 	Context("When marshaling compound objects", func() {
-		FIt("marshals nested objects", func() {
+		It("marshals nested objects", func() {
 			comment1 := Comment{ID: 1, Text: "First!"}
 			comment2 := Comment{ID: 2, Text: "Second!"}
 			author := User{ID: 1, Name: "Test Author"}
@@ -176,7 +161,7 @@ var _ = Describe("Marshalling", func() {
 
 			posts := []Post{post1, post2}
 
-			i, err := Marshal2(posts)
+			i, err := Marshal(posts)
 			Expect(err).To(BeNil())
 
 			expected := map[string]interface{}{
@@ -258,8 +243,8 @@ var _ = Describe("Marshalling", func() {
 							"resource": "/posts/1/comments",
 						},
 						"author": map[string]interface{}{
-							"type":     "users",
-							"resource": "/posts/1/author",
+							"type": "users",
+							//"resource": "/posts/1/author",
 						},
 					},
 				},

@@ -10,6 +10,10 @@ type Magic struct {
 	ID MagicID
 }
 
+func (m Magic) GetID() string {
+	return m.ID.String()
+}
+
 type MagicID string
 
 func (m MagicID) String() string {
@@ -58,7 +62,11 @@ func (u *User) SetID(stringID string) error {
 }
 
 type SimplePost struct {
-	Title, Text string
+	ID, Title, Text string
+}
+
+func (s SimplePost) GetID() string {
+	return s.ID
 }
 
 type Post struct {
@@ -83,6 +91,19 @@ func (c *Post) SetID(stringID string) error {
 	c.ID = id
 
 	return nil
+}
+
+func (c Post) GetReferences() []Reference {
+	return []Reference{
+		{
+			Type: "comments",
+			Name: "comments",
+		},
+		{
+			Type: "users",
+			Name: "author",
+		},
+	}
 }
 
 func (c *Post) SetReferencedIDs(ids []ReferenceID) error {
@@ -114,9 +135,12 @@ func (c Post) GetReferencedIDs() []ReferenceID {
 }
 
 func (c Post) GetReferencedStructs() []MarshalIdentifier {
-	result := []MarshalIdentifier{c.Author}
+	result := []MarshalIdentifier{}
+	if c.Author != nil {
+		result = append(result, c.Author)
+	}
 	for key := range c.Comments {
-		result = append(result, &c.Comments[key])
+		result = append(result, c.Comments[key])
 	}
 	return result
 }
