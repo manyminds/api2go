@@ -97,8 +97,39 @@ func (c *Post) SetReferencedIDs(ids []ReferenceID) error {
 }
 
 func (c Post) GetReferencedIDs() []ReferenceID {
-	authorID := ReferenceID{Type: "users", Name: "author", ID: c.Author.GetID()}
-	return []ReferenceID{authorID}
+	result := []ReferenceID{}
+
+	if c.Author != nil {
+		authorID := ReferenceID{Type: "users", Name: "author", ID: c.Author.GetID()}
+		result = append(result, authorID)
+	} else if c.AuthorID.Valid {
+		authorID := ReferenceID{Type: "users", Name: "author", ID: fmt.Sprintf("%d", c.AuthorID.Int64)}
+		result = append(result, authorID)
+	}
+
+	if len(c.Comments) > 0 {
+		for _, comment := range c.Comments {
+			result = append(result, ReferenceID{Type: "comments", Name: "comments", ID: comment.GetID()})
+		}
+	} else if len(c.CommentsIDs) > 0 {
+		for _, commentID := range c.CommentsIDs {
+			result = append(result, ReferenceID{Type: "comments", Name: "comments", ID: fmt.Sprintf("%d", commentID)})
+		}
+	}
+
+	return result
+}
+
+func (c Post) GetReferencedStructs() []Identifier {
+	result := []Identifier{c.Author}
+	for key := range c.Comments {
+		result = append(result, &c.Comments[key])
+	}
+	return result
+}
+
+func (c *Post) SetReferencedStructs(references []Identifier) error {
+	return nil
 }
 
 var _ = Describe("Marshalling", func() {
@@ -133,10 +164,9 @@ var _ = Describe("Marshalling", func() {
 			user := User{ID: 100, Name: "Nino", Password: "babymaus"}
 			i, err := Marshal2(&user)
 			Expect(err).To(BeNil())
-			Expect(i).To(Equal(map[string]map[string]interface{}{
+			Expect(i).To(Equal(map[string]interface{}{
 				"data": firstUserMap,
 			}))
-
 		})
 
 		FIt("marshals single object", func() {
@@ -262,21 +292,21 @@ var _ = Describe("Marshalling", func() {
 			Expect(err).To(BeNil())
 
 			expected := map[string]interface{}{
-				"data": []interface{}{
+				"data": []map[string]interface{}{
 					map[string]interface{}{
 						"id": "1",
 						"links": map[string]interface{}{
 							"comments": map[string]interface{}{
 								// "self":     "/posts/1/links/comments",
-								"resource": "/posts/1/comments",
-								"ids":      []interface{}{"1", "2"},
-								"type":     "comments",
+								// "resource": "/posts/1/comments",
+								"ids":  []string{"1", "2"},
+								"type": "comments",
 							},
 							"author": map[string]interface{}{
 								// "self":     "/posts/1/links/author",
-								"resource": "/posts/1/author",
-								"id":       "1",
-								"type":     "users",
+								// "resource": "/posts/1/author",
+								"id":   "1",
+								"type": "users",
 							},
 						},
 						"title": "Foobar",
@@ -287,22 +317,27 @@ var _ = Describe("Marshalling", func() {
 						"links": map[string]interface{}{
 							"comments": map[string]interface{}{
 								// "self":     "/posts/2/links/comments",
-								"resource": "/posts/2/comments",
-								"ids":      []interface{}{"1", "2"},
-								"type":     "comments",
+								//"resource": "/posts/2/comments",
+								"ids":  []string{"1", "2"},
+								"type": "comments",
 							},
 							"author": map[string]interface{}{
 								// "self":     "/posts/2/links/author",
-								"resource": "/posts/2/author",
-								"id":       "1",
-								"type":     "users",
+								//"resource": "/posts/2/author",
+								"id":   "1",
+								"type": "users",
 							},
 						},
 						"title": "Foobarbarbar",
 						"type":  "posts",
 					},
 				},
-				"linked": []interface{}{
+				"linked": []map[string]interface{}{
+					map[string]interface{}{
+						"id":   "1",
+						"name": "Test Author",
+						"type": "users",
+					},
 					map[string]interface{}{
 						"id":   "1",
 						"text": "First!",
@@ -312,11 +347,6 @@ var _ = Describe("Marshalling", func() {
 						"id":   "2",
 						"text": "Second!",
 						"type": "comments",
-					},
-					map[string]interface{}{
-						"id":   "1",
-						"name": "Test Author",
-						"type": "users",
 					},
 				},
 			}

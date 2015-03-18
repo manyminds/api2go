@@ -47,10 +47,16 @@ type ReferenceID struct {
 	Name string
 }
 
-// Relations TODO blub
-type Relations interface {
+// LinkedRelations must be implemented if there are references and the reference IDs should be included
+type LinkedRelations interface {
 	GetReferencedIDs() []ReferenceID
 	SetReferencedIDs([]ReferenceID) error
+}
+
+// IncludedRelations must be implemented if referenced structs should be included
+type IncludedRelations interface {
+	GetReferencedStructs() []Identifier
+	SetReferencedStructs([]Identifier) error
 }
 
 // MarshalPrefix2 does the same as Marshal but adds a prefix to generated URLs
@@ -64,12 +70,12 @@ func MarshalPrefix(data interface{}, prefix string) (interface{}, error) {
 }
 
 // Marshal2 is the new shit
-func Marshal2(data Identifier) (interface{}, error) {
+func Marshal2(data Identifier) (map[string]interface{}, error) {
 	return marshal2(data, "")
 }
 
 // MarshalSlice marshals a slice TODO
-func MarshalSlice(data interface{}) (interface{}, error) {
+func MarshalSlice(data interface{}) (map[string]interface{}, error) {
 	result := make(map[string]interface{})
 
 	val := reflect.ValueOf(data)
@@ -78,6 +84,7 @@ func MarshalSlice(data interface{}) (interface{}, error) {
 	}
 
 	var dataElements []map[string]interface{}
+	var referencedStructs []Identifier
 
 	for i := 0; i < val.Len(); i++ {
 		k := val.Index(i).Interface()
@@ -92,11 +99,49 @@ func MarshalSlice(data interface{}) (interface{}, error) {
 		}
 
 		dataElements = append(dataElements, content)
+
+		included, ok := k.(IncludedRelations)
+		if ok {
+			referencedStructs = append(referencedStructs, included.GetReferencedStructs()...)
+		}
+	}
+
+	includedElements, err := reduceDuplicates(referencedStructs, marshalData)
+	if err != nil {
+		return result, err
 	}
 
 	result["data"] = dataElements
+	result["linked"] = includedElements
 
 	return result, nil
+}
+
+// reduceDuplicates eliminates duplicate Identifier from input and calls `method` on every unique Identifier
+func reduceDuplicates(input []Identifier, method func(Identifier) (map[string]interface{}, error)) ([]map[string]interface{}, error) {
+	var (
+		alreadyIncluded  = make(map[string]map[string]bool)
+		includedElements []map[string]interface{}
+	)
+
+	for _, referencedStruct := range input {
+		structType := getStructType(referencedStruct)
+		if alreadyIncluded[structType] == nil {
+			alreadyIncluded[structType] = make(map[string]bool)
+		}
+
+		if !alreadyIncluded[structType][referencedStruct.GetID()] {
+			marshalled, err := method(referencedStruct)
+			if err != nil {
+				return includedElements, err
+			}
+
+			includedElements = append(includedElements, marshalled)
+			alreadyIncluded[structType][referencedStruct.GetID()] = true
+		}
+	}
+
+	return includedElements, nil
 }
 
 func marshalData(data Identifier) (map[string]interface{}, error) {
@@ -120,16 +165,16 @@ func marshalData(data Identifier) (map[string]interface{}, error) {
 	result["type"] = getStructType(data)
 
 	// optional relationship interface for struct
-	relationer, ok := data.(Relations)
+	references, ok := data.(LinkedRelations)
 	if ok {
-		result["links"] = getStructLinks(relationer)
+		result["links"] = getStructLinks(references)
 	}
 
 	return result, nil
 }
 
 // getStructLinks returns the link struct with ids
-func getStructLinks(relationer Relations) map[string]interface{} {
+func getStructLinks(relationer LinkedRelations) map[string]interface{} {
 	referencedIDs := relationer.GetReferencedIDs()
 	sortedResults := make(map[string][]ReferenceID)
 	links := make(map[string]interface{})
@@ -139,7 +184,7 @@ func getStructLinks(relationer Relations) map[string]interface{} {
 	}
 
 	for referenceType, referenceIDs := range sortedResults {
-		switch len(referencedIDs) {
+		switch len(sortedResults[referenceType]) {
 		case 0:
 			continue
 		case 1:
@@ -164,14 +209,41 @@ func getStructLinks(relationer Relations) map[string]interface{} {
 	return links
 }
 
-func marshal2(data Identifier, prefix string) (interface{}, error) {
-	result := make(map[string]map[string]interface{})
+func getIncludedStructs(included IncludedRelations) ([]map[string]interface{}, error) {
+	var result = make([]map[string]interface{}, 0)
+	includedStructs := included.GetReferencedStructs()
+
+	for _, includedStruct := range includedStructs {
+		marshalled, err := marshalData(includedStruct)
+		if err != nil {
+			return result, err
+		}
+
+		result = append(result, marshalled)
+	}
+
+	return result, nil
+}
+
+func marshal2(data Identifier, prefix string) (map[string]interface{}, error) {
+	result := make(map[string]interface{})
 	contentData, err := marshalData(data)
 	if err != nil {
 		return result, err
 	}
 
 	result["data"] = contentData
+
+	included, ok := data.(IncludedRelations)
+	if ok {
+		linked, err := getIncludedStructs(included)
+		if err != nil {
+			return result, err
+		}
+
+		result["linked"] = linked
+	}
+
 	return result, nil
 }
 
@@ -433,6 +505,24 @@ func MarshalToJSON(val interface{}) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	return json.Marshal(result)
+}
+
+// MarshalToJSON2 marshals a struct to json
+func MarshalToJSON2(val interface{}) ([]byte, error) {
+	if reflect.TypeOf(val).Kind() == reflect.Slice {
+		result, err := MarshalSlice(val)
+		if err != nil {
+			return []byte{}, err
+		}
+		return json.Marshal(result)
+	}
+
+	result, err := Marshal2(val.(Identifier))
+	if err != nil {
+		return []byte{}, err
+	}
+
 	return json.Marshal(result)
 }
 
