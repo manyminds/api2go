@@ -44,6 +44,7 @@ type Identifier interface {
 type ReferenceID struct {
 	ID   string
 	Type string
+	Name string
 }
 
 // Relations TODO blub
@@ -101,23 +102,66 @@ func MarshalSlice(data interface{}) (interface{}, error) {
 func marshalData(data Identifier) (map[string]interface{}, error) {
 	result := make(map[string]interface{})
 
-	if element, ok := data.(Identifier); ok {
-		id := element.GetID()
-		content := getStructFields(data)
-		for k, v := range content {
-			result[k] = v
-		}
-
-		//its important that the id from the interface
-		//gets added afterwards, otherwise an ID field
-		//could conflict with the actual marshalling
-		result["id"] = id
-		result["type"] = getStructType(data)
-	} else {
+	element, ok := data.(Identifier)
+	if !ok {
 		return result, errors.New("data must implement api2go.Identifier interface")
 	}
 
+	id := element.GetID()
+	content := getStructFields(data)
+	for k, v := range content {
+		result[k] = v
+	}
+
+	// its important that the id from the interface
+	// gets added afterwards, otherwise an ID field
+	// could conflict with the actual marshalling
+	result["id"] = id
+	result["type"] = getStructType(data)
+
+	// optional relationship interface for struct
+	relationer, ok := data.(Relations)
+	if ok {
+		result["links"] = getStructLinks(relationer)
+	}
+
 	return result, nil
+}
+
+// getStructLinks returns the link struct with ids
+func getStructLinks(relationer Relations) map[string]interface{} {
+	referencedIDs := relationer.GetReferencedIDs()
+	sortedResults := make(map[string][]ReferenceID)
+	links := make(map[string]interface{})
+
+	for _, referenceID := range referencedIDs {
+		sortedResults[referenceID.Type] = append(sortedResults[referenceID.Type], referenceID)
+	}
+
+	for referenceType, referenceIDs := range sortedResults {
+		switch len(referencedIDs) {
+		case 0:
+			continue
+		case 1:
+			links[referenceIDs[0].Name] = map[string]interface{}{
+				"id":   referenceIDs[0].ID,
+				"type": referenceType,
+			}
+		default:
+			// multiple elements in links
+			var ids []string
+
+			for _, referenceID := range referenceIDs {
+				ids = append(ids, referenceID.ID)
+			}
+
+			links[referenceIDs[0].Name] = map[string]interface{}{
+				"ids":  ids,
+				"type": referenceType,
+			}
+		}
+	}
+	return links
 }
 
 func marshal2(data Identifier, prefix string) (interface{}, error) {

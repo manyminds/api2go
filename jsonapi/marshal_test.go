@@ -92,6 +92,15 @@ func (c *Post) SetID(stringID string) error {
 	return nil
 }
 
+func (c *Post) SetReferencedIDs(ids []ReferenceID) error {
+	return nil
+}
+
+func (c Post) GetReferencedIDs() []ReferenceID {
+	authorID := ReferenceID{Type: "users", Name: "author", ID: c.Author.GetID()}
+	return []ReferenceID{authorID}
+}
+
 var _ = Describe("Marshalling", func() {
 	Context("When marshaling simple objects", func() {
 		var (
