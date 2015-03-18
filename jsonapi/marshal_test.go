@@ -633,4 +633,41 @@ var _ = FDescribe("Marshalling", func() {
 			Expect(result).To(Equal(expected))
 		})
 	})
+
+	Context("test reduceDuplicates", func() {
+		input := []MarshalIdentifier{
+			User{ID: 314, Name: "User314"},
+			Comment{ID: 314},
+			Comment{ID: 1},
+			User{ID: 1, Name: "User1"},
+			User{ID: 2, Name: "User2"},
+			Comment{ID: 1},
+			Comment{ID: 314},
+			User{ID: 2, Name: "User2Kopie"},
+		}
+
+		expected := []map[string]interface{}{
+			{"id": 314, "name": "User314", "type": "users"},
+			{"text": "", "id": 314, "type": "comments"},
+			{"text": "", "id": 1, "type": "comments"},
+			{"name": "User1", "id": 1, "type": "users"},
+			{"name": "User2", "id": 2, "type": "users"},
+		}
+
+		dummyFunc := func(m MarshalIdentifier) (map[string]interface{}, error) {
+			return map[string]interface{}{"blub": m}, nil
+		}
+
+		It("should work with default marshalData", func() {
+			actual, err := reduceDuplicates(input, marshalData)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(len(actual)).To(Equal(len(expected)))
+		})
+
+		It("should work with dummy marshalData", func() {
+			actual, err := reduceDuplicates(input, dummyFunc)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(len(actual)).To(Equal(len(expected)))
+		})
+	})
 })
