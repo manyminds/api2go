@@ -7,10 +7,52 @@ import (
 
 type Book struct {
 	ID       string
-	Author   *StupidUser
-	AuthorID string
-	Pages    []Page
-	PagesIDs []string
+	Author   *StupidUser `json:"-"`
+	AuthorID string      `json:"-"`
+	Pages    []Page      `json:"-"`
+	PagesIDs []string    `json:"-"`
+}
+
+func (b Book) GetID() string {
+	return b.ID
+}
+
+func (b Book) GetReferences() []Reference {
+	return []Reference{
+		{
+			Type: "stupidUsers",
+			Name: "author",
+		},
+		{
+			Type: "pages",
+			Name: "pages",
+		},
+	}
+}
+
+func (b Book) GetReferencedIDs() []ReferenceID {
+	result := []ReferenceID{}
+	if b.Author != nil {
+		result = append(result, ReferenceID{ID: b.Author.GetID(), Name: "author", Type: "stupidUsers"})
+	}
+	for _, page := range b.Pages {
+		result = append(result, ReferenceID{ID: page.GetID(), Name: "pages", Type: "pages"})
+	}
+
+	return result
+}
+
+func (b Book) GetReferencedStructs() []MarshalIdentifier {
+	result := []MarshalIdentifier{}
+	if b.Author != nil {
+		result = append(result, *b.Author)
+	}
+
+	for key := range b.Pages {
+		result = append(result, b.Pages[key])
+	}
+
+	return result
 }
 
 type StupidUser struct {
@@ -18,9 +60,17 @@ type StupidUser struct {
 	Name string
 }
 
+func (s StupidUser) GetID() string {
+	return s.ID
+}
+
 type Page struct {
 	ID      string
 	Content string
+}
+
+func (p Page) GetID() string {
+	return p.ID
 }
 
 var _ = Describe("Test for the public api of this package", func() {
@@ -50,13 +100,11 @@ var _ = Describe("Test for the public api of this package", func() {
 						"author" : 
 						{
 							"id" : "A Magical UserID",
-							"resource" : "/books/TheOneAndOnlyID/author",
-							"type" : "users"
+							"type" : "stupidUsers"
 						},
 						"pages" : 
 						{ 
 							"ids" : [ "Page 1","Page 2","Page 3"],
-							"resource" : "/books/TheOneAndOnlyID/pages",
 							"type" : "pages"
 						}
 				},
@@ -66,7 +114,7 @@ var _ = Describe("Test for the public api of this package", func() {
 				[ 
 					{ "id" : "A Magical UserID",
 						"name" : "Terry Pratchett",
-						"type" : "users"
+						"type" : "stupidUsers"
 					},
 					{ "content" : "First Page",
 						"id" : "Page 1",

@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"fmt"
 	"strconv"
+
+	"gopkg.in/guregu/null.v2/zero"
 )
 
 type Magic struct {
@@ -176,4 +178,80 @@ func (p AnotherPost) GetReferencedIDs() []ReferenceID {
 	}
 
 	return result
+}
+
+type ZeroPost struct {
+	ID    string
+	Title string
+	Value zero.Float
+}
+
+func (z ZeroPost) GetID() string {
+	return z.ID
+}
+
+type ZeroPostPointer struct {
+	ID    string
+	Title string
+	Value *zero.Float
+}
+
+func (z ZeroPostPointer) GetID() string {
+	return z.ID
+}
+
+type Question struct {
+	ID                  string
+	Text                string
+	InspiringQuestionID sql.NullString `json:"-"`
+	InspiringQuestion   *Question      `json:"-"`
+}
+
+func (q Question) GetID() string {
+	return q.ID
+}
+
+func (q Question) GetReferences() []Reference {
+	return []Reference{
+		{
+			Type: "questions",
+			Name: "inspiringQuestion",
+		},
+	}
+}
+
+func (q Question) GetReferencedIDs() []ReferenceID {
+	result := []ReferenceID{}
+	if q.InspiringQuestionID.Valid {
+		result = append(result, ReferenceID{ID: q.InspiringQuestionID.String, Name: "inspiringQuestion", Type: "questions"})
+	}
+
+	return result
+}
+
+func (q Question) GetReferencedStructs() []MarshalIdentifier {
+	result := []MarshalIdentifier{}
+	if q.InspiringQuestion != nil {
+		result = append(result, *q.InspiringQuestion)
+	}
+
+	return result
+}
+
+type Identity struct {
+	ID     int64    `json:"user_id"`
+	Scopes []string `json:"scopes"`
+}
+
+func (i Identity) GetID() string {
+	return fmt.Sprintf("%d", i.ID)
+}
+
+type Unicorn struct {
+	UnicornID int64    `json:"unicorn_id"` //Annotations are ignored
+	Scopes    []string `json:"scopes"`
+}
+
+func (u Unicorn) GetID() string {
+	return "magicalUnicorn"
 }

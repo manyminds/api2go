@@ -311,18 +311,6 @@ var _ = Describe("Marshalling", func() {
 	})
 
 	Context("when marshalling zero value types", func() {
-		type ZeroPost struct {
-			ID    string
-			Title string
-			Value zero.Float
-		}
-
-		type ZeroPostPointer struct {
-			ID    string
-			Title string
-			Value *zero.Float
-		}
-
 		theFloat := zero.NewFloat(2.3, true)
 		post := ZeroPost{ID: "1", Title: "test", Value: theFloat}
 		pointerPost := ZeroPostPointer{ID: "1", Title: "test", Value: &theFloat}
@@ -377,13 +365,6 @@ var _ = Describe("Marshalling", func() {
 	})
 
 	Context("When marshalling objects linking to other instances of the same type", func() {
-		type Question struct {
-			ID                  string
-			Text                string
-			InspiringQuestionID sql.NullString
-			InspiringQuestion   *Question
-		}
-
 		question1 := Question{ID: "1", Text: "Does this test work?"}
 		question1Duplicate := Question{ID: "1", Text: "Does this test work?"}
 		question2 := Question{ID: "2", Text: "Will it ever work?", InspiringQuestionID: sql.NullString{"1", true}, InspiringQuestion: &question1}
@@ -397,21 +378,21 @@ var _ = Describe("Marshalling", func() {
 					"text": "Will it ever work?",
 					"links": map[string]interface{}{
 						"inspiringQuestion": map[string]interface{}{
-							"id":       "1",
-							"type":     "questions",
-							"resource": "/questions/2/inspiringQuestion",
+							"id":   "1",
+							"type": "questions",
+							//"resource": "/questions/2/inspiringQuestion",
 						},
 					},
 				},
-				"linked": []interface{}{
+				"linked": []map[string]interface{}{
 					map[string]interface{}{
 						"id":   "1",
 						"type": "questions",
 						"text": "Does this test work?",
 						"links": map[string]interface{}{
 							"inspiringQuestion": map[string]interface{}{
-								"type":     "questions",
-								"resource": "/questions/1/inspiringQuestion",
+								"type": "questions",
+								//"resource": "/questions/1/inspiringQuestion",
 							},
 						},
 					},
@@ -420,21 +401,21 @@ var _ = Describe("Marshalling", func() {
 
 			marshalled, err := Marshal(question2)
 			Expect(err).To(BeNil())
-			Expect(marshalled).To(BeEquivalentTo(expected))
+			Expect(marshalled).To(Equal(expected))
 		})
 
 		It("Does not marshall same dependencies multiple times", func() {
 			expected := map[string]interface{}{
-				"data": []interface{}{
+				"data": []map[string]interface{}{
 					map[string]interface{}{
 						"id":   "3",
 						"type": "questions",
 						"text": "It works now",
 						"links": map[string]interface{}{
 							"inspiringQuestion": map[string]interface{}{
-								"id":       "1",
-								"type":     "questions",
-								"resource": "/questions/3/inspiringQuestion",
+								"id":   "1",
+								"type": "questions",
+								//"resource": "/questions/3/inspiringQuestion",
 							},
 						},
 					},
@@ -444,22 +425,22 @@ var _ = Describe("Marshalling", func() {
 						"text": "Will it ever work?",
 						"links": map[string]interface{}{
 							"inspiringQuestion": map[string]interface{}{
-								"id":       "1",
-								"type":     "questions",
-								"resource": "/questions/2/inspiringQuestion",
+								"id":   "1",
+								"type": "questions",
+								//"resource": "/questions/2/inspiringQuestion",
 							},
 						},
 					},
 				},
-				"linked": []interface{}{
+				"linked": []map[string]interface{}{
 					map[string]interface{}{
 						"id":   "1",
 						"type": "questions",
 						"text": "Does this test work?",
 						"links": map[string]interface{}{
 							"inspiringQuestion": map[string]interface{}{
-								"type":     "questions",
-								"resource": "/questions/1/inspiringQuestion",
+								"type": "questions",
+								//"resource": "/questions/1/inspiringQuestion",
 							},
 						},
 					},
@@ -473,16 +454,6 @@ var _ = Describe("Marshalling", func() {
 	})
 
 	Context("Slice fields", func() {
-		type Identity struct {
-			ID     int64    `json:"user_id"`
-			Scopes []string `json:"scopes"`
-		}
-
-		type Unicorn struct {
-			UnicornID int64    `json:"unicorn_id"` //Annotations are ignored
-			Scopes    []string `json:"scopes"`
-		}
-
 		It("Marshalls the slice field correctly", func() {
 			expected := map[string]interface{}{
 				"data": map[string]interface{}{
@@ -502,7 +473,8 @@ var _ = Describe("Marshalling", func() {
 		It("Marshalls correctly without an ID field", func() {
 			expected := map[string]interface{}{
 				"data": map[string]interface{}{
-					"unicornId": int64(1234), // this must not be unicornID or unicorn_id, because that is the convention for a link to another struct...
+					"id":        "magicalUnicorn",
+					"unicornID": int64(1234),
 					"type":      "unicorns",
 					"scopes": []string{
 						"user_global",
@@ -512,7 +484,7 @@ var _ = Describe("Marshalling", func() {
 
 			marshalled, err := Marshal(Unicorn{1234, []string{"user_global"}})
 			Expect(err).To(BeNil())
-			Expect(marshalled).To(BeEquivalentTo(expected))
+			Expect(marshalled).To(Equal(expected))
 		})
 	})
 
