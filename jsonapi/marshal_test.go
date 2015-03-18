@@ -3,7 +3,6 @@ package jsonapi
 import (
 	"database/sql"
 	"encoding/json"
-	"errors"
 
 	"gopkg.in/guregu/null.v2/zero"
 
@@ -230,17 +229,16 @@ var _ = Describe("Marshalling", func() {
 		It("adds IDs", func() {
 			post := Post{ID: 1, Comments: []Comment{}, CommentsIDs: []int{1}}
 			i, err := Marshal(post)
-			Expect(err).To(BeNil())
-			Expect(i).To(Equal(map[string]interface{}{
+			expected := map[string]interface{}{
 				"data": map[string]interface{}{
 					"id":    "1",
 					"type":  "posts",
 					"title": "",
 					"links": map[string]interface{}{
 						"comments": map[string]interface{}{
-							"ids":      []interface{}{"1"},
-							"type":     "comments",
-							"resource": "/posts/1/comments",
+							"ids":  []string{"1"},
+							"type": "comments",
+							//"resource": "/posts/1/comments",
 						},
 						"author": map[string]interface{}{
 							"type": "users",
@@ -248,31 +246,9 @@ var _ = Describe("Marshalling", func() {
 						},
 					},
 				},
-			}))
-		})
-
-		It("marshal correctly with prefix", func() {
-			post := Post{ID: 1, Comments: []Comment{}, CommentsIDs: []int{1}}
-			i, err := MarshalPrefix(post, "/v1/")
+			}
 			Expect(err).To(BeNil())
-			Expect(i).To(Equal(map[string]interface{}{
-				"data": map[string]interface{}{
-					"id":    "1",
-					"type":  "posts",
-					"title": "",
-					"links": map[string]interface{}{
-						"comments": map[string]interface{}{
-							"ids":      []interface{}{"1"},
-							"type":     "comments",
-							"resource": "/v1/posts/1/comments",
-						},
-						"author": map[string]interface{}{
-							"type":     "users",
-							"resource": "/v1/posts/1/author",
-						},
-					},
-				},
-			}))
+			Expect(i).To(Equal(expected))
 		})
 
 		It("prefers nested structs when given both, structs and IDs", func() {
@@ -288,39 +264,33 @@ var _ = Describe("Marshalling", func() {
 					"title": "",
 					"links": map[string]interface{}{
 						"comments": map[string]interface{}{
-							"ids":      []interface{}{"1"},
-							"type":     "comments",
-							"resource": "/posts/1/comments",
+							"ids":  []string{"1"},
+							"type": "comments",
+							//"resource": "/posts/1/comments",
 						},
 						"author": map[string]interface{}{
-							"id":       "1",
-							"type":     "users",
-							"resource": "/posts/1/author",
+							"id":   "1",
+							"type": "users",
+							//"resource": "/posts/1/author",
 						},
 					},
 				},
-				"linked": []interface{}{
-					map[string]interface{}{
-						"id":   "1",
-						"type": "comments",
-						"text": "",
-					},
+				"linked": []map[string]interface{}{
 					map[string]interface{}{
 						"id":   "1",
 						"type": "users",
 						"name": "Tester",
 					},
+					map[string]interface{}{
+						"id":   "1",
+						"type": "comments",
+						"text": "",
+					},
 				},
 			}))
 		})
 
-		It("uses ID field if single relation struct is nil", func() {
-			type AnotherPost struct {
-				ID       int
-				AuthorID int
-				Author   *User
-			}
-
+		It("uses ID field if MarshalLinkedRelations is implemented", func() {
 			anotherPost := AnotherPost{ID: 1, AuthorID: 1}
 			i, err := Marshal(anotherPost)
 			Expect(err).To(BeNil())
@@ -330,74 +300,13 @@ var _ = Describe("Marshalling", func() {
 					"type": "anotherPosts",
 					"links": map[string]interface{}{
 						"author": map[string]interface{}{
-							"id":       "1",
-							"type":     "users",
-							"resource": "/anotherPosts/1/author",
+							"id":   "1",
+							"type": "users",
+							//"resource": "/anotherPosts/1/author",
 						},
 					},
 				},
 			}))
-		})
-
-		It("uses ID field for the sql.NullInt64 type", func() {
-			type SqlTypesPost struct {
-				ID       int
-				AuthorID sql.NullInt64
-				Author   *User
-			}
-
-			anotherPost := SqlTypesPost{ID: 1, AuthorID: sql.NullInt64{1, true}}
-			i, err := Marshal(anotherPost)
-			Expect(err).To(BeNil())
-			Expect(i).To(Equal(map[string]interface{}{
-				"data": map[string]interface{}{
-					"id":   "1",
-					"type": "sqlTypesPosts",
-					"links": map[string]interface{}{
-						"author": map[string]interface{}{
-							"id":       "1",
-							"type":     "users",
-							"resource": "/sqlTypesPosts/1/author",
-						},
-					},
-				},
-			}))
-		})
-
-		It("uses ID field for the sql.NullString type", func() {
-			type SqlTypesPost struct {
-				ID       int
-				AuthorID sql.NullString
-				Author   *User
-			}
-
-			anotherPost := SqlTypesPost{ID: 1, AuthorID: sql.NullString{"1", true}}
-			i, err := Marshal(anotherPost)
-			Expect(err).To(BeNil())
-			Expect(i).To(Equal(map[string]interface{}{
-				"data": map[string]interface{}{
-					"id":   "1",
-					"type": "sqlTypesPosts",
-					"links": map[string]interface{}{
-						"author": map[string]interface{}{
-							"id":       "1",
-							"type":     "users",
-							"resource": "/sqlTypesPosts/1/author",
-						},
-					},
-				},
-			}))
-		})
-
-		It("returns an error if ID field but no struct field is in struct", func() {
-			type WrongStruct struct {
-				ID       int
-				AuthorID int
-			}
-
-			wrongStruct := WrongStruct{ID: 1, AuthorID: 1}
-			_, err := Marshal(wrongStruct)
-			Expect(err).To(Equal(errors.New("expected struct to have field Author")))
 		})
 	})
 

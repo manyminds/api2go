@@ -3,7 +3,6 @@ package jsonapi
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"reflect"
 )
 
@@ -124,9 +123,7 @@ func marshalSlice(data interface{}) (map[string]interface{}, error) {
 
 	//data key is always present
 	result["data"] = dataElements
-
-	//included elements is only present when included
-	if includedElements != nil {
+	if includedElements != nil && len(includedElements) > 0 {
 		result["linked"] = includedElements
 	}
 
@@ -279,7 +276,9 @@ func marshalStruct(data MarshalIdentifier, prefix string) (map[string]interface{
 			return result, err
 		}
 
-		result["linked"] = linked
+		if len(linked) > 0 {
+			result["linked"] = linked
+		}
 	}
 
 	return result, nil
@@ -327,10 +326,5 @@ func MarshalToJSON(val interface{}) ([]byte, error) {
 
 // MarshalToJSONPrefix does the same as MarshalToJSON but adds a prefix to generated URLs
 func MarshalToJSONPrefix(val interface{}, prefix string) ([]byte, error) {
-	//TODO must either be implemented with prefix or removed
-	result, err := Marshal(val)
-	if err != nil {
-		return nil, err
-	}
-	return json.Marshal(result)
+	return []byte{}, errors.New("This will never be implemented, is going to be moved to API")
 }

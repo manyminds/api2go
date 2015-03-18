@@ -148,3 +148,32 @@ func (c Post) GetReferencedStructs() []MarshalIdentifier {
 func (c *Post) SetReferencedStructs(references []UnmarshalIdentifier) error {
 	return nil
 }
+
+type AnotherPost struct {
+	ID       int
+	AuthorID int   `json:"-"`
+	Author   *User `json:"-"`
+}
+
+func (p AnotherPost) GetID() string {
+	return fmt.Sprintf("%d", p.ID)
+}
+
+func (p AnotherPost) GetReferences() []Reference {
+	return []Reference{
+		{
+			Type: "users",
+			Name: "author",
+		},
+	}
+}
+
+func (p AnotherPost) GetReferencedIDs() []ReferenceID {
+	result := []ReferenceID{}
+
+	if p.AuthorID != 0 {
+		result = append(result, ReferenceID{ID: fmt.Sprintf("%d", p.AuthorID), Name: "author", Type: "users"})
+	}
+
+	return result
+}
