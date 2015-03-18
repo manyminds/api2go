@@ -11,7 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = FDescribe("Marshalling", func() {
+var _ = Describe("Marshalling", func() {
 	Context("When marshaling simple objects", func() {
 		var (
 			firstPost, secondPost                     SimplePost
