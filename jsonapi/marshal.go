@@ -247,7 +247,12 @@ func marshal2(data MarshalIdentifier, prefix string) (map[string]interface{}, er
 }
 
 func getStructType(data MarshalIdentifier) string {
-	return Pluralize(Jsonify(reflect.TypeOf(data).Elem().Name()))
+	reflectType := reflect.TypeOf(data)
+	if reflectType.Kind() == reflect.Ptr {
+		return Pluralize(Jsonify(reflectType.Elem().Name()))
+	}
+
+	return Pluralize(Jsonify(reflectType.Name()))
 }
 
 func getStructFields(data MarshalIdentifier) map[string]interface{} {

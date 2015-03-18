@@ -162,6 +162,15 @@ var _ = Describe("Marshalling", func() {
 
 		FIt("marshals single object without relationships", func() {
 			user := User{ID: 100, Name: "Nino", Password: "babymaus"}
+			i, err := Marshal2(user)
+			Expect(err).To(BeNil())
+			Expect(i).To(Equal(map[string]interface{}{
+				"data": firstUserMap,
+			}))
+		})
+
+		FIt("marshals single object without relationships as pointer", func() {
+			user := User{ID: 100, Name: "Nino", Password: "babymaus"}
 			i, err := Marshal2(&user)
 			Expect(err).To(BeNil())
 			Expect(i).To(Equal(map[string]interface{}{
@@ -169,7 +178,7 @@ var _ = Describe("Marshalling", func() {
 			}))
 		})
 
-		FIt("marshals single object", func() {
+		It("marshals single object", func() {
 			i, err := Marshal(firstPost)
 			Expect(err).To(BeNil())
 			Expect(i).To(Equal(map[string]interface{}{
@@ -286,7 +295,7 @@ var _ = Describe("Marshalling", func() {
 			post1 := Post{ID: 1, Title: "Foobar", Comments: []Comment{comment1, comment2}, Author: &author}
 			post2 := Post{ID: 2, Title: "Foobarbarbar", Comments: []Comment{comment1, comment2}, Author: &author}
 
-			posts := []*Post{&post1, &post2}
+			posts := []Post{post1, post2}
 
 			i, err := MarshalSlice(posts)
 			Expect(err).To(BeNil())
