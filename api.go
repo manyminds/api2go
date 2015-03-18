@@ -364,7 +364,7 @@ func (res *resource) handleDelete(w http.ResponseWriter, r *http.Request, ps htt
 }
 
 func respondWith(obj interface{}, prefix string, status int, w http.ResponseWriter) error {
-	data, err := jsonapi.MarshalToJSONPrefix(obj, prefix)
+	data, err := jsonapi.MarshalToJSON(obj)
 	if err != nil {
 		return err
 	}

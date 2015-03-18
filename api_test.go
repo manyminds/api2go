@@ -12,17 +12,57 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/univedo/api2go/jsonapi"
 	"gopkg.in/guregu/null.v2"
 )
 
 type Post struct {
-	ID          string
-	Title       string
-	Value       null.Float
-	Author      *User
-	AuthorID    string
-	Comments    []Comment
-	CommentsIDs []string
+	ID       string
+	Title    string
+	Value    null.Float
+	Author   *User     `json:"-"`
+	Comments []Comment `json:"-"`
+}
+
+func (p Post) GetID() string {
+	return p.ID
+}
+
+func (p Post) GetReferences() []jsonapi.Reference {
+	return []jsonapi.Reference{
+		{
+			Name: "author",
+			Type: "users",
+		},
+		{
+			Name: "comments",
+			Type: "comments",
+		},
+	}
+}
+
+func (p Post) GetReferencedIDs() []jsonapi.ReferenceID {
+	result := []jsonapi.ReferenceID{}
+	if p.Author != nil {
+		result = append(result, jsonapi.ReferenceID{ID: p.Author.GetID(), Name: "author", Type: "users"})
+	}
+	for _, comment := range p.Comments {
+		result = append(result, jsonapi.ReferenceID{ID: comment.GetID(), Name: "comments", Type: "comments"})
+	}
+
+	return result
+}
+
+func (p Post) GetReferencedStructs() []jsonapi.MarshalIdentifier {
+	result := []jsonapi.MarshalIdentifier{}
+	if p.Author != nil {
+		result = append(result, *p.Author)
+	}
+	for key := range p.Comments {
+		result = append(result, p.Comments[key])
+	}
+
+	return result
 }
 
 type Comment struct {
@@ -30,9 +70,17 @@ type Comment struct {
 	Value string
 }
 
+func (c Comment) GetID() string {
+	return c.ID
+}
+
 type User struct {
 	ID   string
 	Name string
+}
+
+func (u User) GetID() string {
+	return u.ID
 }
 
 type fixtureSource struct {
@@ -262,14 +310,14 @@ var _ = Describe("RestHandler", func() {
 				"value": nil,
 				"links": map[string]interface{}{
 					"author": map[string]interface{}{
-						"id":       "1",
-						"type":     "users",
-						"resource": "/v1/posts/1/author",
+						"id":   "1",
+						"type": "users",
+						//"resource": "/v1/posts/1/author",
 					},
 					"comments": map[string]interface{}{
-						"ids":      []interface{}{"1"},
-						"type":     "comments",
-						"resource": "/v1/posts/1/comments",
+						"ids":  []string{"1"},
+						"type": "comments",
+						//"resource": "/v1/posts/1/comments",
 					},
 				},
 			}
@@ -294,13 +342,12 @@ var _ = Describe("RestHandler", func() {
 				"value": nil,
 				"links": map[string]interface{}{
 					"author": map[string]interface{}{
-						"type":     "users",
-						"resource": "/v1/posts/2/author",
+						"type": "users",
+						//"resource": "/v1/posts/2/author",
 					},
 					"comments": map[string]interface{}{
-						"ids":      []interface{}{},
-						"type":     "comments",
-						"resource": "/v1/posts/2/comments",
+						"type": "comments",
+						//"resource": "/v1/posts/2/comments",
 					},
 				},
 			}
@@ -312,13 +359,12 @@ var _ = Describe("RestHandler", func() {
 				"value": nil,
 				"links": map[string]interface{}{
 					"author": map[string]interface{}{
-						"type":     "users",
-						"resource": "/v1/posts/3/author",
+						"type": "users",
+						//"resource": "/v1/posts/3/author",
 					},
 					"comments": map[string]interface{}{
-						"ids":      []interface{}{},
-						"type":     "comments",
-						"resource": "/v1/posts/3/comments",
+						"type": "comments",
+						//"resource": "/v1/posts/3/comments",
 					},
 				},
 			}
@@ -337,7 +383,7 @@ var _ = Describe("RestHandler", func() {
 			api.Handler().ServeHTTP(rec, req)
 			Expect(rec.Code).To(Equal(http.StatusOK))
 			expected, err := json.Marshal(map[string]interface{}{
-				"data":   []interface{}{post1Json, post2Json, post3Json},
+				"data":   []map[string]interface{}{post1Json, post2Json, post3Json},
 				"linked": post1LinkedJSON,
 			})
 			Expect(err).ToNot(HaveOccurred())
@@ -420,13 +466,12 @@ var _ = Describe("RestHandler", func() {
 					"value": nil,
 					"links": map[string]interface{}{
 						"author": map[string]interface{}{
-							"type":     "users",
-							"resource": "/v1/posts/4/author",
+							"type": "users",
+							//"resource": "/v1/posts/4/author",
 						},
 						"comments": map[string]interface{}{
-							"ids":      []interface{}{},
-							"type":     "comments",
-							"resource": "/v1/posts/4/comments",
+							"type": "comments",
+							//"resource": "/v1/posts/4/comments",
 						},
 					},
 				},
@@ -642,13 +687,12 @@ var _ = Describe("RestHandler", func() {
 				"value": nil,
 				"links": map[string]interface{}{
 					"author": map[string]interface{}{
-						"type":     "users",
-						"resource": "/posts/1/author",
+						"type": "users",
+						//"resource": "/posts/1/author",
 					},
 					"comments": map[string]interface{}{
-						"ids":      []interface{}{},
-						"type":     "comments",
-						"resource": "/posts/1/comments",
+						"type": "comments",
+						//"resource": "/posts/1/comments",
 					},
 				},
 			}
@@ -660,13 +704,12 @@ var _ = Describe("RestHandler", func() {
 				"value": nil,
 				"links": map[string]interface{}{
 					"author": map[string]interface{}{
-						"type":     "users",
-						"resource": "/posts/2/author",
+						"type": "users",
+						//"resource": "/posts/2/author",
 					},
 					"comments": map[string]interface{}{
-						"ids":      []interface{}{},
-						"type":     "comments",
-						"resource": "/posts/2/comments",
+						"type": "comments",
+						//"resource": "/posts/2/comments",
 					},
 				},
 			}
