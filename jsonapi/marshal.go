@@ -56,23 +56,22 @@ type MarshalIncludedRelations interface {
 	GetReferencedStructs() []MarshalIdentifier
 }
 
-// MarshalPrefix2 does the same as Marshal but adds a prefix to generated URLs
-func MarshalPrefix2(data MarshalIdentifier, prefix string) (interface{}, error) {
-	return marshal(data, prefix)
-}
-
 // MarshalPrefix does the same as Marshal but adds a prefix to generated URLs
 func MarshalPrefix(data interface{}, prefix string) (interface{}, error) {
 	return marshal(data, prefix)
 }
 
 // Marshal2 is the new shit
-func Marshal2(data MarshalIdentifier) (map[string]interface{}, error) {
-	return marshal2(data, "")
+func Marshal2(data interface{}) (map[string]interface{}, error) {
+	if reflect.TypeOf(data).Kind() == reflect.Slice {
+		return marshalSlice(data)
+	}
+
+	return marshalStruct(data.(MarshalIdentifier), "")
 }
 
-// MarshalSlice marshals a slice TODO
-func MarshalSlice(data interface{}) (map[string]interface{}, error) {
+// marshalSlice marshals a slice TODO
+func marshalSlice(data interface{}) (map[string]interface{}, error) {
 	result := make(map[string]interface{})
 
 	val := reflect.ValueOf(data)
@@ -224,7 +223,7 @@ func getIncludedStructs(included MarshalIncludedRelations) ([]map[string]interfa
 	return result, nil
 }
 
-func marshal2(data MarshalIdentifier, prefix string) (map[string]interface{}, error) {
+func marshalStruct(data MarshalIdentifier, prefix string) (map[string]interface{}, error) {
 	result := make(map[string]interface{})
 	contentData, err := marshalData(data)
 	if err != nil {
@@ -514,14 +513,6 @@ func MarshalToJSON(val interface{}) ([]byte, error) {
 
 // MarshalToJSON2 marshals a struct to json
 func MarshalToJSON2(val interface{}) ([]byte, error) {
-	if reflect.TypeOf(val).Kind() == reflect.Slice {
-		result, err := MarshalSlice(val)
-		if err != nil {
-			return []byte{}, err
-		}
-		return json.Marshal(result)
-	}
-
 	result, err := Marshal2(val.(MarshalIdentifier))
 	if err != nil {
 		return []byte{}, err
