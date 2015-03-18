@@ -31,9 +31,73 @@ func Marshal(data interface{}) (interface{}, error) {
 	return marshal(data, "")
 }
 
+//Identifier interface is necessary to give an element
+//a unique ID. This interface must be implemented for
+//marshal and unmarshal in order to let them store
+//elements
+type Identifier interface {
+	GetID() string
+	SetID(string) error
+}
+
+// MarshalPrefix2 does the same as Marshal but adds a prefix to generated URLs
+func MarshalPrefix2(data Identifier, prefix string) (interface{}, error) {
+	return marshal(data, prefix)
+}
+
 // MarshalPrefix does the same as Marshal but adds a prefix to generated URLs
 func MarshalPrefix(data interface{}, prefix string) (interface{}, error) {
 	return marshal(data, prefix)
+}
+
+// Marshal2 is the new shit
+func Marshal2(data Identifier) (interface{}, error) {
+	return marshal2(data, "")
+}
+
+func marshal2(data Identifier, prefix string) (interface{}, error) {
+	result := make(map[string]map[string]interface{})
+	result["data"] = make(map[string]interface{})
+
+	if element, ok := data.(Identifier); ok {
+		id := element.GetID()
+		content := getStructFields(data)
+		for k, v := range content {
+			result["data"][k] = v
+		}
+
+		result["data"]["id"] = id
+		result["data"]["type"] = getStructType(data)
+	} else {
+		return result, errors.New("data must implement api2go.Identifier interface")
+	}
+
+	return result, nil
+}
+
+func getStructType(data Identifier) string {
+	return Pluralize(Jsonify(reflect.TypeOf(data).Elem().Name()))
+}
+
+func getStructFields(data Identifier) map[string]interface{} {
+	result := make(map[string]interface{})
+	val := reflect.ValueOf(data)
+	if val.Kind() == reflect.Ptr {
+		val = val.Elem()
+	}
+	valType := val.Type()
+	for i := 0; i < val.NumField(); i++ {
+		tag := valType.Field(i).Tag.Get("json")
+		if tag == "-" {
+			continue
+		}
+
+		field := val.Field(i)
+		keyName := Jsonify(valType.Field(i).Name)
+		result[keyName] = field.Interface()
+	}
+
+	return result
 }
 
 func marshal(data interface{}, prefix string) (interface{}, error) {

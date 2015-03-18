@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"strconv"
 
 	"gopkg.in/guregu/null.v2/zero"
 
@@ -21,22 +23,51 @@ func (m MagicID) String() string {
 	return "This should be visible"
 }
 
+type Comment struct {
+	ID   int `json:"-"`
+	Text string
+}
+
+func (c Comment) GetID() string {
+	return fmt.Sprintf("%d", c.ID)
+}
+
+func (c *Comment) SetID(stringID string) error {
+	id, err := strconv.Atoi(stringID)
+	if err != nil {
+		return err
+	}
+
+	c.ID = id
+
+	return nil
+}
+
+type User struct {
+	ID       int
+	Name     string
+	Password string `json:"-"`
+}
+
+func (u User) GetID() string {
+	return fmt.Sprintf("%d", u.ID)
+}
+
+func (u *User) SetID(stringID string) error {
+	id, err := strconv.Atoi(stringID)
+	if err != nil {
+		return err
+	}
+
+	u.ID = id
+
+	return nil
+}
+
 var _ = Describe("Marshalling", func() {
 	type SimplePost struct {
 		Title, Text string
 	}
-
-	type Comment struct {
-		ID   int
-		Text string
-	}
-
-	type User struct {
-		ID       int
-		Name     string
-		Password string `json:"-"`
-	}
-
 	type Post struct {
 		ID          int
 		Title       string
@@ -48,8 +79,8 @@ var _ = Describe("Marshalling", func() {
 
 	Context("When marshaling simple objects", func() {
 		var (
-			firstPost, secondPost       SimplePost
-			firstPostMap, secondPostMap map[string]interface{}
+			firstPost, secondPost                     SimplePost
+			firstUserMap, firstPostMap, secondPostMap map[string]interface{}
 		)
 
 		BeforeEach(func() {
@@ -65,6 +96,22 @@ var _ = Describe("Marshalling", func() {
 				"title": secondPost.Title,
 				"text":  secondPost.Text,
 			}
+
+			firstUserMap = map[string]interface{}{
+				"type": "users",
+				"id":   "100",
+				"name": "Nino",
+			}
+		})
+
+		FIt("marshals single object without relationships", func() {
+			user := User{ID: 100, Name: "Nino", Password: "babymaus"}
+			i, err := Marshal2(&user)
+			Expect(err).To(BeNil())
+			Expect(i).To(Equal(map[string]map[string]interface{}{
+				"data": firstUserMap,
+			}))
+
 		})
 
 		It("marshals single object", func() {
@@ -595,7 +642,7 @@ var _ = Describe("Marshalling", func() {
 		}
 
 		type Unicorn struct {
-			UnicornId int64    `json:"unicorn_id"` //Annotations are ignored
+			UnicornID int64    `json:"unicorn_id"` //Annotations are ignored
 			Scopes    []string `json:"scopes"`
 		}
 

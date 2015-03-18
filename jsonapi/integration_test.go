@@ -7,13 +7,13 @@ import (
 
 type Book struct {
 	ID       string
-	Author   *User
+	Author   *StupidUser
 	AuthorID string
 	Pages    []Page
 	PagesIDs []string
 }
 
-type User struct {
+type StupidUser struct {
 	ID   string
 	Name string
 }
@@ -24,7 +24,7 @@ type Page struct {
 }
 
 var _ = Describe("Test for the public api of this package", func() {
-	author := User{
+	author := StupidUser{
 		ID:   "A Magical UserID",
 		Name: "Terry Pratchett",
 	}
