@@ -78,7 +78,7 @@ func Marshal(data interface{}) (map[string]interface{}, error) {
 	switch reflect.TypeOf(data).Kind() {
 	case reflect.Slice:
 		return marshalSlice(data)
-	case reflect.Struct:
+	case reflect.Struct, reflect.Ptr:
 		return marshalStruct(data.(MarshalIdentifier), "")
 	default:
 		return map[string]interface{}{}, errors.New("Marshal only accepts slice, struct or ptr types")
@@ -172,8 +172,6 @@ func marshalData(element MarshalIdentifier) (map[string]interface{}, error) {
 		return result, errors.New("MarshalIdentifier must not be nil")
 	}
 
-	fmt.Printf("\n%#v", element)
-
 	id := element.GetID()
 	content := getStructFields(element)
 	for k, v := range content {
@@ -205,16 +203,18 @@ func getStructLinks(relationer MarshalLinkedRelations) map[string]interface{} {
 		sortedResults[referenceID.Type] = append(sortedResults[referenceID.Type], referenceID)
 	}
 
+	references := relationer.GetReferences()
+
+	// helper mad to check if all references are included to also include mepty ones
+	notIncludedReferences := map[string]Reference{}
+	for _, reference := range references {
+		notIncludedReferences[reference.Name] = reference
+	}
+
 	for referenceType, referenceIDs := range sortedResults {
-		switch len(sortedResults[referenceType]) {
-		case 0:
-			continue
-		case 1:
-			links[referenceIDs[0].Name] = map[string]interface{}{
-				"id":   referenceIDs[0].ID,
-				"type": referenceType,
-			}
-		default:
+		name := referenceIDs[0].Name
+		// if referenceType is plural, we have ids, otherwise it's just one id
+		if Pluralize(name) == name {
 			// multiple elements in links
 			var ids []string
 
@@ -222,12 +222,28 @@ func getStructLinks(relationer MarshalLinkedRelations) map[string]interface{} {
 				ids = append(ids, referenceID.ID)
 			}
 
-			links[referenceIDs[0].Name] = map[string]interface{}{
+			links[name] = map[string]interface{}{
 				"ids":  ids,
 				"type": referenceType,
 			}
+		} else {
+			links[name] = map[string]interface{}{
+				"id":   referenceIDs[0].ID,
+				"type": referenceType,
+			}
+		}
+
+		// this marks the reference as already included
+		delete(notIncludedReferences, referenceIDs[0].Name)
+	}
+
+	// check for empty references
+	for name, reference := range notIncludedReferences {
+		links[name] = map[string]interface{}{
+			"type": reference.Type,
 		}
 	}
+
 	return links
 }
 
