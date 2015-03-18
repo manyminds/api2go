@@ -11,6 +11,21 @@ import (
 
 type unmarshalContext map[string]interface{}
 
+// UnmarshalIdentifier interface to set ID when unmarshalling
+type UnmarshalIdentifier interface {
+	SetID(string) error
+}
+
+// UnmarshalLinkedRelations same as MarshalLinkedRelations for unmarshaling
+type UnmarshalLinkedRelations interface {
+	SetReferencedIDs([]ReferenceID) error
+}
+
+// UnmarshalIncludedRelations same as MarshalIncludedRelations for unmarshalling
+type UnmarshalIncludedRelations interface {
+	SetReferencedStructs([]UnmarshalIdentifier) error
+}
+
 // Unmarshal reads a JSONAPI map to a model struct
 func Unmarshal(ctx unmarshalContext, values interface{}) error {
 	// Check that target is a *[]Model

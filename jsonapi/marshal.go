@@ -31,13 +31,12 @@ func Marshal(data interface{}) (interface{}, error) {
 	return marshal(data, "")
 }
 
-// Identifier interface is necessary to give an element
+// MarshalIdentifier interface is necessary to give an element
 // a unique ID. This interface must be implemented for
 // marshal and unmarshal in order to let them store
 // elements
-type Identifier interface {
+type MarshalIdentifier interface {
 	GetID() string
-	SetID(string) error
 }
 
 // ReferenceID todo later
@@ -47,20 +46,18 @@ type ReferenceID struct {
 	Name string
 }
 
-// LinkedRelations must be implemented if there are references and the reference IDs should be included
-type LinkedRelations interface {
+// MarshalLinkedRelations must be implemented if there are references and the reference IDs should be included
+type MarshalLinkedRelations interface {
 	GetReferencedIDs() []ReferenceID
-	SetReferencedIDs([]ReferenceID) error
 }
 
-// IncludedRelations must be implemented if referenced structs should be included
-type IncludedRelations interface {
-	GetReferencedStructs() []Identifier
-	SetReferencedStructs([]Identifier) error
+// MarshalIncludedRelations must be implemented if referenced structs should be included
+type MarshalIncludedRelations interface {
+	GetReferencedStructs() []MarshalIdentifier
 }
 
 // MarshalPrefix2 does the same as Marshal but adds a prefix to generated URLs
-func MarshalPrefix2(data Identifier, prefix string) (interface{}, error) {
+func MarshalPrefix2(data MarshalIdentifier, prefix string) (interface{}, error) {
 	return marshal(data, prefix)
 }
 
@@ -70,7 +67,7 @@ func MarshalPrefix(data interface{}, prefix string) (interface{}, error) {
 }
 
 // Marshal2 is the new shit
-func Marshal2(data Identifier) (map[string]interface{}, error) {
+func Marshal2(data MarshalIdentifier) (map[string]interface{}, error) {
 	return marshal2(data, "")
 }
 
@@ -84,13 +81,13 @@ func MarshalSlice(data interface{}) (map[string]interface{}, error) {
 	}
 
 	var dataElements []map[string]interface{}
-	var referencedStructs []Identifier
+	var referencedStructs []MarshalIdentifier
 
 	for i := 0; i < val.Len(); i++ {
 		k := val.Index(i).Interface()
-		element, ok := k.(Identifier)
+		element, ok := k.(MarshalIdentifier)
 		if !ok {
-			return result, errors.New("all elements within the slice must implement api2go.Identifier")
+			return result, errors.New("all elements within the slice must implement api2go.MarshalIdentifier")
 		}
 
 		content, err := marshalData(element)
@@ -100,7 +97,7 @@ func MarshalSlice(data interface{}) (map[string]interface{}, error) {
 
 		dataElements = append(dataElements, content)
 
-		included, ok := k.(IncludedRelations)
+		included, ok := k.(MarshalIncludedRelations)
 		if ok {
 			referencedStructs = append(referencedStructs, included.GetReferencedStructs()...)
 		}
@@ -112,13 +109,15 @@ func MarshalSlice(data interface{}) (map[string]interface{}, error) {
 	}
 
 	result["data"] = dataElements
-	result["linked"] = includedElements
+	if includedElements != nil {
+		result["linked"] = includedElements
+	}
 
 	return result, nil
 }
 
-// reduceDuplicates eliminates duplicate Identifier from input and calls `method` on every unique Identifier
-func reduceDuplicates(input []Identifier, method func(Identifier) (map[string]interface{}, error)) ([]map[string]interface{}, error) {
+// reduceDuplicates eliminates duplicate MarshalIdentifier from input and calls `method` on every unique MarshalIdentifier
+func reduceDuplicates(input []MarshalIdentifier, method func(MarshalIdentifier) (map[string]interface{}, error)) ([]map[string]interface{}, error) {
 	var (
 		alreadyIncluded  = make(map[string]map[string]bool)
 		includedElements []map[string]interface{}
@@ -144,12 +143,12 @@ func reduceDuplicates(input []Identifier, method func(Identifier) (map[string]in
 	return includedElements, nil
 }
 
-func marshalData(data Identifier) (map[string]interface{}, error) {
+func marshalData(data MarshalIdentifier) (map[string]interface{}, error) {
 	result := make(map[string]interface{})
 
-	element, ok := data.(Identifier)
+	element, ok := data.(MarshalIdentifier)
 	if !ok {
-		return result, errors.New("data must implement api2go.Identifier interface")
+		return result, errors.New("data must implement api2go.MarshalIdentifier interface")
 	}
 
 	id := element.GetID()
@@ -165,7 +164,7 @@ func marshalData(data Identifier) (map[string]interface{}, error) {
 	result["type"] = getStructType(data)
 
 	// optional relationship interface for struct
-	references, ok := data.(LinkedRelations)
+	references, ok := data.(MarshalLinkedRelations)
 	if ok {
 		result["links"] = getStructLinks(references)
 	}
@@ -174,7 +173,7 @@ func marshalData(data Identifier) (map[string]interface{}, error) {
 }
 
 // getStructLinks returns the link struct with ids
-func getStructLinks(relationer LinkedRelations) map[string]interface{} {
+func getStructLinks(relationer MarshalLinkedRelations) map[string]interface{} {
 	referencedIDs := relationer.GetReferencedIDs()
 	sortedResults := make(map[string][]ReferenceID)
 	links := make(map[string]interface{})
@@ -209,7 +208,7 @@ func getStructLinks(relationer LinkedRelations) map[string]interface{} {
 	return links
 }
 
-func getIncludedStructs(included IncludedRelations) ([]map[string]interface{}, error) {
+func getIncludedStructs(included MarshalIncludedRelations) ([]map[string]interface{}, error) {
 	var result = make([]map[string]interface{}, 0)
 	includedStructs := included.GetReferencedStructs()
 
@@ -225,7 +224,7 @@ func getIncludedStructs(included IncludedRelations) ([]map[string]interface{}, e
 	return result, nil
 }
 
-func marshal2(data Identifier, prefix string) (map[string]interface{}, error) {
+func marshal2(data MarshalIdentifier, prefix string) (map[string]interface{}, error) {
 	result := make(map[string]interface{})
 	contentData, err := marshalData(data)
 	if err != nil {
@@ -234,7 +233,7 @@ func marshal2(data Identifier, prefix string) (map[string]interface{}, error) {
 
 	result["data"] = contentData
 
-	included, ok := data.(IncludedRelations)
+	included, ok := data.(MarshalIncludedRelations)
 	if ok {
 		linked, err := getIncludedStructs(included)
 		if err != nil {
@@ -247,11 +246,11 @@ func marshal2(data Identifier, prefix string) (map[string]interface{}, error) {
 	return result, nil
 }
 
-func getStructType(data Identifier) string {
+func getStructType(data MarshalIdentifier) string {
 	return Pluralize(Jsonify(reflect.TypeOf(data).Elem().Name()))
 }
 
-func getStructFields(data Identifier) map[string]interface{} {
+func getStructFields(data MarshalIdentifier) map[string]interface{} {
 	result := make(map[string]interface{})
 	val := reflect.ValueOf(data)
 	if val.Kind() == reflect.Ptr {
@@ -518,7 +517,7 @@ func MarshalToJSON2(val interface{}) ([]byte, error) {
 		return json.Marshal(result)
 	}
 
-	result, err := Marshal2(val.(Identifier))
+	result, err := Marshal2(val.(MarshalIdentifier))
 	if err != nil {
 		return []byte{}, err
 	}

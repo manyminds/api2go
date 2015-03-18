@@ -120,15 +120,15 @@ func (c Post) GetReferencedIDs() []ReferenceID {
 	return result
 }
 
-func (c Post) GetReferencedStructs() []Identifier {
-	result := []Identifier{c.Author}
+func (c Post) GetReferencedStructs() []MarshalIdentifier {
+	result := []MarshalIdentifier{c.Author}
 	for key := range c.Comments {
 		result = append(result, &c.Comments[key])
 	}
 	return result
 }
 
-func (c *Post) SetReferencedStructs(references []Identifier) error {
+func (c *Post) SetReferencedStructs(references []UnmarshalIdentifier) error {
 	return nil
 }
 
