@@ -2,7 +2,6 @@ package jsonapi
 
 import (
 	"database/sql"
-	"encoding/json"
 	"time"
 
 	"gopkg.in/guregu/null.v2/zero"
@@ -141,21 +140,6 @@ var _ = Describe("Marshalling", func() {
 		It("returns an error when passing an empty string", func() {
 			_, err := Marshal("")
 			Expect(err).To(HaveOccurred())
-		})
-
-		PIt("marshals to JSON", func() {
-			j, err := MarshalToJSON([]SimplePost{firstPost})
-			Expect(err).To(BeNil())
-			var m map[string]interface{}
-			Expect(json.Unmarshal(j, &m)).To(BeNil())
-
-			//the expectation currently does not
-			//decode the time.Time
-			Expect(m).To(Equal(map[string]interface{}{
-				"data": []interface{}{
-					firstPostMap,
-				},
-			}))
 		})
 	})
 
