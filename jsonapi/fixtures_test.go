@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"strconv"
+	"time"
 
 	"gopkg.in/guregu/null.v2/zero"
 )
@@ -65,6 +66,7 @@ func (u *User) SetID(stringID string) error {
 
 type SimplePost struct {
 	ID, Title, Text string
+	Created         time.Time
 }
 
 func (s SimplePost) GetID() string {

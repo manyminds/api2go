@@ -11,12 +11,6 @@ import (
 )
 
 var _ = Describe("Unmarshal", func() {
-	type SimplePost struct {
-		ID          string
-		Title, Text string
-		Created     time.Time
-	}
-
 	type Post struct {
 		ID          int
 		Title       string
