@@ -176,7 +176,7 @@ var _ = Describe("Marshalling", func() {
 				"data": []map[string]interface{}{
 					map[string]interface{}{
 						"id": "1",
-						"links": map[string]interface{}{
+						"links": map[string]map[string]interface{}{
 							"comments": map[string]interface{}{
 								// "self":     "/posts/1/links/comments",
 								// "resource": "/posts/1/comments",
@@ -195,7 +195,7 @@ var _ = Describe("Marshalling", func() {
 					},
 					map[string]interface{}{
 						"id": "2",
-						"links": map[string]interface{}{
+						"links": map[string]map[string]interface{}{
 							"comments": map[string]interface{}{
 								// "self":     "/posts/2/links/comments",
 								//"resource": "/posts/2/comments",
@@ -243,7 +243,7 @@ var _ = Describe("Marshalling", func() {
 					"id":    "1",
 					"type":  "posts",
 					"title": "",
-					"links": map[string]interface{}{
+					"links": map[string]map[string]interface{}{
 						"comments": map[string]interface{}{
 							"ids":  []string{"1"},
 							"type": "comments",
@@ -271,7 +271,7 @@ var _ = Describe("Marshalling", func() {
 					"id":    "1",
 					"type":  "posts",
 					"title": "",
-					"links": map[string]interface{}{
+					"links": map[string]map[string]interface{}{
 						"comments": map[string]interface{}{
 							"ids":  []string{"1"},
 							"type": "comments",
@@ -307,7 +307,7 @@ var _ = Describe("Marshalling", func() {
 				"data": map[string]interface{}{
 					"id":   "1",
 					"type": "anotherPosts",
-					"links": map[string]interface{}{
+					"links": map[string]map[string]interface{}{
 						"author": map[string]interface{}{
 							"id":   "1",
 							"type": "users",
@@ -385,7 +385,7 @@ var _ = Describe("Marshalling", func() {
 					"id":   "2",
 					"type": "questions",
 					"text": "Will it ever work?",
-					"links": map[string]interface{}{
+					"links": map[string]map[string]interface{}{
 						"inspiringQuestion": map[string]interface{}{
 							"id":   "1",
 							"type": "questions",
@@ -398,7 +398,7 @@ var _ = Describe("Marshalling", func() {
 						"id":   "1",
 						"type": "questions",
 						"text": "Does this test work?",
-						"links": map[string]interface{}{
+						"links": map[string]map[string]interface{}{
 							"inspiringQuestion": map[string]interface{}{
 								"type": "questions",
 								//"resource": "/questions/1/inspiringQuestion",
@@ -420,7 +420,7 @@ var _ = Describe("Marshalling", func() {
 						"id":   "3",
 						"type": "questions",
 						"text": "It works now",
-						"links": map[string]interface{}{
+						"links": map[string]map[string]interface{}{
 							"inspiringQuestion": map[string]interface{}{
 								"id":   "1",
 								"type": "questions",
@@ -432,7 +432,7 @@ var _ = Describe("Marshalling", func() {
 						"id":   "2",
 						"type": "questions",
 						"text": "Will it ever work?",
-						"links": map[string]interface{}{
+						"links": map[string]map[string]interface{}{
 							"inspiringQuestion": map[string]interface{}{
 								"id":   "1",
 								"type": "questions",
@@ -446,7 +446,7 @@ var _ = Describe("Marshalling", func() {
 						"id":   "1",
 						"type": "questions",
 						"text": "Does this test work?",
-						"links": map[string]interface{}{
+						"links": map[string]map[string]interface{}{
 							"inspiringQuestion": map[string]interface{}{
 								"type": "questions",
 								//"resource": "/questions/1/inspiringQuestion",
@@ -521,6 +521,46 @@ var _ = Describe("Marshalling", func() {
 		It("should work with pointer to value", func() {
 			result := getStructFields(&comment)
 			Expect(result).To(Equal(expected))
+		})
+	})
+
+	Context("test getStructLinks", func() {
+		var (
+			post    Post
+			comment Comment
+			author  User
+		)
+
+		BeforeEach(func() {
+			comment = Comment{ID: 1}
+			author = User{ID: 1, Name: "Tester"}
+			post = Post{ID: 1, Comments: []Comment{comment}, Author: &author}
+		})
+
+		It("Generates to-one links correctly", func() {
+			links := getStructLinks(post, serverInformationNil)
+			Expect(links["author"]).To(Equal(map[string]interface{}{
+				"id":   "1",
+				"type": "users",
+			}))
+		})
+
+		It("Generates to-many links correctly", func() {
+			links := getStructLinks(post, serverInformationNil)
+			Expect(links["comments"]).To(Equal(map[string]interface{}{
+				"ids":  []string{"1"},
+				"type": "comments",
+			}))
+		})
+
+		It("Generates self/related URLs correctly", func() {
+			links := getStructLinks(post, CompleteServerInformation{})
+			Expect(links["author"]).To(Equal(map[string]interface{}{
+				"id":      "1",
+				"type":    "users",
+				"self":    "http://my.domain/v1/posts/1/links/author",
+				"related": "http://my.domain/v1/posts/1/author",
+			}))
 		})
 	})
 

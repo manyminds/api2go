@@ -3,6 +3,7 @@ package jsonapi
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"reflect"
 )
 
@@ -54,22 +55,41 @@ type MarshalReferences interface {
 // MarshalLinkedRelations must be implemented if there are references and the reference IDs should be included
 type MarshalLinkedRelations interface {
 	MarshalReferences
+	MarshalIdentifier
 	GetReferencedIDs() []ReferenceID
 }
 
 // MarshalIncludedRelations must be implemented if referenced structs should be included
 type MarshalIncludedRelations interface {
 	MarshalReferences
+	MarshalIdentifier
 	GetReferencedStructs() []MarshalIdentifier
 }
+
+// ServerInformation can be passed to MarshalWithURLs to generate the `self` and `related` urls inside `links`
+type ServerInformation interface {
+	GetBaseURL() string
+	GetPrefix() string
+}
+
+var serverInformationNil ServerInformation
 
 // MarshalPrefix does the same as Marshal but adds a prefix to generated URLs
 func MarshalPrefix(data interface{}, prefix string) (interface{}, error) {
 	return nil, errors.New("Will never be implemented, must be moved into API layer")
 }
 
+// MarshalWithURLs can be used to include the generation of `related` and `self` links
+func MarshalWithURLs(data interface{}, information ServerInformation) (map[string]interface{}, error) {
+	return marshal(data, information)
+}
+
 // Marshal is the new shit
 func Marshal(data interface{}) (map[string]interface{}, error) {
+	return marshal(data, serverInformationNil)
+}
+
+func marshal(data interface{}, information ServerInformation) (map[string]interface{}, error) {
 	if data == nil {
 		return map[string]interface{}{}, errors.New("nil cannot be marshalled")
 	}
@@ -184,17 +204,17 @@ func marshalData(element MarshalIdentifier) (map[string]interface{}, error) {
 	// optional relationship interface for struct
 	references, ok := element.(MarshalLinkedRelations)
 	if ok {
-		result["links"] = getStructLinks(references)
+		result["links"] = getStructLinks(references, serverInformationNil)
 	}
 
 	return result, nil
 }
 
 // getStructLinks returns the link struct with ids
-func getStructLinks(relationer MarshalLinkedRelations) map[string]interface{} {
+func getStructLinks(relationer MarshalLinkedRelations, information ServerInformation) map[string]map[string]interface{} {
 	referencedIDs := relationer.GetReferencedIDs()
 	sortedResults := make(map[string][]ReferenceID)
-	links := make(map[string]interface{})
+	links := make(map[string]map[string]interface{})
 
 	for _, referenceID := range referencedIDs {
 		sortedResults[referenceID.Type] = append(sortedResults[referenceID.Type], referenceID)
@@ -227,6 +247,27 @@ func getStructLinks(relationer MarshalLinkedRelations) map[string]interface{} {
 			links[name] = map[string]interface{}{
 				"id":   referenceIDs[0].ID,
 				"type": referenceType,
+			}
+		}
+
+		// generate links if necessary
+		if information != serverInformationNil {
+			prefix := ""
+			baseURL := information.GetBaseURL()
+			if baseURL != "" {
+				prefix = baseURL
+			}
+			p := information.GetPrefix()
+			if p != "" {
+				prefix += "/" + p
+			}
+
+			if prefix != "" {
+				links[name]["self"] = fmt.Sprintf("%s/%s/%s/links/%s", prefix, getStructType(relationer), relationer.GetID(), name)
+				links[name]["related"] = fmt.Sprintf("%s/%s/%s/%s", prefix, getStructType(relationer), relationer.GetID(), name)
+			} else {
+				links[name]["self"] = fmt.Sprintf("%s/%s/links/%s", getStructType(relationer), relationer.GetID(), name)
+				links[name]["related"] = fmt.Sprintf("%s/%s/%s", getStructType(relationer), relationer.GetID(), name)
 			}
 		}
 

@@ -257,3 +257,13 @@ type Unicorn struct {
 func (u Unicorn) GetID() string {
 	return "magicalUnicorn"
 }
+
+type CompleteServerInformation struct{}
+
+func (i CompleteServerInformation) GetBaseURL() string {
+	return "http://my.domain"
+}
+
+func (i CompleteServerInformation) GetPrefix() string {
+	return "v1"
+}
