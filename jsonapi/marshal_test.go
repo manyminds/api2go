@@ -153,7 +153,7 @@ var _ = Describe("Marshalling", func() {
 
 			posts := []Post{post1, post2}
 
-			i, err := Marshal(posts)
+			i, err := MarshalWithURLs(posts, CompleteServerInformation{})
 			Expect(err).To(BeNil())
 
 			expected := map[string]interface{}{
@@ -162,16 +162,16 @@ var _ = Describe("Marshalling", func() {
 						"id": "1",
 						"links": map[string]map[string]interface{}{
 							"comments": map[string]interface{}{
-								// "self":     "/posts/1/links/comments",
-								// "resource": "/posts/1/comments",
-								"ids":  []string{"1", "2"},
-								"type": "comments",
+								"self":    completePrefix + "/posts/1/links/comments",
+								"related": completePrefix + "/posts/1/comments",
+								"ids":     []string{"1", "2"},
+								"type":    "comments",
 							},
 							"author": map[string]interface{}{
-								// "self":     "/posts/1/links/author",
-								// "resource": "/posts/1/author",
-								"id":   "1",
-								"type": "users",
+								"self":    completePrefix + "/posts/1/links/author",
+								"related": completePrefix + "/posts/1/author",
+								"id":      "1",
+								"type":    "users",
 							},
 						},
 						"title": "Foobar",
@@ -181,16 +181,16 @@ var _ = Describe("Marshalling", func() {
 						"id": "2",
 						"links": map[string]map[string]interface{}{
 							"comments": map[string]interface{}{
-								// "self":     "/posts/2/links/comments",
-								//"resource": "/posts/2/comments",
-								"ids":  []string{"1", "2"},
-								"type": "comments",
+								"self":    completePrefix + "/posts/2/links/comments",
+								"related": completePrefix + "/posts/2/comments",
+								"ids":     []string{"1", "2"},
+								"type":    "comments",
 							},
 							"author": map[string]interface{}{
-								// "self":     "/posts/2/links/author",
-								//"resource": "/posts/2/author",
-								"id":   "1",
-								"type": "users",
+								"self":    completePrefix + "/posts/2/links/author",
+								"related": completePrefix + "/posts/2/author",
+								"id":      "1",
+								"type":    "users",
 							},
 						},
 						"title": "Foobarbarbar",
@@ -221,7 +221,7 @@ var _ = Describe("Marshalling", func() {
 
 		It("adds IDs", func() {
 			post := Post{ID: 1, Comments: []Comment{}, CommentsIDs: []int{1}}
-			i, err := Marshal(post)
+			i, err := MarshalWithURLs(post, CompleteServerInformation{})
 			expected := map[string]interface{}{
 				"data": map[string]interface{}{
 					"id":    "1",
@@ -229,13 +229,15 @@ var _ = Describe("Marshalling", func() {
 					"title": "",
 					"links": map[string]map[string]interface{}{
 						"comments": map[string]interface{}{
-							"ids":  []string{"1"},
-							"type": "comments",
-							//"resource": "/posts/1/comments",
+							"ids":     []string{"1"},
+							"type":    "comments",
+							"self":    completePrefix + "/posts/1/links/comments",
+							"related": completePrefix + "/posts/1/comments",
 						},
 						"author": map[string]interface{}{
-							"type": "users",
-							//"resource": "/posts/1/author",
+							"type":    "users",
+							"self":    completePrefix + "/posts/1/links/author",
+							"related": completePrefix + "/posts/1/author",
 						},
 					},
 				},
@@ -537,13 +539,33 @@ var _ = Describe("Marshalling", func() {
 			}))
 		})
 
-		It("Generates self/related URLs correctly", func() {
+		It("Generates self/related URLs with baseURL and prefix correctly", func() {
 			links := getStructLinks(post, CompleteServerInformation{})
 			Expect(links["author"]).To(Equal(map[string]interface{}{
 				"id":      "1",
 				"type":    "users",
 				"self":    "http://my.domain/v1/posts/1/links/author",
 				"related": "http://my.domain/v1/posts/1/author",
+			}))
+		})
+
+		It("Generates self/related URLs with baseURL correctly", func() {
+			links := getStructLinks(post, BaseURLServerInformation{})
+			Expect(links["author"]).To(Equal(map[string]interface{}{
+				"id":      "1",
+				"type":    "users",
+				"self":    "http://my.domain/posts/1/links/author",
+				"related": "http://my.domain/posts/1/author",
+			}))
+		})
+
+		It("Generates self/related URLs with prefix correctly", func() {
+			links := getStructLinks(post, PrefixServerInformation{})
+			Expect(links["author"]).To(Equal(map[string]interface{}{
+				"id":      "1",
+				"type":    "users",
+				"self":    "/v1/posts/1/links/author",
+				"related": "/v1/posts/1/author",
 			}))
 		})
 	})
@@ -568,18 +590,18 @@ var _ = Describe("Marshalling", func() {
 			{"name": "User2", "id": 2, "type": "users"},
 		}
 
-		dummyFunc := func(m MarshalIdentifier) (map[string]interface{}, error) {
+		dummyFunc := func(m MarshalIdentifier, i ServerInformation) (map[string]interface{}, error) {
 			return map[string]interface{}{"blub": m}, nil
 		}
 
 		It("should work with default marshalData", func() {
-			actual, err := reduceDuplicates(input, marshalData)
+			actual, err := reduceDuplicates(input, serverInformationNil, marshalData)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(len(actual)).To(Equal(len(expected)))
 		})
 
 		It("should work with dummy marshalData", func() {
-			actual, err := reduceDuplicates(input, dummyFunc)
+			actual, err := reduceDuplicates(input, serverInformationNil, dummyFunc)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(len(actual)).To(Equal(len(expected)))
 		})

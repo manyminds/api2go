@@ -74,11 +74,6 @@ type ServerInformation interface {
 
 var serverInformationNil ServerInformation
 
-// MarshalPrefix does the same as Marshal but adds a prefix to generated URLs
-func MarshalPrefix(data interface{}, prefix string) (interface{}, error) {
-	return nil, errors.New("Will never be implemented, must be moved into API layer")
-}
-
 // MarshalWithURLs can be used to include the generation of `related` and `self` links
 func MarshalWithURLs(data interface{}, information ServerInformation) (map[string]interface{}, error) {
 	return marshal(data, information)
@@ -96,16 +91,16 @@ func marshal(data interface{}, information ServerInformation) (map[string]interf
 
 	switch reflect.TypeOf(data).Kind() {
 	case reflect.Slice:
-		return marshalSlice(data)
+		return marshalSlice(data, information)
 	case reflect.Struct, reflect.Ptr:
-		return marshalStruct(data.(MarshalIdentifier), "")
+		return marshalStruct(data.(MarshalIdentifier), information)
 	default:
 		return map[string]interface{}{}, errors.New("Marshal only accepts slice, struct or ptr types")
 	}
 }
 
 // marshalSlice marshals a slice TODO
-func marshalSlice(data interface{}) (map[string]interface{}, error) {
+func marshalSlice(data interface{}, information ServerInformation) (map[string]interface{}, error) {
 	result := make(map[string]interface{})
 
 	val := reflect.ValueOf(data)
@@ -123,7 +118,7 @@ func marshalSlice(data interface{}) (map[string]interface{}, error) {
 			return result, errors.New("all elements within the slice must implement api2go.MarshalIdentifier")
 		}
 
-		content, err := marshalData(element)
+		content, err := marshalData(element, information)
 		if err != nil {
 			return result, err
 		}
@@ -136,7 +131,7 @@ func marshalSlice(data interface{}) (map[string]interface{}, error) {
 		}
 	}
 
-	includedElements, err := reduceDuplicates(referencedStructs, marshalData)
+	includedElements, err := reduceDuplicates(referencedStructs, information, marshalData)
 	if err != nil {
 		return result, err
 	}
@@ -151,7 +146,7 @@ func marshalSlice(data interface{}) (map[string]interface{}, error) {
 }
 
 // reduceDuplicates eliminates duplicate MarshalIdentifier from input and calls `method` on every unique MarshalIdentifier
-func reduceDuplicates(input []MarshalIdentifier, method func(MarshalIdentifier) (map[string]interface{}, error)) ([]map[string]interface{}, error) {
+func reduceDuplicates(input []MarshalIdentifier, information ServerInformation, method func(MarshalIdentifier, ServerInformation) (map[string]interface{}, error)) ([]map[string]interface{}, error) {
 	var (
 		alreadyIncluded  = make(map[string]map[string]bool)
 		includedElements []map[string]interface{}
@@ -168,7 +163,7 @@ func reduceDuplicates(input []MarshalIdentifier, method func(MarshalIdentifier) 
 		}
 
 		if !alreadyIncluded[structType][referencedStruct.GetID()] {
-			marshalled, err := method(referencedStruct)
+			marshalled, err := method(referencedStruct, information)
 			if err != nil {
 				return includedElements, err
 			}
@@ -181,7 +176,7 @@ func reduceDuplicates(input []MarshalIdentifier, method func(MarshalIdentifier) 
 	return includedElements, nil
 }
 
-func marshalData(element MarshalIdentifier) (map[string]interface{}, error) {
+func marshalData(element MarshalIdentifier, information ServerInformation) (map[string]interface{}, error) {
 	result := make(map[string]interface{})
 
 	refValue := reflect.ValueOf(element)
@@ -204,7 +199,7 @@ func marshalData(element MarshalIdentifier) (map[string]interface{}, error) {
 	// optional relationship interface for struct
 	references, ok := element.(MarshalLinkedRelations)
 	if ok {
-		result["links"] = getStructLinks(references, serverInformationNil)
+		result["links"] = getStructLinks(references, information)
 	}
 
 	return result, nil
@@ -250,25 +245,9 @@ func getStructLinks(relationer MarshalLinkedRelations, information ServerInforma
 			}
 		}
 
-		// generate links if necessary
-		if information != serverInformationNil {
-			prefix := ""
-			baseURL := information.GetBaseURL()
-			if baseURL != "" {
-				prefix = baseURL
-			}
-			p := information.GetPrefix()
-			if p != "" {
-				prefix += "/" + p
-			}
-
-			if prefix != "" {
-				links[name]["self"] = fmt.Sprintf("%s/%s/%s/links/%s", prefix, getStructType(relationer), relationer.GetID(), name)
-				links[name]["related"] = fmt.Sprintf("%s/%s/%s/%s", prefix, getStructType(relationer), relationer.GetID(), name)
-			} else {
-				links[name]["self"] = fmt.Sprintf("%s/%s/links/%s", getStructType(relationer), relationer.GetID(), name)
-				links[name]["related"] = fmt.Sprintf("%s/%s/%s", getStructType(relationer), relationer.GetID(), name)
-			}
+		// set URLs if necessary
+		for key, value := range getLinksForServerInformation(relationer, name, information) {
+			links[name][key] = value
 		}
 
 		// this marks the reference as already included
@@ -280,17 +259,47 @@ func getStructLinks(relationer MarshalLinkedRelations, information ServerInforma
 		links[name] = map[string]interface{}{
 			"type": reference.Type,
 		}
+		for key, value := range getLinksForServerInformation(relationer, name, information) {
+			links[name][key] = value
+		}
 	}
 
 	return links
 }
 
-func getIncludedStructs(included MarshalIncludedRelations) ([]map[string]interface{}, error) {
+// helper method to generate URL fields for `links`
+func getLinksForServerInformation(relationer MarshalLinkedRelations, name string, information ServerInformation) map[string]string {
+	links := map[string]string{}
+	// generate links if necessary
+	if information != serverInformationNil {
+		prefix := ""
+		baseURL := information.GetBaseURL()
+		if baseURL != "" {
+			prefix = baseURL
+		}
+		p := information.GetPrefix()
+		if p != "" {
+			prefix += "/" + p
+		}
+
+		if prefix != "" {
+			links["self"] = fmt.Sprintf("%s/%s/%s/links/%s", prefix, getStructType(relationer), relationer.GetID(), name)
+			links["related"] = fmt.Sprintf("%s/%s/%s/%s", prefix, getStructType(relationer), relationer.GetID(), name)
+		} else {
+			links["self"] = fmt.Sprintf("%s/%s/links/%s", getStructType(relationer), relationer.GetID(), name)
+			links["related"] = fmt.Sprintf("%s/%s/%s", getStructType(relationer), relationer.GetID(), name)
+		}
+	}
+
+	return links
+}
+
+func getIncludedStructs(included MarshalIncludedRelations, information ServerInformation) ([]map[string]interface{}, error) {
 	var result = make([]map[string]interface{}, 0)
 	includedStructs := included.GetReferencedStructs()
 
 	for key := range includedStructs {
-		marshalled, err := marshalData(includedStructs[key])
+		marshalled, err := marshalData(includedStructs[key], information)
 		if err != nil {
 			return result, err
 		}
@@ -301,9 +310,9 @@ func getIncludedStructs(included MarshalIncludedRelations) ([]map[string]interfa
 	return result, nil
 }
 
-func marshalStruct(data MarshalIdentifier, prefix string) (map[string]interface{}, error) {
+func marshalStruct(data MarshalIdentifier, information ServerInformation) (map[string]interface{}, error) {
 	result := make(map[string]interface{})
-	contentData, err := marshalData(data)
+	contentData, err := marshalData(data, information)
 	if err != nil {
 		return result, err
 	}
@@ -312,7 +321,7 @@ func marshalStruct(data MarshalIdentifier, prefix string) (map[string]interface{
 
 	included, ok := data.(MarshalIncludedRelations)
 	if ok {
-		linked, err := getIncludedStructs(included)
+		linked, err := getIncludedStructs(included, information)
 		if err != nil {
 			return result, err
 		}
@@ -365,7 +374,12 @@ func MarshalToJSON(val interface{}) ([]byte, error) {
 	return json.Marshal(result)
 }
 
-// MarshalToJSONPrefix does the same as MarshalToJSON but adds a prefix to generated URLs
-func MarshalToJSONPrefix(val interface{}, prefix string) ([]byte, error) {
-	return []byte{}, errors.New("This will never be implemented, is going to be moved to API")
+// MarshalToJSONWithURLs marshals a struct to json with URLs in `links`
+func MarshalToJSONWithURLs(val interface{}, information ServerInformation) ([]byte, error) {
+	result, err := MarshalWithURLs(val, information)
+	if err != nil {
+		return []byte{}, err
+	}
+
+	return json.Marshal(result)
 }

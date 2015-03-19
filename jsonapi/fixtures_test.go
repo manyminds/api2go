@@ -260,10 +260,34 @@ func (u Unicorn) GetID() string {
 
 type CompleteServerInformation struct{}
 
+const completePrefix = "http://my.domain/v1"
+const baseURL = "http://my.domain"
+const prefix = "v1"
+
 func (i CompleteServerInformation) GetBaseURL() string {
-	return "http://my.domain"
+	return baseURL
 }
 
 func (i CompleteServerInformation) GetPrefix() string {
-	return "v1"
+	return prefix
+}
+
+type BaseURLServerInformation struct{}
+
+func (i BaseURLServerInformation) GetBaseURL() string {
+	return baseURL
+}
+
+func (i BaseURLServerInformation) GetPrefix() string {
+	return ""
+}
+
+type PrefixServerInformation struct{}
+
+func (i PrefixServerInformation) GetBaseURL() string {
+	return ""
+}
+
+func (i PrefixServerInformation) GetPrefix() string {
+	return prefix
 }
