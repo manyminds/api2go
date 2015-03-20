@@ -450,7 +450,7 @@ var _ = Describe("RestHandler", func() {
 		})
 
 		It("POSTSs new objects", func() {
-			reqBody := strings.NewReader(`{"posts": [{"title": "New Post"}]}`)
+			reqBody := strings.NewReader(`{"data": [{"title": "New Post", "type": "posts"}]}`)
 			req, err := http.NewRequest("POST", "/v1/posts", reqBody)
 			Expect(err).To(BeNil())
 			api.Handler().ServeHTTP(rec, req)
@@ -479,7 +479,7 @@ var _ = Describe("RestHandler", func() {
 		})
 
 		It("POSTSs new objects with trailing slash automatic redirect enabled", func() {
-			reqBody := strings.NewReader(`{"posts": [{"title": "New Post"}]}`)
+			reqBody := strings.NewReader(`{"data": [{"title": "New Post", "types"; "posts"}]}`)
 			req, err := http.NewRequest("POST", "/v1/posts/", reqBody)
 			Expect(err).To(BeNil())
 			api.SetRedirectTrailingSlash(true)
@@ -488,7 +488,7 @@ var _ = Describe("RestHandler", func() {
 		})
 
 		It("POSTSs new objects with trailing slash automatic redirect disabled", func() {
-			reqBody := strings.NewReader(`{"posts": [{"title": "New Post"}]}`)
+			reqBody := strings.NewReader(`{"data": [{"title": "New Post", "types": "posts"}]}`)
 			req, err := http.NewRequest("POST", "/v1/posts/", reqBody)
 			Expect(err).To(BeNil())
 			api.SetRedirectTrailingSlash(false)
@@ -541,7 +541,7 @@ var _ = Describe("RestHandler", func() {
 		})
 
 		It("UPDATEs", func() {
-			reqBody := strings.NewReader(`{"posts": {"id": "1", "title": "New Title"}}`)
+			reqBody := strings.NewReader(`{"data": {"id": "1", "title": "New Title", "type": "posts"}}`)
 			req, err := http.NewRequest("PUT", "/v1/posts/1", reqBody)
 			Expect(err).To(BeNil())
 			api.Handler().ServeHTTP(rec, req)
@@ -550,7 +550,7 @@ var _ = Describe("RestHandler", func() {
 		})
 
 		It("UPDATEs as array", func() {
-			reqBody := strings.NewReader(`{"posts": [{"id": "1", "title": "New Title"}]}`)
+			reqBody := strings.NewReader(`{"data": [{"id": "1", "title": "New Title", "type": "posts"}]}`)
 			req, err := http.NewRequest("PUT", "/v1/posts/1", reqBody)
 			Expect(err).To(BeNil())
 			api.Handler().ServeHTTP(rec, req)
@@ -598,7 +598,7 @@ var _ = Describe("RestHandler", func() {
 			})
 
 			It("Create", func() {
-				reqBody := strings.NewReader(`{"posts": [{"title": "New Post"}]}`)
+				reqBody := strings.NewReader(`{"data": [{"title": "New Post", "type": "posts"}]}`)
 				req, err := http.NewRequest("POST", "/posts", reqBody)
 				Expect(err).To(BeNil())
 				api.Handler().ServeHTTP(rec, req)
@@ -616,7 +616,7 @@ var _ = Describe("RestHandler", func() {
 			})
 
 			It("Update", func() {
-				reqBody := strings.NewReader(`{"posts": [{"id": "1", "title": "New Post"}]}`)
+				reqBody := strings.NewReader(`{"data": [{"id": "1", "title": "New Post", "type": "posts"}]}`)
 				req, err := http.NewRequest("PUT", "/posts/1", reqBody)
 				Expect(err).To(BeNil())
 				api.Handler().ServeHTTP(rec, req)
@@ -653,7 +653,7 @@ var _ = Describe("RestHandler", func() {
 		})
 
 		It("POSTSs new objects", func() {
-			reqBody := strings.NewReader(`{"posts": [{"title": ""}]}`)
+			reqBody := strings.NewReader(`{"data": [{"title": "", "type": "posts"}]}`)
 			req, err := http.NewRequest("POST", "/posts", reqBody)
 			Expect(err).To(BeNil())
 			api.Handler().ServeHTTP(rec, req)

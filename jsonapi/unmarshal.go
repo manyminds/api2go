@@ -27,13 +27,13 @@ type UnmarshalIncludedRelations interface {
 }
 
 // Unmarshal reads a JSONAPI map to a model struct
-func Unmarshal(ctx unmarshalContext, values interface{}) error {
+func Unmarshal(input unmarshalContext, target interface{}) error {
 	// Check that target is a *[]Model
-	ptrVal := reflect.ValueOf(values)
+	ptrVal := reflect.ValueOf(target)
 	if ptrVal.Kind() != reflect.Ptr || ptrVal.IsNil() {
 		return errors.New("You must pass a pointer to a []struct to Unmarshal()")
 	}
-	sliceType := reflect.TypeOf(values).Elem()
+	sliceType := reflect.TypeOf(target).Elem()
 	sliceVal := ptrVal.Elem()
 	if sliceType.Kind() != reflect.Slice {
 		return errors.New("You must pass a pointer to a []struct to Unmarshal()")
@@ -46,7 +46,7 @@ func Unmarshal(ctx unmarshalContext, values interface{}) error {
 	// Copy the value, then write into the new variable.
 	// Later Set() the actual value of the pointee.
 	val := sliceVal
-	err := UnmarshalInto(ctx, structType, &val)
+	err := UnmarshalInto(input, structType, &val)
 	if err != nil {
 		return err
 	}
@@ -86,16 +86,12 @@ func setFieldValue(field *reflect.Value, value reflect.Value) {
 
 // UnmarshalInto this must be private. We have some tight coupling problems here
 // DEPRECATED this method will be private in further releases, so please do not use it
-func UnmarshalInto(ctx unmarshalContext, structType reflect.Type, sliceVal *reflect.Value) error {
+func UnmarshalInto(input unmarshalContext, targetStructType reflect.Type, targetSliceVal *reflect.Value) error {
 	// Read models slice
 	var modelsInterface interface{}
-	rootName := Pluralize(Jsonify(structType.Name()))
 
-	if modelsInterface = ctx[rootName]; modelsInterface == nil {
-		rootName = "data"
-		if modelsInterface = ctx[rootName]; modelsInterface == nil {
-			return errors.New("expected root document to include a '" + rootName + "' key but it didn't.")
-		}
+	if modelsInterface = input["data"]; modelsInterface == nil {
+		return errors.New("expected root document to include a data key but it didn't")
 	}
 
 	models, ok := modelsInterface.([]interface{})
@@ -107,7 +103,7 @@ func UnmarshalInto(ctx unmarshalContext, structType reflect.Type, sliceVal *refl
 	for _, m := range models {
 		attributes, ok := m.(map[string]interface{})
 		if !ok {
-			return errors.New("expected an array of objects under key '" + rootName + "'")
+			return errors.New("expected an array of objects under key data")
 		}
 
 		var val reflect.Value
@@ -122,8 +118,8 @@ func UnmarshalInto(ctx unmarshalContext, structType reflect.Type, sliceVal *refl
 
 			// If we have an ID, check if there's already an object with that ID in the slice
 			// TODO This is O(n^2), make it O(n)
-			for i := 0; i < sliceVal.Len(); i++ {
-				obj := sliceVal.Index(i)
+			for i := 0; i < targetSliceVal.Len(); i++ {
+				obj := targetSliceVal.Index(i)
 				otherID, err := idFromObject(obj)
 				if err != nil {
 					return err
@@ -137,7 +133,7 @@ func UnmarshalInto(ctx unmarshalContext, structType reflect.Type, sliceVal *refl
 		}
 		// If the struct wasn't already there for updating, make a new one
 		if !val.IsValid() {
-			val = reflect.New(structType).Elem()
+			val = reflect.New(targetStructType).Elem()
 		}
 
 		for k, v := range attributes {
@@ -168,7 +164,7 @@ func UnmarshalInto(ctx unmarshalContext, structType reflect.Type, sliceVal *refl
 				fieldName := Dejsonify(k)
 				field := val.FieldByName(fieldName)
 				if !field.IsValid() {
-					return errors.New("expected struct " + structType.Name() + " to have field " + fieldName)
+					return errors.New("expected struct " + targetStructType.Name() + " to have field " + fieldName)
 				}
 				value := reflect.ValueOf(v)
 
@@ -212,7 +208,7 @@ func UnmarshalInto(ctx unmarshalContext, structType reflect.Type, sliceVal *refl
 		}
 
 		if isNew {
-			*sliceVal = reflect.Append(*sliceVal, val)
+			*targetSliceVal = reflect.Append(*targetSliceVal, val)
 		}
 	}
 
@@ -291,11 +287,11 @@ func unmarshalLinks(val reflect.Value, linksMap map[string]interface{}) error {
 }
 
 // UnmarshalFromJSON reads a JSONAPI compatible JSON document to a model struct
-func UnmarshalFromJSON(data []byte, values interface{}) error {
+func UnmarshalFromJSON(data []byte, target interface{}) error {
 	var ctx unmarshalContext
 	err := json.Unmarshal(data, &ctx)
 	if err != nil {
 		return err
 	}
-	return Unmarshal(ctx, values)
+	return Unmarshal(ctx, target)
 }

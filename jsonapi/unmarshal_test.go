@@ -411,10 +411,12 @@ var _ = Describe("Unmarshal", func() {
 
 			var users []User
 			userMap := map[string]interface{}{
-				"users": []interface{}{
+				"data": []interface{}{
 					map[string]interface{}{
 						"id":   "1",
-						"Name": "test"}}}
+						"Name": "test",
+						"type": "users",
+					}}}
 
 			err := Unmarshal(userMap, &users)
 			Expect(err).To(BeNil())
@@ -428,10 +430,12 @@ var _ = Describe("Unmarshal", func() {
 
 			var users []User
 			userMap := map[string]interface{}{
-				"users": []interface{}{
+				"data": []interface{}{
 					map[string]interface{}{
 						"id":   "1",
-						"Name": "test"}}}
+						"Name": "test",
+						"type": "users",
+					}}}
 
 			err := Unmarshal(userMap, &users)
 			Expect(err).To(BeNil())
@@ -445,10 +449,12 @@ var _ = Describe("Unmarshal", func() {
 
 			var users []User
 			userMap := map[string]interface{}{
-				"users": []interface{}{
+				"data": []interface{}{
 					map[string]interface{}{
 						"id":   "1",
-						"Name": "test"}}}
+						"Name": "test",
+						"type": "users",
+					}}}
 
 			err := Unmarshal(userMap, &users)
 			Expect(err).To(BeNil())
@@ -462,10 +468,12 @@ var _ = Describe("Unmarshal", func() {
 
 			var users []User
 			userMap := map[string]interface{}{
-				"users": []interface{}{
+				"data": []interface{}{
 					map[string]interface{}{
 						"id":   "1",
-						"Name": "test"}}}
+						"Name": "test",
+						"type": "users",
+					}}}
 
 			err := Unmarshal(userMap, &users)
 			Expect(err).To(BeNil())
@@ -479,10 +487,12 @@ var _ = Describe("Unmarshal", func() {
 
 			var users []User
 			userMap := map[string]interface{}{
-				"users": []interface{}{
+				"data": []interface{}{
 					map[string]interface{}{
 						"id":   "1",
-						"Name": "test"}}}
+						"Name": "test",
+						"type": "users",
+					}}}
 
 			err := Unmarshal(userMap, &users)
 			Expect(err).To(BeNil())
@@ -496,10 +506,12 @@ var _ = Describe("Unmarshal", func() {
 
 			var users []User
 			userMap := map[string]interface{}{
-				"users": []interface{}{
+				"data": []interface{}{
 					map[string]interface{}{
 						"id":   "1",
-						"Name": "test"}}}
+						"Name": "test",
+						"type": "users",
+					}}}
 
 			err := Unmarshal(userMap, &users)
 			Expect(err).To(BeNil())
@@ -513,10 +525,12 @@ var _ = Describe("Unmarshal", func() {
 
 			var users []User
 			userMap := map[string]interface{}{
-				"users": []interface{}{
+				"data": []interface{}{
 					map[string]interface{}{
 						"id":   "1",
-						"Name": "test"}}}
+						"Name": "test",
+						"type": "users",
+					}}}
 
 			err := Unmarshal(userMap, &users)
 			Expect(err).To(BeNil())
@@ -530,10 +544,12 @@ var _ = Describe("Unmarshal", func() {
 
 			var users []User
 			userMap := map[string]interface{}{
-				"users": []interface{}{
+				"data": []interface{}{
 					map[string]interface{}{
 						"id":   "1",
-						"Name": "test"}}}
+						"Name": "test",
+						"type": "users",
+					}}}
 
 			err := Unmarshal(userMap, &users)
 			Expect(err).To(BeNil())
@@ -547,10 +563,12 @@ var _ = Describe("Unmarshal", func() {
 
 			var users []User
 			userMap := map[string]interface{}{
-				"users": []interface{}{
+				"data": []interface{}{
 					map[string]interface{}{
 						"id":   "1",
-						"Name": "test"}}}
+						"Name": "test",
+						"type": "users",
+					}}}
 
 			err := Unmarshal(userMap, &users)
 			Expect(err).To(BeNil())
@@ -564,10 +582,12 @@ var _ = Describe("Unmarshal", func() {
 
 			var users []User
 			userMap := map[string]interface{}{
-				"users": []interface{}{
+				"data": []interface{}{
 					map[string]interface{}{
 						"id":   "1",
-						"Name": "test"}}}
+						"Name": "test",
+						"type": "users",
+					}}}
 
 			err := Unmarshal(userMap, &users)
 			Expect(err).To(BeNil())
@@ -582,10 +602,11 @@ var _ = Describe("Unmarshal", func() {
 
 			var users []User
 			userMap := map[string]interface{}{
-				"users": []interface{}{
+				"data": []interface{}{
 					map[string]interface{}{
 						"id":   "1",
 						"Name": "test",
+						"type": "users",
 						"links": map[string]interface{}{
 							"foreign": "1337",
 						}}}}
@@ -605,10 +626,11 @@ var _ = Describe("Unmarshal", func() {
 
 			var users []User
 			userMap := map[string]interface{}{
-				"users": []interface{}{
+				"data": []interface{}{
 					map[string]interface{}{
 						"id":   "1",
 						"Name": "test",
+						"type": "users",
 						"links": map[string]interface{}{
 							"foreign": "1337",
 						}}}}
@@ -629,11 +651,12 @@ var _ = Describe("Unmarshal", func() {
 
 		It("correctly unmarshals driver values", func() {
 			postMap := map[string]interface{}{
-				"zeroPosts": []interface{}{
+				"data": []interface{}{
 					map[string]interface{}{
 						"id":    "1",
 						"title": "test",
 						"value": 2.3,
+						"type":  "zeroPosts",
 					},
 				},
 			}
@@ -654,11 +677,12 @@ var _ = Describe("Unmarshal", func() {
 
 		It("correctly unmarshals driver values", func() {
 			postMap := map[string]interface{}{
-				"zeroPostValues": []interface{}{
+				"data": []interface{}{
 					map[string]interface{}{
 						"id":    "1",
 						"title": "test",
 						"value": 2.3,
+						"type":  "zeroPostValues",
 					},
 				},
 			}
@@ -683,11 +707,12 @@ var _ = Describe("Unmarshal", func() {
 		It("correctly converts number to int64", func() {
 			json := `
 				{
-					"numberPosts": [
+					"data": [
 						{
 							"id": "test",
 							"title": "Blubb",
-							"number": 1337
+							"number": 1337,
+							"type": "numberPosts"
 						}
 					]
 				}
@@ -704,11 +729,12 @@ var _ = Describe("Unmarshal", func() {
 		It("correctly converts negative number to int64", func() {
 			json := `
 				{
-					"numberPosts": [
+					"data": [
 						{
 							"id": "test",
 							"title": "Blubb",
-							"number": -1337
+							"number": -1337,
+							"type": "numberPosts"
 						}
 					]
 				}
@@ -725,11 +751,12 @@ var _ = Describe("Unmarshal", func() {
 		It("correctly converts number to uint64", func() {
 			json := `
 				{
-					"numberPosts": [
+					"data": [
 						{
 							"id": "test",
 							"title": "Blubb",
-							"unsignedNumber": 1337
+							"unsignedNumber": 1337,
+							"type": "numberPosts"
 						}
 					]
 				}
