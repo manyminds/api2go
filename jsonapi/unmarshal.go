@@ -1,7 +1,6 @@
 package jsonapi
 
 import (
-	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -47,22 +46,6 @@ func Unmarshal(input unmarshalContext, target interface{}) error {
 	}
 	sliceVal.Set(val)
 	return nil
-}
-
-// fillSqlScanner extracts the value of into the field of the target struct
-func fillSqlScanner(structField interface{}, value interface{}) (sql.Scanner, error) {
-	newTarget := reflect.TypeOf(structField)
-
-	intf := reflect.New(newTarget.Elem()).Interface()
-
-	intf2, ok := intf.(sql.Scanner)
-	if !ok {
-		return nil, fmt.Errorf("could not type cast into sql.Scanner: %#v", structField)
-	}
-
-	intf2.Scan(value)
-
-	return intf2, nil
 }
 
 // setFieldValue in a json object, there is only the number type, which defaults to float64. This method convertes float64 to the value
@@ -183,7 +166,7 @@ func UnmarshalInto(input unmarshalContext, targetStructType reflect.Type, target
 				if value.IsValid() {
 					plainValue := reflect.ValueOf(v)
 
-					switch element := field.Interface().(type) {
+					switch field.Interface().(type) {
 					case time.Time:
 						t, err := time.Parse(time.RFC3339, plainValue.String())
 						if err != nil {
@@ -191,23 +174,9 @@ func UnmarshalInto(input unmarshalContext, targetStructType reflect.Type, target
 						}
 
 						field.Set(reflect.ValueOf(t))
-					case sql.Scanner:
-						scanner, err := fillSqlScanner(element, plainValue.Interface())
-						if err != nil {
-							return err
-						}
-
-						field.Set(reflect.ValueOf(scanner))
 					default:
 						if field.CanAddr() {
-							switch element := field.Addr().Interface().(type) {
-							case sql.Scanner:
-								scanner, err := fillSqlScanner(element, plainValue.Interface())
-								if err != nil {
-									return err
-								}
-
-								field.Set(reflect.ValueOf(scanner).Elem())
+							switch field.Addr().Interface().(type) {
 							default:
 								setFieldValue(&field, plainValue)
 							}
