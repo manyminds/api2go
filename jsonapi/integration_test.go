@@ -17,6 +17,12 @@ func (b Book) GetID() string {
 	return b.ID
 }
 
+func (b *Book) SetID(ID string) error {
+	b.ID = ID
+
+	return nil
+}
+
 func (b Book) GetReferences() []Reference {
 	return []Reference{
 		{
@@ -40,6 +46,19 @@ func (b Book) GetReferencedIDs() []ReferenceID {
 	}
 
 	return result
+}
+
+func (b *Book) SetReferencedIDs(IDs []ReferenceID) error {
+	for _, reference := range IDs {
+		switch reference.Name {
+		case "author":
+			b.AuthorID = reference.ID
+		case "pages":
+			b.PagesIDs = append(b.PagesIDs, reference.ID)
+		}
+	}
+
+	return nil
 }
 
 func (b Book) GetReferencedStructs() []MarshalIdentifier {
@@ -142,7 +161,8 @@ var _ = Describe("Test for the public api of this package", func() {
 					"type":"users"
 				},
 				"pages":{
-						"ids":["Page 1","Page 2","Page 3"]
+						"ids":["Page 1","Page 2","Page 3"],
+						"type": "pages"
 					}
 				}
 			},

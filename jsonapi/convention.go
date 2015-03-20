@@ -1,6 +1,12 @@
 package jsonapi
 
-import "reflect"
+import (
+	"database/sql"
+	"errors"
+	"fmt"
+	"reflect"
+	"strconv"
+)
 
 // ConventionWrapper restores api2go compatibilty
 // to the old version.
@@ -61,4 +67,56 @@ func (c ConventionWrapper) GetReferencedIDs() []ReferenceID {
 // GetReferencedStructs will dynamically search for TODO
 func (c ConventionWrapper) GetReferencedStructs() []MarshalIdentifier {
 	return []MarshalIdentifier{}
+}
+
+func idFromValue(v reflect.Value) (string, error) {
+	kind := v.Kind()
+	if kind == reflect.Struct {
+		if sv, err := extractIDFromSqlStruct(v); err == nil {
+			v = sv
+			kind = v.Kind()
+		} else {
+			return "", err
+		}
+	} else if v.CanInterface() {
+		x := v.Interface()
+
+		switch x := x.(type) {
+		case fmt.Stringer:
+			return x.String(), nil
+		}
+	}
+
+	switch kind {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return strconv.FormatInt(v.Int(), 10), nil
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return strconv.FormatUint(v.Uint(), 10), nil
+	case reflect.String:
+		return v.String(), nil
+	default:
+		return "", errors.New("need int or string as type of ID")
+	}
+}
+
+func extractIDFromSqlStruct(v reflect.Value) (reflect.Value, error) {
+	i := v.Interface()
+	switch value := i.(type) {
+	case sql.NullInt64:
+		if value.Valid {
+			return reflect.ValueOf(value.Int64), nil
+		}
+	case sql.NullFloat64:
+		if value.Valid {
+			return reflect.ValueOf(value.Float64), nil
+		}
+	case sql.NullString:
+		if value.Valid {
+			return reflect.ValueOf(value.String), nil
+		}
+	default:
+		return reflect.ValueOf(""), errors.New("invalid type, allowed sql/database types are sql.NullInt64, sql.NullFloat64, sql.NullString")
+	}
+
+	return reflect.ValueOf(""), nil
 }

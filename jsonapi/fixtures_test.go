@@ -73,6 +73,12 @@ func (s SimplePost) GetID() string {
 	return s.ID
 }
 
+func (s *SimplePost) SetID(ID string) error {
+	s.ID = ID
+
+	return nil
+}
+
 type Post struct {
 	ID          int
 	Title       string
@@ -111,6 +117,20 @@ func (c Post) GetReferences() []Reference {
 }
 
 func (c *Post) SetReferencedIDs(ids []ReferenceID) error {
+	for _, reference := range ids {
+		intID, err := strconv.ParseInt(reference.ID, 10, 64)
+		if err != nil {
+			return err
+		}
+
+		switch reference.Name {
+		case "comments":
+			c.CommentsIDs = append(c.CommentsIDs, int(intID))
+		case "author":
+			c.AuthorID = sql.NullInt64{Valid: true, Int64: intID}
+		}
+	}
+
 	return nil
 }
 
@@ -256,6 +276,19 @@ type Unicorn struct {
 
 func (u Unicorn) GetID() string {
 	return "magicalUnicorn"
+}
+
+type NumberPost struct {
+	ID             string
+	Title          string
+	Number         int64
+	UnsignedNumber uint64
+}
+
+func (n *NumberPost) SetID(ID string) error {
+	n.ID = ID
+
+	return nil
 }
 
 type CompleteServerInformation struct{}

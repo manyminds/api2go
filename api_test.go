@@ -28,6 +28,11 @@ func (p Post) GetID() string {
 	return p.ID
 }
 
+func (p *Post) SetID(ID string) error {
+	p.ID = ID
+	return nil
+}
+
 func (p Post) GetReferences() []jsonapi.Reference {
 	return []jsonapi.Reference{
 		{
@@ -51,6 +56,10 @@ func (p Post) GetReferencedIDs() []jsonapi.ReferenceID {
 	}
 
 	return result
+}
+
+func (p *Post) SetReferencedIDs(IDs []jsonapi.ReferenceID) error {
+	return nil
 }
 
 func (p Post) GetReferencedStructs() []jsonapi.MarshalIdentifier {

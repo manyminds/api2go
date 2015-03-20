@@ -21,26 +21,21 @@ type UnmarshalLinkedRelations interface {
 	SetReferencedIDs([]ReferenceID) error
 }
 
-// UnmarshalIncludedRelations same as MarshalIncludedRelations for unmarshalling
-type UnmarshalIncludedRelations interface {
-	SetReferencedStructs([]UnmarshalIdentifier) error
-}
-
 // Unmarshal reads a JSONAPI map to a model struct
 func Unmarshal(input unmarshalContext, target interface{}) error {
 	// Check that target is a *[]Model
 	ptrVal := reflect.ValueOf(target)
 	if ptrVal.Kind() != reflect.Ptr || ptrVal.IsNil() {
-		return errors.New("You must pass a pointer to a []struct to Unmarshal()")
+		return errors.New("You must pass a pointer to a []UnmarshalIdentifier to Unmarshal()")
 	}
 	sliceType := reflect.TypeOf(target).Elem()
 	sliceVal := ptrVal.Elem()
 	if sliceType.Kind() != reflect.Slice {
-		return errors.New("You must pass a pointer to a []struct to Unmarshal()")
+		return errors.New("You must pass a pointer to a []UnmarshalIdentifier to Unmarshal()")
 	}
 	structType := sliceType.Elem()
 	if structType.Kind() != reflect.Struct {
-		return errors.New("You must pass a pointer to a []struct to Unmarshal()")
+		return errors.New("You must pass a pointer to a []UnmarshalIdentifier to Unmarshal()")
 	}
 
 	// Copy the value, then write into the new variable.
@@ -120,10 +115,11 @@ func UnmarshalInto(input unmarshalContext, targetStructType reflect.Type, target
 			// TODO This is O(n^2), make it O(n)
 			for i := 0; i < targetSliceVal.Len(); i++ {
 				obj := targetSliceVal.Index(i)
-				otherID, err := idFromObject(obj)
-				if err != nil {
-					return err
+				existingObj, ok := obj.Interface().(MarshalIdentifier)
+				if !ok {
+					return errors.New("existing structs must implement interface MarshalIdentifier")
 				}
+				otherID := existingObj.GetID()
 				if otherID == id {
 					val = obj
 					isNew = false
@@ -148,16 +144,32 @@ func UnmarshalInto(input unmarshalContext, targetStructType reflect.Type, target
 				}
 
 			case "id":
+				var i reflect.Value
+				if val.CanAddr() {
+					i = val.Addr()
+				}
+				targetStruct, ok := i.Interface().(UnmarshalIdentifier)
+				if !ok {
+					return errors.New("All target structs must implement UnmarshalIdentifier interface")
+				}
+
 				// Allow conversion of string id to int
 				id, ok = v.(string)
 				if !ok {
 					return errors.New("expected id to be of type string")
 				}
-				if err := setObjectID(val, id); err != nil {
-					return err
-				}
+
+				targetStruct.SetID(id)
 
 			case "type":
+				structType, ok := v.(string)
+				if !ok {
+					return errors.New("type must be string")
+				}
+				expectedType := Pluralize(Jsonify(targetStructType.Name()))
+				if structType != expectedType {
+					return fmt.Errorf("type %s does not match expected type %s of target struct", structType, expectedType)
+				}
 				// do not unmarshal the `type` field
 
 			default:
@@ -216,73 +228,59 @@ func UnmarshalInto(input unmarshalContext, targetStructType reflect.Type, target
 }
 
 func unmarshalLinks(val reflect.Value, linksMap map[string]interface{}) error {
-	for linkName, linkObj := range linksMap {
-		switch links := linkObj.(type) {
-		case []interface{}:
-			// Has-many
-			// Check for field named 'FoobarsIDs' for key 'foobars'
-			structFieldName := Dejsonify(linkName) + "IDs"
-			sliceField := val.FieldByName(structFieldName)
-			if !sliceField.IsValid() || sliceField.Kind() != reflect.Slice {
-				return errors.New("expected struct to have a " + structFieldName + " slice")
-			}
+	referenceIDs := []ReferenceID{}
 
-			sliceField.Set(reflect.MakeSlice(sliceField.Type(), len(links), len(links)))
-			for i, idInterface := range links {
-				if err := setIDValue(sliceField.Index(i), idInterface); err != nil {
-					return err
-				}
-			}
-
-		case string:
-			// Belongs-to or has-one
-			// Check for field named 'FoobarID' for key 'foobar'
-			structFieldName := Dejsonify(linkName) + "ID"
-			field := val.FieldByName(structFieldName)
-			if err := setIDValue(field, links); err != nil {
-				return err
-			}
-
-		case map[string]interface{}:
-			// Belongs-to or has-one
-			// Check for field named 'FooID' for key 'foo' if the type is 'foobar'
-			if links["id"] != nil {
-				id := links["id"].(string)
-				structFieldName := Dejsonify(linkName) + "ID"
-				field := val.FieldByName(structFieldName)
-				if err := setIDValue(field, id); err != nil {
-					return err
-				}
-
-				continue
-			}
-
-			// Has-many
-			// Check for field named 'FoosIDs' for key 'foos' if the type is 'foobars'
-			if links["ids"] != nil {
-				ids := links["ids"].([]interface{})
-
-				structFieldName := Dejsonify(linkName) + "IDs"
-				sliceField := val.FieldByName(structFieldName)
-				if !sliceField.IsValid() || sliceField.Kind() != reflect.Slice {
-					return errors.New("expected struct to have a " + structFieldName + " slice")
-				}
-
-				sliceField.Set(reflect.MakeSlice(sliceField.Type(), len(ids), len(ids)))
-				for i, idInterface := range ids {
-					if err := setIDValue(sliceField.Index(i), idInterface); err != nil {
-						return err
-					}
-				}
-
-				continue
-			}
-
-			return errors.New("Invalid object in links object")
-		default:
-			return errors.New("expected string, array or an object with field id(s) in links object")
+	for linkName, links := range linksMap {
+		links, ok := links.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("link field for %s has invalid format, must be map[string]interface{}", linkName)
 		}
+		linksType, ok := links["type"]
+		if !ok {
+			return fmt.Errorf("Missing type field for %s", linkName)
+		}
+		linksTypeString, ok := linksType.(string)
+		if !ok {
+			return fmt.Errorf("type field for %s links must be a string", linkName)
+		}
+
+		// Belongs-to or has-one
+		if links["id"] != nil {
+			id := links["id"].(string)
+			referenceIDs = append(referenceIDs, ReferenceID{ID: id, Name: linkName, Type: linksTypeString})
+			continue
+		}
+
+		// has-many
+		if links["ids"] != nil {
+			ids := links["ids"].([]interface{})
+			if !ok {
+				return fmt.Errorf("ids for %s links must be an array", linkName)
+			}
+			for _, id := range ids {
+				id, ok := id.(string)
+				if !ok {
+					return fmt.Errorf("id inside %s must be a string", linkName)
+				}
+				referenceIDs = append(referenceIDs, ReferenceID{ID: id, Name: linkName, Type: linksTypeString})
+			}
+
+			continue
+		}
+
+		return errors.New("Invalid object in links object")
 	}
+
+	if val.CanAddr() {
+		val = val.Addr()
+	}
+
+	target, ok := val.Interface().(UnmarshalLinkedRelations)
+	if !ok {
+		return errors.New("target struct must implement interface UnmarshalLinkedRelations")
+	}
+	target.SetReferencedIDs(referenceIDs)
+
 	return nil
 }
 
