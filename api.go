@@ -34,25 +34,6 @@ type DataSource interface {
 	Update(obj interface{}) error
 }
 
-// Controller provides more customization of each route.
-// You can define a controller for every DataSource if needed
-type Controller interface {
-	// FindAll gets called after resource was called
-	FindAll(r *http.Request, objs *interface{}) error
-
-	// FindOne gets called after resource was called
-	FindOne(r *http.Request, obj *interface{}) error
-
-	// Create gets called before resource was called
-	Create(r *http.Request, obj *interface{}) error
-
-	// Delete gets called before resource was called
-	Delete(r *http.Request, id string) error
-
-	// Update gets called before resource was called
-	Update(r *http.Request, obj *interface{}) error
-}
-
 // API is a REST JSONAPI.
 type API struct {
 	router *httprouter.Router
@@ -90,15 +71,15 @@ func (api *API) SetRedirectTrailingSlash(enabled bool) {
 
 // Request holds additional information for FindOne and Find Requests
 type Request struct {
-	QueryParams map[string][]string
-	Header      http.Header
+	PlainRequest *http.Request
+	QueryParams  map[string][]string
+	Header       http.Header
 }
 
 type resource struct {
 	resourceType reflect.Type
 	source       DataSource
 	name         string
-	controller   Controller
 }
 
 func (api *API) addResource(prototype interface{}, source DataSource) *resource {
@@ -177,15 +158,8 @@ func (api *API) AddResource(prototype interface{}, source DataSource) {
 	api.addResource(prototype, source)
 }
 
-// AddResourceWithController does the same as `AddResource` but also couples a custom `Controller`
-// Use this controller to implement access control and other things that depend on the request
-func (api *API) AddResourceWithController(prototype interface{}, source DataSource, controller Controller) {
-	res := api.addResource(prototype, source)
-	res.controller = controller
-}
-
 func buildRequest(r *http.Request) Request {
-	req := Request{}
+	req := Request{PlainRequest: r}
 	params := make(map[string][]string)
 	for key, values := range r.URL.Query() {
 		params[key] = strings.Split(values[0], ",")
@@ -201,11 +175,6 @@ func (res *resource) handleIndex(w http.ResponseWriter, r *http.Request, prefix 
 		return err
 	}
 
-	if res.controller != nil {
-		if err := res.controller.FindAll(r, &objs); err != nil {
-			return err
-		}
-	}
 	return respondWith(objs, prefix, http.StatusOK, w)
 }
 
@@ -227,11 +196,6 @@ func (res *resource) handleRead(w http.ResponseWriter, r *http.Request, ps httpr
 		return err
 	}
 
-	if res.controller != nil {
-		if err := res.controller.FindOne(r, &obj); err != nil {
-			return err
-		}
-	}
 	return respondWith(obj, prefix, http.StatusOK, w)
 }
 
@@ -292,12 +256,6 @@ func (res *resource) handleCreate(w http.ResponseWriter, r *http.Request, prefix
 
 	newObj := newObjs.Index(0).Interface()
 
-	if res.controller != nil {
-		if err := res.controller.Create(r, &newObj); err != nil {
-			return err
-		}
-	}
-
 	id, err := res.source.Create(newObj)
 	if err != nil {
 		return err
@@ -334,11 +292,6 @@ func (res *resource) handleUpdate(w http.ResponseWriter, r *http.Request, ps htt
 	}
 
 	updatingObj := updatingObjs.Index(0).Interface()
-	if res.controller != nil {
-		if err := res.controller.Update(r, &updatingObj); err != nil {
-			return err
-		}
-	}
 
 	if err := res.source.Update(updatingObj); err != nil {
 		return err
@@ -348,13 +301,6 @@ func (res *resource) handleUpdate(w http.ResponseWriter, r *http.Request, ps htt
 }
 
 func (res *resource) handleDelete(w http.ResponseWriter, r *http.Request, ps httprouter.Params) error {
-	id := ps.ByName("id")
-	if res.controller != nil {
-		if err := res.controller.Delete(r, id); err != nil {
-			return err
-		}
-	}
-
 	err := res.source.Delete(ps.ByName("id"))
 	if err != nil {
 		return err
