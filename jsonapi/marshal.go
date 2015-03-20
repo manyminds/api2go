@@ -7,23 +7,6 @@ import (
 	"reflect"
 )
 
-type marshalingContext struct {
-	root           map[string]interface{}
-	rootName       string
-	isSingleStruct bool
-	prefix         string
-}
-
-func makeContext(rootName string, isSingleStruct bool, prefix string) *marshalingContext {
-	ctx := &marshalingContext{}
-	ctx.rootName = rootName
-	ctx.root = map[string]interface{}{}
-	ctx.root[rootName] = []interface{}{}
-	ctx.isSingleStruct = isSingleStruct
-	ctx.prefix = prefix
-	return ctx
-}
-
 // MarshalIdentifier interface is necessary to give an element
 // a unique ID. This interface must be implemented for
 // marshal and unmarshal in order to let them store
@@ -146,7 +129,14 @@ func marshalSlice(data interface{}, information ServerInformation) (map[string]i
 }
 
 // reduceDuplicates eliminates duplicate MarshalIdentifier from input and calls `method` on every unique MarshalIdentifier
-func reduceDuplicates(input []MarshalIdentifier, information ServerInformation, method func(MarshalIdentifier, ServerInformation) (map[string]interface{}, error)) ([]map[string]interface{}, error) {
+func reduceDuplicates(
+	input []MarshalIdentifier,
+	information ServerInformation,
+	method func(MarshalIdentifier, ServerInformation) (map[string]interface{}, error),
+) (
+	[]map[string]interface{},
+	error,
+) {
 	var (
 		alreadyIncluded  = make(map[string]map[string]bool)
 		includedElements []map[string]interface{}
