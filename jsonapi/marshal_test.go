@@ -362,8 +362,8 @@ var _ = Describe("Marshalling", func() {
 	Context("When marshalling objects linking to other instances of the same type", func() {
 		question1 := Question{ID: "1", Text: "Does this test work?"}
 		question1Duplicate := Question{ID: "1", Text: "Does this test work?"}
-		question2 := Question{ID: "2", Text: "Will it ever work?", InspiringQuestionID: sql.NullString{"1", true}, InspiringQuestion: &question1}
-		question3 := Question{ID: "3", Text: "It works now", InspiringQuestionID: sql.NullString{"1", true}, InspiringQuestion: &question1Duplicate}
+		question2 := Question{ID: "2", Text: "Will it ever work?", InspiringQuestionID: sql.NullString{String: "1", Valid: true}, InspiringQuestion: &question1}
+		question3 := Question{ID: "3", Text: "It works now", InspiringQuestionID: sql.NullString{String: "1", Valid: true}, InspiringQuestion: &question1Duplicate}
 
 		It("Correctly marshalls question2 and sets question1 into linked", func() {
 			expected := map[string]interface{}{
