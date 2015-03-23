@@ -15,10 +15,11 @@ type MarshalIdentifier interface {
 	GetID() string
 }
 
-// ReferenceID todo later
+// ReferenceID contains all necessary information in order
+// to reference another struct in jsonapi
 type ReferenceID struct {
 	ID   string
-	Type string // Todo: Must be removed, is redundant because it's already in `Reference` struct
+	Type string // TODO: Must be removed, is redundant because it's already in `Reference` struct
 	Name string
 }
 
@@ -82,7 +83,6 @@ func marshal(data interface{}, information ServerInformation) (map[string]interf
 	}
 }
 
-// marshalSlice marshals a slice TODO
 func marshalSlice(data interface{}, information ServerInformation) (map[string]interface{}, error) {
 	result := make(map[string]interface{})
 

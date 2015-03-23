@@ -245,7 +245,6 @@ func (res *resource) handleCreate(w http.ResponseWriter, r *http.Request, prefix
 	}
 	newObjs := reflect.MakeSlice(reflect.SliceOf(res.resourceType), 0, 0)
 
-	//TODO remove necessecity to call unmarshal into
 	err = jsonapi.UnmarshalInto(ctx, res.resourceType, &newObjs)
 	if err != nil {
 		return err
@@ -282,7 +281,6 @@ func (res *resource) handleUpdate(w http.ResponseWriter, r *http.Request, ps htt
 	updatingObjs := reflect.MakeSlice(reflect.SliceOf(res.resourceType), 1, 1)
 	updatingObjs.Index(0).Set(reflect.ValueOf(obj))
 
-	//TODO remove call to unmarshalInto
 	err = jsonapi.UnmarshalInto(ctx, res.resourceType, &updatingObjs)
 	if err != nil {
 		return err

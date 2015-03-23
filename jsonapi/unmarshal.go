@@ -8,8 +8,6 @@ import (
 	"time"
 )
 
-type unmarshalContext map[string]interface{}
-
 // UnmarshalIdentifier interface to set ID when unmarshalling
 type UnmarshalIdentifier interface {
 	SetID(string) error
@@ -21,7 +19,7 @@ type UnmarshalLinkedRelations interface {
 }
 
 // Unmarshal reads a JSONAPI map to a model struct
-func Unmarshal(input unmarshalContext, target interface{}) error {
+func Unmarshal(input map[string]interface{}, target interface{}) error {
 	// Check that target is a *[]Model
 	ptrVal := reflect.ValueOf(target)
 	if ptrVal.Kind() != reflect.Ptr || ptrVal.IsNil() {
@@ -62,9 +60,8 @@ func setFieldValue(field *reflect.Value, value reflect.Value) {
 	}
 }
 
-// UnmarshalInto this must be private. We have some tight coupling problems here
-// DEPRECATED this method will be private in further releases, so please do not use it
-func UnmarshalInto(input unmarshalContext, targetStructType reflect.Type, targetSliceVal *reflect.Value) error {
+// UnmarshalInto reads input params for one struct from `input` and marshals it into `targetSliceVal`
+func UnmarshalInto(input map[string]interface{}, targetStructType reflect.Type, targetSliceVal *reflect.Value) error {
 	// Read models slice
 	var modelsInterface interface{}
 
@@ -95,7 +92,6 @@ func UnmarshalInto(input unmarshalContext, targetStructType reflect.Type, target
 			}
 
 			// If we have an ID, check if there's already an object with that ID in the slice
-			// TODO This is O(n^2), make it O(n)
 			for i := 0; i < targetSliceVal.Len(); i++ {
 				obj := targetSliceVal.Index(i)
 				existingObj, ok := obj.Interface().(MarshalIdentifier)
@@ -255,7 +251,7 @@ func unmarshalLinks(val reflect.Value, linksMap map[string]interface{}) error {
 
 // UnmarshalFromJSON reads a JSONAPI compatible JSON document to a model struct
 func UnmarshalFromJSON(data []byte, target interface{}) error {
-	var ctx unmarshalContext
+	var ctx map[string]interface{}
 	err := json.Unmarshal(data, &ctx)
 	if err != nil {
 		return err
