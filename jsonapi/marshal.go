@@ -371,6 +371,12 @@ func getStructFields(data MarshalIdentifier) map[string]interface{} {
 
 		field := val.Field(i)
 		keyName := Jsonify(valType.Field(i).Name)
+
+		//skip private fields
+		if !field.CanInterface() {
+			continue
+		}
+
 		result[keyName] = field.Interface()
 	}
 
