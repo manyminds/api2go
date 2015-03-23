@@ -58,12 +58,35 @@ type ServerInformation interface {
 
 var serverInformationNil ServerInformation
 
+// MarshalToJSON marshals a struct to json
+// it works like `Marshal` but returns json instead
+func MarshalToJSON(val interface{}) ([]byte, error) {
+	result, err := Marshal(val)
+	if err != nil {
+		return []byte{}, err
+	}
+
+	return json.Marshal(result)
+}
+
+// MarshalToJSONWithURLs marshals a struct to json with URLs in `links`
+func MarshalToJSONWithURLs(val interface{}, information ServerInformation) ([]byte, error) {
+	result, err := MarshalWithURLs(val, information)
+	if err != nil {
+		return []byte{}, err
+	}
+
+	return json.Marshal(result)
+}
+
 // MarshalWithURLs can be used to include the generation of `related` and `self` links
 func MarshalWithURLs(data interface{}, information ServerInformation) (map[string]interface{}, error) {
 	return marshal(data, information)
 }
 
-// Marshal is the new shit
+// Marshal thats the input from `data` which can be a struct, a slice, or a pointer of it.
+// Any struct in `data`or data itself, must at least implement the `MarshalIdentifier` interface.
+// If so, it will generate a map[string]interface{} matching the jsonapi specification.
 func Marshal(data interface{}) (map[string]interface{}, error) {
 	return marshal(data, serverInformationNil)
 }
@@ -352,24 +375,4 @@ func getStructFields(data MarshalIdentifier) map[string]interface{} {
 	}
 
 	return result
-}
-
-// MarshalToJSON marshals a struct to json
-func MarshalToJSON(val interface{}) ([]byte, error) {
-	result, err := Marshal(val)
-	if err != nil {
-		return []byte{}, err
-	}
-
-	return json.Marshal(result)
-}
-
-// MarshalToJSONWithURLs marshals a struct to json with URLs in `links`
-func MarshalToJSONWithURLs(val interface{}, information ServerInformation) ([]byte, error) {
-	result, err := MarshalWithURLs(val, information)
-	if err != nil {
-		return []byte{}, err
-	}
-
-	return json.Marshal(result)
 }

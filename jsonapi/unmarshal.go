@@ -19,6 +19,7 @@ type UnmarshalLinkedRelations interface {
 }
 
 // Unmarshal reads a JSONAPI map to a model struct
+// target must at least implement the `UnmarshalIdentifier` interface.
 func Unmarshal(input map[string]interface{}, target interface{}) error {
 	// Check that target is a *[]Model
 	ptrVal := reflect.ValueOf(target)
@@ -46,18 +47,14 @@ func Unmarshal(input map[string]interface{}, target interface{}) error {
 	return nil
 }
 
-// setFieldValue in a json object, there is only the number type, which defaults to float64. This method convertes float64 to the value
-// of the underlying struct field, for example uint64, or int32 etc...
-// If the field type is not one of the integers, it just sets the value
-func setFieldValue(field *reflect.Value, value reflect.Value) {
-	switch field.Type().Kind() {
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		field.SetInt(int64(value.Float()))
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		field.SetUint(uint64(value.Float()))
-	default:
-		field.Set(value)
+// UnmarshalFromJSON reads a JSONAPI compatible JSON document to a model struct
+func UnmarshalFromJSON(data []byte, target interface{}) error {
+	var ctx map[string]interface{}
+	err := json.Unmarshal(data, &ctx)
+	if err != nil {
+		return err
 	}
+	return Unmarshal(ctx, target)
 }
 
 // UnmarshalInto reads input params for one struct from `input` and marshals it into `targetSliceVal`
@@ -192,6 +189,20 @@ func UnmarshalInto(input map[string]interface{}, targetStructType reflect.Type, 
 	return nil
 }
 
+// setFieldValue in a json object, there is only the number type, which defaults to float64. This method convertes float64 to the value
+// of the underlying struct field, for example uint64, or int32 etc...
+// If the field type is not one of the integers, it just sets the value
+func setFieldValue(field *reflect.Value, value reflect.Value) {
+	switch field.Type().Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		field.SetInt(int64(value.Float()))
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		field.SetUint(uint64(value.Float()))
+	default:
+		field.Set(value)
+	}
+}
+
 func unmarshalLinks(val reflect.Value, linksMap map[string]interface{}) error {
 	referenceIDs := []ReferenceID{}
 
@@ -247,14 +258,4 @@ func unmarshalLinks(val reflect.Value, linksMap map[string]interface{}) error {
 	target.SetReferencedIDs(referenceIDs)
 
 	return nil
-}
-
-// UnmarshalFromJSON reads a JSONAPI compatible JSON document to a model struct
-func UnmarshalFromJSON(data []byte, target interface{}) error {
-	var ctx map[string]interface{}
-	err := json.Unmarshal(data, &ctx)
-	if err != nil {
-		return err
-	}
-	return Unmarshal(ctx, target)
 }
