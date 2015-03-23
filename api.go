@@ -259,7 +259,13 @@ func (res *resource) handleCreate(w http.ResponseWriter, r *http.Request, prefix
 	checkID, ok := newObj.(jsonapi.MarshalIdentifier)
 	if ok {
 		if checkID.GetID() != "" {
-			return respondWith(checkID, prefix, http.StatusForbidden, w)
+			err := Error{
+				Status: string(http.StatusForbidden),
+				Title:  "Forbidden",
+				Detail: "Client generated IDs are not supported.",
+			}
+
+			return respondWith(err, prefix, http.StatusForbidden, w)
 		}
 	}
 
