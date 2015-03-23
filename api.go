@@ -253,7 +253,15 @@ func (res *resource) handleCreate(w http.ResponseWriter, r *http.Request, prefix
 		return errors.New("expected one object in POST")
 	}
 
+	//TODO create multiple objects not only one.
 	newObj := newObjs.Index(0).Interface()
+
+	checkID, ok := newObj.(jsonapi.MarshalIdentifier)
+	if ok {
+		if checkID.GetID() != "" {
+			return respondWith(checkID, prefix, http.StatusForbidden, w)
+		}
+	}
 
 	id, err := res.source.Create(newObj)
 	if err != nil {

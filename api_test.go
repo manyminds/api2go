@@ -488,7 +488,7 @@ var _ = Describe("RestHandler", func() {
 		})
 
 		It("POSTSs new objects with trailing slash automatic redirect enabled", func() {
-			reqBody := strings.NewReader(`{"data": [{"title": "New Post", "types"; "posts"}]}`)
+			reqBody := strings.NewReader(`{"data": [{"title": "New Post", "type": "posts"}]}`)
 			req, err := http.NewRequest("POST", "/v1/posts/", reqBody)
 			Expect(err).To(BeNil())
 			api.SetRedirectTrailingSlash(true)
@@ -496,8 +496,16 @@ var _ = Describe("RestHandler", func() {
 			Expect(rec.Code).To(Equal(http.StatusTemporaryRedirect))
 		})
 
+		It("POSTSs with client ids", func() {
+			reqBody := strings.NewReader(`{"data": [{"id" : "100", "title": "New Post", "type": "posts"}]}`)
+			req, err := http.NewRequest("POST", "/v1/posts", reqBody)
+			Expect(err).To(BeNil())
+			api.Handler().ServeHTTP(rec, req)
+			Expect(rec.Code).To(Equal(http.StatusForbidden))
+		})
+
 		It("POSTSs new objects with trailing slash automatic redirect disabled", func() {
-			reqBody := strings.NewReader(`{"data": [{"title": "New Post", "types": "posts"}]}`)
+			reqBody := strings.NewReader(`{"data": [{"title": "New Post", "type": "posts"}]}`)
 			req, err := http.NewRequest("POST", "/v1/posts/", reqBody)
 			Expect(err).To(BeNil())
 			api.SetRedirectTrailingSlash(false)
