@@ -19,7 +19,7 @@ type MarshalIdentifier interface {
 // to reference another struct in jsonapi
 type ReferenceID struct {
 	ID   string
-	Type string // TODO: Must be removed, is redundant because it's already in `Reference` struct
+	Type string
 	Name string
 }
 
