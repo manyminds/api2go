@@ -18,6 +18,10 @@ Note: if you only need the marshaling functionality, you can install the subpack
 go get github.com/univedo/api2go/jsonapi
 ```
 
+## Examples
+
+Examples can be found [here](https://github.com/univedo/api2go/blob/master/examples/crud_example.go).
+
 ## Usage
 
 Take the simple structs:
