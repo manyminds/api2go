@@ -5,118 +5,364 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
-	"regexp"
-	"strings"
 )
 
-type marshalingContext struct {
-	root           map[string]interface{}
-	rootName       string
-	isSingleStruct bool
-	prefix         string
+// MarshalIdentifier interface is necessary to give an element
+// a unique ID. This interface must be implemented for
+// marshal and unmarshal in order to let them store
+// elements
+type MarshalIdentifier interface {
+	GetID() string
 }
 
-func makeContext(rootName string, isSingleStruct bool, prefix string) *marshalingContext {
-	ctx := &marshalingContext{}
-	ctx.rootName = rootName
-	ctx.root = map[string]interface{}{}
-	ctx.root[rootName] = []interface{}{}
-	ctx.isSingleStruct = isSingleStruct
-	ctx.prefix = prefix
-	return ctx
+// ReferenceID contains all necessary information in order
+// to reference another struct in jsonapi
+type ReferenceID struct {
+	ID   string
+	Type string
+	Name string
 }
 
-// Marshal takes a struct (or slice of structs) and marshals them to a json encodable interface{} value
-func Marshal(data interface{}) (interface{}, error) {
-	return marshal(data, "")
+// Reference information about possible references of a struct
+type Reference struct {
+	Type string
+	Name string
 }
 
-// MarshalPrefix does the same as Marshal but adds a prefix to generated URLs
-func MarshalPrefix(data interface{}, prefix string) (interface{}, error) {
-	return marshal(data, prefix)
+// MarshalReferences must be implemented if the struct to be serialized has relations. This must be done
+// because jsonapi needs information about relations even if many to many relations or many to one relations
+// are empty
+type MarshalReferences interface {
+	GetReferences() []Reference
 }
 
-func marshal(data interface{}, prefix string) (interface{}, error) {
-	if data == nil || data == "" {
-		return nil, errors.New("marshal only works with objects")
+// MarshalLinkedRelations must be implemented if there are references and the reference IDs should be included
+type MarshalLinkedRelations interface {
+	MarshalReferences
+	MarshalIdentifier
+	GetReferencedIDs() []ReferenceID
+}
+
+// MarshalIncludedRelations must be implemented if referenced structs should be included
+type MarshalIncludedRelations interface {
+	MarshalReferences
+	MarshalIdentifier
+	GetReferencedStructs() []MarshalIdentifier
+}
+
+// ServerInformation can be passed to MarshalWithURLs to generate the `self` and `related` urls inside `links`
+type ServerInformation interface {
+	GetBaseURL() string
+	GetPrefix() string
+}
+
+var serverInformationNil ServerInformation
+
+// MarshalToJSON marshals a struct to json
+// it works like `Marshal` but returns json instead
+func MarshalToJSON(val interface{}) ([]byte, error) {
+	result, err := Marshal(val)
+	if err != nil {
+		return []byte{}, err
 	}
 
-	var ctx *marshalingContext
+	return json.Marshal(result)
+}
 
-	if reflect.TypeOf(data).Kind() == reflect.Slice {
-		// We were passed a slice
-		// Using Elem() here to get the slice's element type
-		rootName := Pluralize(Jsonify(reflect.TypeOf(data).Elem().Name()))
+// MarshalToJSONWithURLs marshals a struct to json with URLs in `links`
+func MarshalToJSONWithURLs(val interface{}, information ServerInformation) ([]byte, error) {
+	result, err := MarshalWithURLs(val, information)
+	if err != nil {
+		return []byte{}, err
+	}
 
-		// Error on empty string, i.e. passed []interface{}
-		if rootName == "" {
-			return nil, errors.New("you passed a slice of interfaces []interface{}{...} to Marshal. we cannot determine key names from that. Use []YourObjectName{...} instead")
+	return json.Marshal(result)
+}
+
+// MarshalWithURLs can be used to include the generation of `related` and `self` links
+func MarshalWithURLs(data interface{}, information ServerInformation) (map[string]interface{}, error) {
+	return marshal(data, information)
+}
+
+// Marshal thats the input from `data` which can be a struct, a slice, or a pointer of it.
+// Any struct in `data`or data itself, must at least implement the `MarshalIdentifier` interface.
+// If so, it will generate a map[string]interface{} matching the jsonapi specification.
+func Marshal(data interface{}) (map[string]interface{}, error) {
+	return marshal(data, serverInformationNil)
+}
+
+func marshal(data interface{}, information ServerInformation) (map[string]interface{}, error) {
+	if data == nil {
+		return map[string]interface{}{}, errors.New("nil cannot be marshalled")
+	}
+
+	switch reflect.TypeOf(data).Kind() {
+	case reflect.Slice:
+		return marshalSlice(data, information)
+	case reflect.Struct, reflect.Ptr:
+		return marshalStruct(data.(MarshalIdentifier), information)
+	default:
+		return map[string]interface{}{}, errors.New("Marshal only accepts slice, struct or ptr types")
+	}
+}
+
+func marshalSlice(data interface{}, information ServerInformation) (map[string]interface{}, error) {
+	result := make(map[string]interface{})
+
+	val := reflect.ValueOf(data)
+	if val.Kind() != reflect.Slice {
+		return result, errors.New("data must be a slice")
+	}
+
+	dataElements := []map[string]interface{}{}
+	var referencedStructs []MarshalIdentifier
+
+	for i := 0; i < val.Len(); i++ {
+		k := val.Index(i).Interface()
+		element, ok := k.(MarshalIdentifier)
+		if !ok {
+			return result, errors.New("all elements within the slice must implement api2go.MarshalIdentifier")
 		}
-		ctx = makeContext("data", false, prefix)
 
-		// Marshal all elements
-		// We iterate using reflections to save copying the slice to a []interface{}
-		sliceValue := reflect.ValueOf(data)
-		for i := 0; i < sliceValue.Len(); i++ {
-			if err := ctx.marshalRootStruct(sliceValue.Index(i)); err != nil {
-				return nil, err
+		content, err := marshalData(element, information)
+		if err != nil {
+			return result, err
+		}
+
+		dataElements = append(dataElements, content)
+
+		included, ok := k.(MarshalIncludedRelations)
+		if ok {
+			referencedStructs = append(referencedStructs, included.GetReferencedStructs()...)
+		}
+	}
+
+	includedElements, err := reduceDuplicates(referencedStructs, information, marshalData)
+	if err != nil {
+		return result, err
+	}
+
+	//data key is always present
+	result["data"] = dataElements
+	if includedElements != nil && len(includedElements) > 0 {
+		result["linked"] = includedElements
+	}
+
+	return result, nil
+}
+
+// reduceDuplicates eliminates duplicate MarshalIdentifier from input and calls `method` on every unique MarshalIdentifier
+func reduceDuplicates(
+	input []MarshalIdentifier,
+	information ServerInformation,
+	method func(MarshalIdentifier, ServerInformation) (map[string]interface{}, error),
+) (
+	[]map[string]interface{},
+	error,
+) {
+	var (
+		alreadyIncluded  = make(map[string]map[string]bool)
+		includedElements []map[string]interface{}
+	)
+
+	for _, referencedStruct := range input {
+		if referencedStruct == nil {
+			continue
+		}
+
+		structType := getStructType(referencedStruct)
+		if alreadyIncluded[structType] == nil {
+			alreadyIncluded[structType] = make(map[string]bool)
+		}
+
+		if !alreadyIncluded[structType][referencedStruct.GetID()] {
+			marshalled, err := method(referencedStruct, information)
+			if err != nil {
+				return includedElements, err
+			}
+
+			includedElements = append(includedElements, marshalled)
+			alreadyIncluded[structType][referencedStruct.GetID()] = true
+		}
+	}
+
+	return includedElements, nil
+}
+
+func marshalData(element MarshalIdentifier, information ServerInformation) (map[string]interface{}, error) {
+	result := make(map[string]interface{})
+
+	refValue := reflect.ValueOf(element)
+	if refValue.Kind() == reflect.Ptr && refValue.IsNil() {
+		return result, errors.New("MarshalIdentifier must not be nil")
+	}
+
+	id := element.GetID()
+	content := getStructFields(element)
+	for k, v := range content {
+		result[k] = v
+	}
+
+	// its important that the id from the interface
+	// gets added afterwards, otherwise an ID field
+	// could conflict with the actual marshalling
+	result["id"] = id
+	result["type"] = getStructType(element)
+
+	// optional relationship interface for struct
+	references, ok := element.(MarshalLinkedRelations)
+	if ok {
+		result["links"] = getStructLinks(references, information)
+	}
+
+	return result, nil
+}
+
+// getStructLinks returns the link struct with ids
+func getStructLinks(relationer MarshalLinkedRelations, information ServerInformation) map[string]map[string]interface{} {
+	referencedIDs := relationer.GetReferencedIDs()
+	sortedResults := make(map[string][]ReferenceID)
+	links := make(map[string]map[string]interface{})
+
+	for _, referenceID := range referencedIDs {
+		sortedResults[referenceID.Type] = append(sortedResults[referenceID.Type], referenceID)
+	}
+
+	references := relationer.GetReferences()
+
+	// helper mad to check if all references are included to also include mepty ones
+	notIncludedReferences := map[string]Reference{}
+	for _, reference := range references {
+		notIncludedReferences[reference.Name] = reference
+	}
+
+	for referenceType, referenceIDs := range sortedResults {
+		name := referenceIDs[0].Name
+		// if referenceType is plural, we have ids, otherwise it's just one id
+		if Pluralize(name) == name {
+			// multiple elements in links
+			var ids []string
+
+			for _, referenceID := range referenceIDs {
+				ids = append(ids, referenceID.ID)
+			}
+
+			links[name] = map[string]interface{}{
+				"ids":  ids,
+				"type": referenceType,
+			}
+		} else {
+			links[name] = map[string]interface{}{
+				"id":   referenceIDs[0].ID,
+				"type": referenceType,
 			}
 		}
-	} else {
-		// We were passed a single object
-		ctx = makeContext("data", true, prefix)
 
-		// Marshal the value
-		if err := ctx.marshalRootStruct(reflect.ValueOf(data)); err != nil {
-			return nil, err
+		// set URLs if necessary
+		for key, value := range getLinksForServerInformation(relationer, name, information) {
+			links[name][key] = value
+		}
+
+		// this marks the reference as already included
+		delete(notIncludedReferences, referenceIDs[0].Name)
+	}
+
+	// check for empty references
+	for name, reference := range notIncludedReferences {
+		links[name] = map[string]interface{}{
+			"type": reference.Type,
+		}
+		for key, value := range getLinksForServerInformation(relationer, name, information) {
+			links[name][key] = value
 		}
 	}
 
-	return ctx.root, nil
+	return links
 }
 
-// marshalRootStruct is a more convenient name for marshalling structs at root level
-func (ctx *marshalingContext) marshalRootStruct(val reflect.Value) error {
-	return ctx.marshalStruct(&val, false)
+// helper method to generate URL fields for `links`
+func getLinksForServerInformation(relationer MarshalLinkedRelations, name string, information ServerInformation) map[string]string {
+	links := map[string]string{}
+	// generate links if necessary
+	if information != serverInformationNil {
+		prefix := ""
+		baseURL := information.GetBaseURL()
+		if baseURL != "" {
+			prefix = baseURL
+		}
+		p := information.GetPrefix()
+		if p != "" {
+			prefix += "/" + p
+		}
+
+		if prefix != "" {
+			links["self"] = fmt.Sprintf("%s/%s/%s/links/%s", prefix, getStructType(relationer), relationer.GetID(), name)
+			links["related"] = fmt.Sprintf("%s/%s/%s/%s", prefix, getStructType(relationer), relationer.GetID(), name)
+		} else {
+			links["self"] = fmt.Sprintf("%s/%s/links/%s", getStructType(relationer), relationer.GetID(), name)
+			links["related"] = fmt.Sprintf("%s/%s/%s", getStructType(relationer), relationer.GetID(), name)
+		}
+	}
+
+	return links
 }
 
-// marshalLinkedStruct is a more convenient name for marshalling structs that were linked to a root level struct
-func (ctx *marshalingContext) marshalLinkedStruct(val reflect.Value) error {
-	return ctx.marshalStruct(&val, true)
+func getIncludedStructs(included MarshalIncludedRelations, information ServerInformation) ([]map[string]interface{}, error) {
+	var result = make([]map[string]interface{}, 0)
+	includedStructs := included.GetReferencedStructs()
+
+	for key := range includedStructs {
+		marshalled, err := marshalData(includedStructs[key], information)
+		if err != nil {
+			return result, err
+		}
+
+		result = append(result, marshalled)
+	}
+
+	return result, nil
 }
 
-// marshalStruct marshals a struct and places it in the context's root
-func (ctx *marshalingContext) marshalStruct(val *reflect.Value, isLinked bool) error {
-	result := map[string]interface{}{}
-	linksMap := map[string]interface{}{}
-	idFieldRegex := regexp.MustCompile("^.*ID$")
+func marshalStruct(data MarshalIdentifier, information ServerInformation) (map[string]interface{}, error) {
+	result := make(map[string]interface{})
+	contentData, err := marshalData(data, information)
+	if err != nil {
+		return result, err
+	}
 
+	result["data"] = contentData
+
+	included, ok := data.(MarshalIncludedRelations)
+	if ok {
+		linked, err := getIncludedStructs(included, information)
+		if err != nil {
+			return result, err
+		}
+
+		if len(linked) > 0 {
+			result["linked"] = linked
+		}
+	}
+
+	return result, nil
+}
+
+func getStructType(data MarshalIdentifier) string {
+	reflectType := reflect.TypeOf(data)
+	if reflectType.Kind() == reflect.Ptr {
+		return Pluralize(Jsonify(reflectType.Elem().Name()))
+	}
+
+	return Pluralize(Jsonify(reflectType.Name()))
+}
+
+func getStructFields(data MarshalIdentifier) map[string]interface{} {
+	result := make(map[string]interface{})
+	val := reflect.ValueOf(data)
+	if val.Kind() == reflect.Ptr {
+		val = val.Elem()
+	}
 	valType := val.Type()
-	name := Jsonify(Pluralize(valType.Name()))
-
-	buildLinksMap := func(referenceIDs []interface{}, single bool, field reflect.Value, name, keyName string) map[string]interface{} {
-		var resource string
-		if ctx.prefix != "/" && ctx.prefix != "" {
-			resource = fmt.Sprintf("%s%s/%s/%s", ctx.prefix, name, result["id"], keyName)
-		} else {
-			resource = fmt.Sprintf("/%s/%s/%s", name, result["id"], keyName)
-		}
-
-		result := make(map[string]interface{})
-		result["type"] = Pluralize(Jsonify(field.Type().Elem().Name()))
-		result["resource"] = resource
-
-		if single {
-			if referenceIDs[0] != "" {
-				result["id"] = referenceIDs[0]
-			}
-		} else {
-			result["ids"] = referenceIDs
-		}
-
-		return result
-	}
-
 	for i := 0; i < val.NumField(); i++ {
 		tag := valType.Field(i).Tag.Get("json")
 		if tag == "-" {
@@ -126,157 +372,13 @@ func (ctx *marshalingContext) marshalStruct(val *reflect.Value, isLinked bool) e
 		field := val.Field(i)
 		keyName := Jsonify(valType.Field(i).Name)
 
-		if field.Kind() == reflect.Slice {
-			// A slice indicates nested objects.
-
-			// First, check whether this is a slice of structs which we need to nest
-			if field.Type().Elem().Kind() == reflect.Struct {
-				ids := []interface{}{}
-				for i := 0; i < field.Len(); i++ {
-					id, err := idFromObject(field.Index(i))
-					if err != nil {
-						return err
-					}
-					ids = append(ids, id)
-
-					if err := ctx.marshalLinkedStruct(field.Index(i)); err != nil {
-						return err
-					}
-				}
-
-				linksMap[keyName] = buildLinksMap(ids, false, field, name, keyName)
-			} else if strings.HasSuffix(keyName, "IDs") {
-				// Treat slices of non-struct type as lists of IDs if the suffix is IDs
-				keyName = strings.TrimSuffix(keyName, "IDs")
-				linksMapReflect := reflect.TypeOf(linksMap[keyName].(map[string]interface{})["ids"])
-
-				// Don't overwrite any existing links, since they came from nested structs
-				if linksMap[keyName] == nil || linksMapReflect.Kind() == reflect.Slice && len(linksMap[keyName].(map[string]interface{})["ids"].([]interface{})) == 0 {
-					ids := []interface{}{}
-					for i := 0; i < field.Len(); i++ {
-						id, err := idFromValue(field.Index(i))
-						if err != nil {
-							return err
-						}
-						ids = append(ids, id)
-					}
-
-					structFieldName := Dejsonify(keyName)
-					typeField := val.FieldByName(structFieldName)
-
-					if typeField.IsValid() {
-						linksMap[keyName] = buildLinksMap(ids, false, typeField, name, keyName)
-					} else {
-						return fmt.Errorf("expected struct to have field %s", structFieldName)
-					}
-				}
-			} else {
-				result[keyName] = field.Interface()
-
-			}
-		} else if keyName == "id" {
-			// ID needs to be converted to string
-			id, err := idFromValue(field)
-			if err != nil {
-				return err
-			}
-			result[keyName] = id
-		} else if field.Type().Kind() == reflect.Ptr {
-			if !field.IsNil() {
-				id, err := idFromObject(field)
-				if err == nil {
-					linksMap[keyName] = buildLinksMap([]interface{}{id}, true, field, name, keyName)
-
-					if err := ctx.marshalLinkedStruct(field.Elem()); err != nil {
-						return err
-					}
-				} else {
-					// the field is not a referenced struct, it is a normal property, so add it to the result
-					result[keyName] = field.Interface()
-				}
-			}
-		} else if idFieldRegex.MatchString(keyName) {
-			keyNameWithoutID := strings.TrimSuffix(keyName, "ID")
-			structFieldName := Dejsonify(keyNameWithoutID)
-			// struct must be preferred, only use this field if struct ptr is nil
-			structFieldValue := val.FieldByName(structFieldName)
-			if !structFieldValue.IsValid() {
-				return fmt.Errorf("expected struct to have field %s", structFieldName)
-			}
-			if structFieldValue.Kind() == reflect.Ptr && structFieldValue.IsNil() {
-				id, err := idFromValue(field)
-				if err != nil {
-					return err
-				}
-
-				linksMap[keyNameWithoutID] = buildLinksMap([]interface{}{id}, true, structFieldValue, name, keyNameWithoutID)
-			}
-		} else {
-			result[keyName] = field.Interface()
-		}
-	}
-
-	// add object type
-	result["type"] = Pluralize(Jsonify(valType.Name()))
-
-	if len(linksMap) > 0 {
-		result["links"] = linksMap
-	}
-
-	ctx.addValue(result, isLinked)
-	return nil
-}
-
-// addValue adds an object to the context's root
-// `name` should be the Pluralized and underscorized object type.
-func (ctx *marshalingContext) addValue(val map[string]interface{}, isLinked bool) {
-	if !isLinked {
-		if ctx.isSingleStruct {
-			ctx.root["data"] = val
-		} else {
-			// Root objects are placed directly into the root doc
-			ctx.root["data"] = append(ctx.root["data"].([]interface{}), val)
-		}
-	} else {
-		// Linked objects are placed in a slice under the `linked` key
-		var linkedSlice []interface{}
-
-		if ctx.root["linked"] == nil {
-			linkedSlice = []interface{}{}
-			ctx.root["linked"] = linkedSlice
-		} else {
-			linkedSlice = ctx.root["linked"].([]interface{})
+		//skip private fields
+		if !field.CanInterface() {
+			continue
 		}
 
-		// add to linked slice if not already present
-		alreadyLinked := false
-		for _, linked := range linkedSlice {
-			m := reflect.ValueOf(linked).Interface().(map[string]interface{})
-			if val["id"] == m["id"] && val["type"] == m["type"] {
-				alreadyLinked = true
-			}
-		}
-
-		if alreadyLinked == false {
-			ctx.root["linked"] = append(linkedSlice, val)
-		}
+		result[keyName] = field.Interface()
 	}
-}
 
-// MarshalToJSON takes a struct and marshals it to JSONAPI compliant JSON
-func MarshalToJSON(val interface{}) ([]byte, error) {
-	result, err := Marshal(val)
-	if err != nil {
-		return nil, err
-	}
-	return json.Marshal(result)
-}
-
-// MarshalToJSONPrefix does the same as MarshalToJSON but adds a prefix to generated URLs
-func MarshalToJSONPrefix(val interface{}, prefix string) ([]byte, error) {
-	result, err := marshal(val, prefix)
-	if err != nil {
-		return nil, err
-	}
-	return json.Marshal(result)
+	return result
 }

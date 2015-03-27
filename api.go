@@ -25,32 +25,13 @@ type DataSource interface {
 	FindMultiple(IDs []string, req Request) (interface{}, error)
 
 	// Create a new object and return its ID
-	Create(interface{}) (string, error)
+	Create(obj interface{}, req Request) (string, error)
 
 	// Delete an object
-	Delete(id string) error
+	Delete(id string, req Request) error
 
 	// Update an object
-	Update(obj interface{}) error
-}
-
-// Controller provides more customization of each route.
-// You can define a controller for every DataSource if needed
-type Controller interface {
-	// FindAll gets called after resource was called
-	FindAll(r *http.Request, objs *interface{}) error
-
-	// FindOne gets called after resource was called
-	FindOne(r *http.Request, obj *interface{}) error
-
-	// Create gets called before resource was called
-	Create(r *http.Request, obj *interface{}) error
-
-	// Delete gets called before resource was called
-	Delete(r *http.Request, id string) error
-
-	// Update gets called before resource was called
-	Update(r *http.Request, obj *interface{}) error
+	Update(obj interface{}, req Request) error
 }
 
 // API is a REST JSONAPI.
@@ -90,15 +71,15 @@ func (api *API) SetRedirectTrailingSlash(enabled bool) {
 
 // Request holds additional information for FindOne and Find Requests
 type Request struct {
-	QueryParams map[string][]string
-	Header      http.Header
+	PlainRequest *http.Request
+	QueryParams  map[string][]string
+	Header       http.Header
 }
 
 type resource struct {
 	resourceType reflect.Type
 	source       DataSource
 	name         string
-	controller   Controller
 }
 
 func (api *API) addResource(prototype interface{}, source DataSource) *resource {
@@ -177,15 +158,8 @@ func (api *API) AddResource(prototype interface{}, source DataSource) {
 	api.addResource(prototype, source)
 }
 
-// AddResourceWithController does the same as `AddResource` but also couples a custom `Controller`
-// Use this controller to implement access control and other things that depend on the request
-func (api *API) AddResourceWithController(prototype interface{}, source DataSource, controller Controller) {
-	res := api.addResource(prototype, source)
-	res.controller = controller
-}
-
 func buildRequest(r *http.Request) Request {
-	req := Request{}
+	req := Request{PlainRequest: r}
 	params := make(map[string][]string)
 	for key, values := range r.URL.Query() {
 		params[key] = strings.Split(values[0], ",")
@@ -201,11 +175,6 @@ func (res *resource) handleIndex(w http.ResponseWriter, r *http.Request, prefix 
 		return err
 	}
 
-	if res.controller != nil {
-		if err := res.controller.FindAll(r, &objs); err != nil {
-			return err
-		}
-	}
 	return respondWith(objs, prefix, http.StatusOK, w)
 }
 
@@ -227,11 +196,6 @@ func (res *resource) handleRead(w http.ResponseWriter, r *http.Request, ps httpr
 		return err
 	}
 
-	if res.controller != nil {
-		if err := res.controller.FindOne(r, &obj); err != nil {
-			return err
-		}
-	}
 	return respondWith(obj, prefix, http.StatusOK, w)
 }
 
@@ -281,7 +245,6 @@ func (res *resource) handleCreate(w http.ResponseWriter, r *http.Request, prefix
 	}
 	newObjs := reflect.MakeSlice(reflect.SliceOf(res.resourceType), 0, 0)
 
-	//TODO remove necessecity to call unmarshal into
 	err = jsonapi.UnmarshalInto(ctx, res.resourceType, &newObjs)
 	if err != nil {
 		return err
@@ -290,15 +253,23 @@ func (res *resource) handleCreate(w http.ResponseWriter, r *http.Request, prefix
 		return errors.New("expected one object in POST")
 	}
 
+	//TODO create multiple objects not only one.
 	newObj := newObjs.Index(0).Interface()
 
-	if res.controller != nil {
-		if err := res.controller.Create(r, &newObj); err != nil {
-			return err
+	checkID, ok := newObj.(jsonapi.MarshalIdentifier)
+	if ok {
+		if checkID.GetID() != "" {
+			err := Error{
+				Status: string(http.StatusForbidden),
+				Title:  "Forbidden",
+				Detail: "Client generated IDs are not supported.",
+			}
+
+			return respondWith(err, prefix, http.StatusForbidden, w)
 		}
 	}
 
-	id, err := res.source.Create(newObj)
+	id, err := res.source.Create(newObj, buildRequest(r))
 	if err != nil {
 		return err
 	}
@@ -324,7 +295,6 @@ func (res *resource) handleUpdate(w http.ResponseWriter, r *http.Request, ps htt
 	updatingObjs := reflect.MakeSlice(reflect.SliceOf(res.resourceType), 1, 1)
 	updatingObjs.Index(0).Set(reflect.ValueOf(obj))
 
-	//TODO remove call to unmarshalInto
 	err = jsonapi.UnmarshalInto(ctx, res.resourceType, &updatingObjs)
 	if err != nil {
 		return err
@@ -334,13 +304,8 @@ func (res *resource) handleUpdate(w http.ResponseWriter, r *http.Request, ps htt
 	}
 
 	updatingObj := updatingObjs.Index(0).Interface()
-	if res.controller != nil {
-		if err := res.controller.Update(r, &updatingObj); err != nil {
-			return err
-		}
-	}
 
-	if err := res.source.Update(updatingObj); err != nil {
+	if err := res.source.Update(updatingObj, buildRequest(r)); err != nil {
 		return err
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -348,14 +313,7 @@ func (res *resource) handleUpdate(w http.ResponseWriter, r *http.Request, ps htt
 }
 
 func (res *resource) handleDelete(w http.ResponseWriter, r *http.Request, ps httprouter.Params) error {
-	id := ps.ByName("id")
-	if res.controller != nil {
-		if err := res.controller.Delete(r, id); err != nil {
-			return err
-		}
-	}
-
-	err := res.source.Delete(ps.ByName("id"))
+	err := res.source.Delete(ps.ByName("id"), buildRequest(r))
 	if err != nil {
 		return err
 	}
@@ -364,7 +322,7 @@ func (res *resource) handleDelete(w http.ResponseWriter, r *http.Request, ps htt
 }
 
 func respondWith(obj interface{}, prefix string, status int, w http.ResponseWriter) error {
-	data, err := jsonapi.MarshalToJSONPrefix(obj, prefix)
+	data, err := jsonapi.MarshalToJSON(obj)
 	if err != nil {
 		return err
 	}
@@ -393,9 +351,10 @@ func handleError(err error, w http.ResponseWriter) {
 	if e, ok := err.(HTTPError); ok {
 		http.Error(w, marshalError(e), e.status)
 		return
+
 	}
 
-	w.WriteHeader(500)
+	http.Error(w, marshalError(err), http.StatusInternalServerError)
 }
 
 // Handler returns the http.Handler instance for the API.

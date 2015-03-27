@@ -29,6 +29,11 @@ type Error struct {
 	Path   string `json:"path,omitempty"`
 }
 
+// GetID returns the ID
+func (e Error) GetID() string {
+	return e.ID
+}
+
 //marshalError marshals all error types
 func marshalError(err error) string {
 	httpErr, ok := err.(HTTPError)
