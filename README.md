@@ -112,7 +112,7 @@ type UnmarshalLinkedRelations interface {
 **If you need to know more about how to use the interfaces, look at our tests or at the example project.**
 
 ### Ignoring fields
-api2go ignores all fields that are marked with the `json"-"`` ignore tag. This is useful if your struct has some more
+api2go ignores all fields that are marked with the `json"-"` ignore tag. This is useful if your struct has some more
 fields which are only used internally to manage relations or data that needs to stay private, like a password field.
 
 ### Manual marshaling / unmarshaling
@@ -180,15 +180,15 @@ func (s *fixtureSource) FindMultiple(IDs []string, r api2go.Request) (interface{
   // For example for Requests like GET /posts/1,2,3
 }
 
-func (s *fixtureSource) Create(obj interface{}) (string, error) {
+func (s *fixtureSource) Create(obj interface{}, r api2go.Request) (string, error) {
   // Save the new Post in `obj` and return its ID.
 }
 
-func (s *fixtureSource) Delete(id string) error {
+func (s *fixtureSource) Delete(id string, r api2go.Request) error {
   // Delete a post
 }
 
-func (s *fixtureSource) Update(obj interface{}) error {
+func (s *fixtureSource) Update(obj interface{}, r api2go.Request) error {
   // Apply the new values in the Post in `obj`
 }
 ```
