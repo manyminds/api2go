@@ -495,7 +495,7 @@ var _ = Describe("RestHandler", func() {
 			api.Handler().ServeHTTP(rec, req)
 			Expect(rec.Code).To(Equal(http.StatusInternalServerError))
 			Expect(rec.Header().Get("Location")).To(Equal(""))
-			Expect(rec.Body.Bytes()).To(BeNil())
+			Expect(rec.Body.Bytes()).ToNot(HaveLen(0))
 		})
 
 		It("PUTSs multiple objects", func() {
@@ -505,7 +505,7 @@ var _ = Describe("RestHandler", func() {
 			api.Handler().ServeHTTP(rec, req)
 			Expect(rec.Code).To(Equal(http.StatusInternalServerError))
 			Expect(rec.Header().Get("Location")).To(Equal(""))
-			Expect(rec.Body.Bytes()).To(BeNil())
+			Expect(rec.Body.Bytes()).ToNot(HaveLen(0))
 		})
 
 		It("OPTIONS on collection route", func() {

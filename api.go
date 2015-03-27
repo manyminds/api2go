@@ -351,9 +351,10 @@ func handleError(err error, w http.ResponseWriter) {
 	if e, ok := err.(HTTPError); ok {
 		http.Error(w, marshalError(e), e.status)
 		return
+
 	}
 
-	w.WriteHeader(500)
+	http.Error(w, marshalError(err), http.StatusInternalServerError)
 }
 
 // Handler returns the http.Handler instance for the API.
