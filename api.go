@@ -25,13 +25,13 @@ type DataSource interface {
 	FindMultiple(IDs []string, req Request) (interface{}, error)
 
 	// Create a new object and return its ID
-	Create(interface{}) (string, error)
+	Create(obj interface{}, req Request) (string, error)
 
 	// Delete an object
-	Delete(id string) error
+	Delete(id string, req Request) error
 
 	// Update an object
-	Update(obj interface{}) error
+	Update(obj interface{}, req Request) error
 }
 
 // API is a REST JSONAPI.
@@ -269,7 +269,7 @@ func (res *resource) handleCreate(w http.ResponseWriter, r *http.Request, prefix
 		}
 	}
 
-	id, err := res.source.Create(newObj)
+	id, err := res.source.Create(newObj, buildRequest(r))
 	if err != nil {
 		return err
 	}
@@ -305,7 +305,7 @@ func (res *resource) handleUpdate(w http.ResponseWriter, r *http.Request, ps htt
 
 	updatingObj := updatingObjs.Index(0).Interface()
 
-	if err := res.source.Update(updatingObj); err != nil {
+	if err := res.source.Update(updatingObj, buildRequest(r)); err != nil {
 		return err
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -313,7 +313,7 @@ func (res *resource) handleUpdate(w http.ResponseWriter, r *http.Request, ps htt
 }
 
 func (res *resource) handleDelete(w http.ResponseWriter, r *http.Request, ps httprouter.Params) error {
-	err := res.source.Delete(ps.ByName("id"))
+	err := res.source.Delete(ps.ByName("id"), buildRequest(r))
 	if err != nil {
 		return err
 	}
