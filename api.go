@@ -214,12 +214,8 @@ func (res *resource) handleLinked(api *API, w http.ResponseWriter, r *http.Reque
 			fieldType := jsonapi.Pluralize(jsonapi.Jsonify(field.Type.Elem().Name()))
 			for _, resource := range api.resources {
 				if resource.name == fieldType {
-					request := Request{
-						Header: r.Header,
-						QueryParams: map[string][]string{
-							res.name + "ID": []string{id},
-						},
-					}
+					request := buildRequest(r)
+					request.QueryParams[res.name+"ID"] = []string{id}
 					obj, err := resource.source.FindAll(request)
 					if err != nil {
 						return err
