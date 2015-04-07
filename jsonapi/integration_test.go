@@ -118,13 +118,27 @@ var _ = Describe("Test for the public api of this package", func() {
 				{ 
 						"author" : 
 						{
-							"id" : "A Magical UserID",
-							"type" : "stupidUsers"
+							"linkage": {
+								"id" : "A Magical UserID",
+								"type" : "stupidUsers"
+							}
 						},
 						"pages" : 
 						{ 
-							"ids" : [ "Page 1","Page 2","Page 3"],
-							"type" : "pages"
+							"linkage": [
+								{
+									"id": "Page 1",
+									"type": "pages"
+								},
+								{
+									"id": "Page 2",
+									"type": "pages"
+								},
+								{
+									"id": "Page 3",
+									"type": "pages"
+								}
+							]
 						}
 				},
 					"type" : "books"
@@ -157,22 +171,28 @@ var _ = Describe("Test for the public api of this package", func() {
 			"type":"books",
 			"links":{
 				"author":{
-					"id":"A Magical UserID",
-					"type":"users"
+					"linkage": {
+						"id":"A Magical UserID",
+						"type":"users"
+					}
 				},
 				"pages":{
-						"ids":["Page 1","Page 2","Page 3"],
-						"type": "pages"
-					}
+					"linkage": [
+						{
+							"id": "Page 1",
+							"type": "pages"
+						},
+						{
+							"id": "Page 2",
+							"type": "pages"
+						},
+						{
+							"id": "Page 3",
+							"type": "pages"
+						}
+					]}
 				}
-			},
-			"included":
-				[
-					{"content":"First Page","id":"Page 1","type":"pages"},
-					{"content":"Second Page","id":"Page 2","type":"pages"},
-					{"content":"Final page","id":"Page 3","type":"pages"},
-					{"id":"A Magical UserID","name":"Terry Pratchett","type":"users"}
-				]
+			}
 		}`
 
 	Context("Marshal and Unmarshal data", func() {

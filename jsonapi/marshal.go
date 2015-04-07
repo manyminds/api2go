@@ -238,23 +238,26 @@ func getStructLinks(relationer MarshalLinkedRelations, information ServerInforma
 
 	for referenceType, referenceIDs := range sortedResults {
 		name := referenceIDs[0].Name
-		// if referenceType is plural, we have ids, otherwise it's just one id
+		links[name] = map[string]interface{}{}
+		// if referenceType is plural, we need to use an array for linkage, otherwise it's just an object
 		if Pluralize(name) == name {
 			// multiple elements in links
-			var ids []string
+			linkage := []map[string]interface{}{}
 
 			for _, referenceID := range referenceIDs {
-				ids = append(ids, referenceID.ID)
+				linkage = append(linkage, map[string]interface{}{
+					"type": referenceType,
+					"id":   referenceID.ID,
+				})
 			}
 
-			links[name] = map[string]interface{}{
-				"ids":  ids,
-				"type": referenceType,
-			}
+			links[name]["linkage"] = linkage
 		} else {
 			links[name] = map[string]interface{}{
-				"id":   referenceIDs[0].ID,
-				"type": referenceType,
+				"linkage": map[string]interface{}{
+					"type": referenceType,
+					"id":   referenceIDs[0].ID,
+				},
 			}
 		}
 
@@ -268,9 +271,13 @@ func getStructLinks(relationer MarshalLinkedRelations, information ServerInforma
 	}
 
 	// check for empty references
-	for name, reference := range notIncludedReferences {
-		links[name] = map[string]interface{}{
-			"type": reference.Type,
+	for name := range notIncludedReferences {
+		links[name] = map[string]interface{}{}
+		// Plural empty relationships need an empty array and empty to-one need a null in the json
+		if Pluralize(name) == name {
+			links[name]["linkage"] = []interface{}{}
+		} else {
+			links[name]["linkage"] = nil
 		}
 		for key, value := range getLinksForServerInformation(relationer, name, information) {
 			links[name][key] = value

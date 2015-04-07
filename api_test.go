@@ -293,14 +293,18 @@ var _ = Describe("RestHandler", func() {
 				"value": nil,
 				"links": map[string]interface{}{
 					"author": map[string]interface{}{
-						"id":   "1",
-						"type": "users",
-						//"resource": "/v1/posts/1/author",
+						"linkage": map[string]interface{}{
+							"id":   "1",
+							"type": "users",
+						},
 					},
 					"comments": map[string]interface{}{
-						"ids":  []string{"1"},
-						"type": "comments",
-						//"resource": "/v1/posts/1/comments",
+						"linkage": []map[string]interface{}{
+							map[string]interface{}{
+								"id":   "1",
+								"type": "comments",
+							},
+						},
 					},
 				},
 			}
@@ -325,12 +329,10 @@ var _ = Describe("RestHandler", func() {
 				"value": nil,
 				"links": map[string]interface{}{
 					"author": map[string]interface{}{
-						"type": "users",
-						//"resource": "/v1/posts/2/author",
+						"linkage": nil,
 					},
 					"comments": map[string]interface{}{
-						"type": "comments",
-						//"resource": "/v1/posts/2/comments",
+						"linkage": []interface{}{},
 					},
 				},
 			}
@@ -342,12 +344,10 @@ var _ = Describe("RestHandler", func() {
 				"value": nil,
 				"links": map[string]interface{}{
 					"author": map[string]interface{}{
-						"type": "users",
-						//"resource": "/v1/posts/3/author",
+						"linkage": nil,
 					},
 					"comments": map[string]interface{}{
-						"type": "comments",
-						//"resource": "/v1/posts/3/comments",
+						"linkage": []interface{}{},
 					},
 				},
 			}
@@ -449,12 +449,10 @@ var _ = Describe("RestHandler", func() {
 					"value": nil,
 					"links": map[string]interface{}{
 						"author": map[string]interface{}{
-							"type": "users",
-							//"resource": "/v1/posts/4/author",
+							"linkage": nil,
 						},
 						"comments": map[string]interface{}{
-							"type": "comments",
-							//"resource": "/v1/posts/4/comments",
+							"linkage": []interface{}{},
 						},
 					},
 				},
@@ -612,12 +610,10 @@ var _ = Describe("RestHandler", func() {
 				"value": nil,
 				"links": map[string]interface{}{
 					"author": map[string]interface{}{
-						"type": "users",
-						//"resource": "/posts/1/author",
+						"linkage": nil,
 					},
 					"comments": map[string]interface{}{
-						"type": "comments",
-						//"resource": "/posts/1/comments",
+						"linkage": []interface{}{},
 					},
 				},
 			}
@@ -629,12 +625,10 @@ var _ = Describe("RestHandler", func() {
 				"value": nil,
 				"links": map[string]interface{}{
 					"author": map[string]interface{}{
-						"type": "users",
-						//"resource": "/posts/2/author",
+						"linkage": nil,
 					},
 					"comments": map[string]interface{}{
-						"type": "comments",
-						//"resource": "/posts/2/comments",
+						"linkage": []interface{}{},
 					},
 				},
 			}

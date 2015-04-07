@@ -164,14 +164,24 @@ var _ = Describe("Marshalling", func() {
 							"comments": map[string]interface{}{
 								"self":    completePrefix + "/posts/1/links/comments",
 								"related": completePrefix + "/posts/1/comments",
-								"ids":     []string{"1", "2"},
-								"type":    "comments",
+								"linkage": []map[string]interface{}{
+									map[string]interface{}{
+										"id":   "1",
+										"type": "comments",
+									},
+									map[string]interface{}{
+										"id":   "2",
+										"type": "comments",
+									},
+								},
 							},
 							"author": map[string]interface{}{
 								"self":    completePrefix + "/posts/1/links/author",
 								"related": completePrefix + "/posts/1/author",
-								"id":      "1",
-								"type":    "users",
+								"linkage": map[string]interface{}{
+									"id":   "1",
+									"type": "users",
+								},
 							},
 						},
 						"title": "Foobar",
@@ -183,14 +193,24 @@ var _ = Describe("Marshalling", func() {
 							"comments": map[string]interface{}{
 								"self":    completePrefix + "/posts/2/links/comments",
 								"related": completePrefix + "/posts/2/comments",
-								"ids":     []string{"1", "2"},
-								"type":    "comments",
+								"linkage": []map[string]interface{}{
+									map[string]interface{}{
+										"id":   "1",
+										"type": "comments",
+									},
+									map[string]interface{}{
+										"id":   "2",
+										"type": "comments",
+									},
+								},
 							},
 							"author": map[string]interface{}{
 								"self":    completePrefix + "/posts/2/links/author",
 								"related": completePrefix + "/posts/2/author",
-								"id":      "1",
-								"type":    "users",
+								"linkage": map[string]interface{}{
+									"id":   "1",
+									"type": "users",
+								},
 							},
 						},
 						"title": "Foobarbarbar",
@@ -229,13 +249,17 @@ var _ = Describe("Marshalling", func() {
 					"title": "",
 					"links": map[string]map[string]interface{}{
 						"comments": map[string]interface{}{
-							"ids":     []string{"1"},
-							"type":    "comments",
 							"self":    completePrefix + "/posts/1/links/comments",
 							"related": completePrefix + "/posts/1/comments",
+							"linkage": []map[string]interface{}{
+								map[string]interface{}{
+									"id":   "1",
+									"type": "comments",
+								},
+							},
 						},
 						"author": map[string]interface{}{
-							"type":    "users",
+							"linkage": nil,
 							"self":    completePrefix + "/posts/1/links/author",
 							"related": completePrefix + "/posts/1/author",
 						},
@@ -259,14 +283,18 @@ var _ = Describe("Marshalling", func() {
 					"title": "",
 					"links": map[string]map[string]interface{}{
 						"comments": map[string]interface{}{
-							"ids":  []string{"1"},
-							"type": "comments",
-							//"resource": "/posts/1/comments",
+							"linkage": []map[string]interface{}{
+								map[string]interface{}{
+									"id":   "1",
+									"type": "comments",
+								},
+							},
 						},
 						"author": map[string]interface{}{
-							"id":   "1",
-							"type": "users",
-							//"resource": "/posts/1/author",
+							"linkage": map[string]interface{}{
+								"id":   "1",
+								"type": "users",
+							},
 						},
 					},
 				},
@@ -295,9 +323,10 @@ var _ = Describe("Marshalling", func() {
 					"type": "anotherPosts",
 					"links": map[string]map[string]interface{}{
 						"author": map[string]interface{}{
-							"id":   "1",
-							"type": "users",
-							//"resource": "/anotherPosts/1/author",
+							"linkage": map[string]interface{}{
+								"id":   "1",
+								"type": "users",
+							},
 						},
 					},
 				},
@@ -373,9 +402,10 @@ var _ = Describe("Marshalling", func() {
 					"text": "Will it ever work?",
 					"links": map[string]map[string]interface{}{
 						"inspiringQuestion": map[string]interface{}{
-							"id":   "1",
-							"type": "questions",
-							//"resource": "/questions/2/inspiringQuestion",
+							"linkage": map[string]interface{}{
+								"id":   "1",
+								"type": "questions",
+							},
 						},
 					},
 				},
@@ -386,8 +416,7 @@ var _ = Describe("Marshalling", func() {
 						"text": "Does this test work?",
 						"links": map[string]map[string]interface{}{
 							"inspiringQuestion": map[string]interface{}{
-								"type": "questions",
-								//"resource": "/questions/1/inspiringQuestion",
+								"linkage": nil,
 							},
 						},
 					},
@@ -408,9 +437,10 @@ var _ = Describe("Marshalling", func() {
 						"text": "It works now",
 						"links": map[string]map[string]interface{}{
 							"inspiringQuestion": map[string]interface{}{
-								"id":   "1",
-								"type": "questions",
-								//"resource": "/questions/3/inspiringQuestion",
+								"linkage": map[string]interface{}{
+									"id":   "1",
+									"type": "questions",
+								},
 							},
 						},
 					},
@@ -420,9 +450,10 @@ var _ = Describe("Marshalling", func() {
 						"text": "Will it ever work?",
 						"links": map[string]map[string]interface{}{
 							"inspiringQuestion": map[string]interface{}{
-								"id":   "1",
-								"type": "questions",
-								//"resource": "/questions/2/inspiringQuestion",
+								"linkage": map[string]interface{}{
+									"id":   "1",
+									"type": "questions",
+								},
 							},
 						},
 					},
@@ -434,8 +465,7 @@ var _ = Describe("Marshalling", func() {
 						"text": "Does this test work?",
 						"links": map[string]map[string]interface{}{
 							"inspiringQuestion": map[string]interface{}{
-								"type": "questions",
-								//"resource": "/questions/1/inspiringQuestion",
+								"linkage": nil,
 							},
 						},
 					},
@@ -526,24 +556,32 @@ var _ = Describe("Marshalling", func() {
 		It("Generates to-one links correctly", func() {
 			links := getStructLinks(post, serverInformationNil)
 			Expect(links["author"]).To(Equal(map[string]interface{}{
-				"id":   "1",
-				"type": "users",
+				"linkage": map[string]interface{}{
+					"id":   "1",
+					"type": "users",
+				},
 			}))
 		})
 
 		It("Generates to-many links correctly", func() {
 			links := getStructLinks(post, serverInformationNil)
 			Expect(links["comments"]).To(Equal(map[string]interface{}{
-				"ids":  []string{"1"},
-				"type": "comments",
+				"linkage": []map[string]interface{}{
+					map[string]interface{}{
+						"id":   "1",
+						"type": "comments",
+					},
+				},
 			}))
 		})
 
 		It("Generates self/related URLs with baseURL and prefix correctly", func() {
 			links := getStructLinks(post, CompleteServerInformation{})
 			Expect(links["author"]).To(Equal(map[string]interface{}{
-				"id":      "1",
-				"type":    "users",
+				"linkage": map[string]interface{}{
+					"id":   "1",
+					"type": "users",
+				},
 				"self":    "http://my.domain/v1/posts/1/links/author",
 				"related": "http://my.domain/v1/posts/1/author",
 			}))
@@ -552,8 +590,10 @@ var _ = Describe("Marshalling", func() {
 		It("Generates self/related URLs with baseURL correctly", func() {
 			links := getStructLinks(post, BaseURLServerInformation{})
 			Expect(links["author"]).To(Equal(map[string]interface{}{
-				"id":      "1",
-				"type":    "users",
+				"linkage": map[string]interface{}{
+					"id":   "1",
+					"type": "users",
+				},
 				"self":    "http://my.domain/posts/1/links/author",
 				"related": "http://my.domain/posts/1/author",
 			}))
@@ -562,8 +602,10 @@ var _ = Describe("Marshalling", func() {
 		It("Generates self/related URLs with prefix correctly", func() {
 			links := getStructLinks(post, PrefixServerInformation{})
 			Expect(links["author"]).To(Equal(map[string]interface{}{
-				"id":      "1",
-				"type":    "users",
+				"linkage": map[string]interface{}{
+					"id":   "1",
+					"type": "users",
+				},
 				"self":    "/v1/posts/1/links/author",
 				"related": "/v1/posts/1/author",
 			}))

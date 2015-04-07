@@ -211,40 +211,49 @@ func unmarshalLinks(val reflect.Value, linksMap map[string]interface{}) error {
 		if !ok {
 			return fmt.Errorf("link field for %s has invalid format, must be map[string]interface{}", linkName)
 		}
-		linksType, ok := links["type"]
+		_, ok = links["linkage"]
 		if !ok {
-			return fmt.Errorf("Missing type field for %s", linkName)
+			return fmt.Errorf("Missing linkage field for %s", linkName)
 		}
-		linksTypeString, ok := linksType.(string)
 		if !ok {
 			return fmt.Errorf("type field for %s links must be a string", linkName)
 		}
 
-		// Belongs-to or has-one
-		if links["id"] != nil {
-			id := links["id"].(string)
-			referenceIDs = append(referenceIDs, ReferenceID{ID: id, Name: linkName, Type: linksTypeString})
-			continue
-		}
-
-		// has-many
-		if links["ids"] != nil {
-			ids := links["ids"].([]interface{})
+		hasOne, ok := links["linkage"].(map[string]interface{})
+		if ok {
+			hasOneID, ok := hasOne["id"].(string)
 			if !ok {
-				return fmt.Errorf("ids for %s links must be an array", linkName)
+				return fmt.Errorf("linkage object must have a field id for %s", linkName)
 			}
-			for _, id := range ids {
-				id, ok := id.(string)
+			hasOneType, ok := hasOne["type"].(string)
+			if !ok {
+				return fmt.Errorf("linkage object must have a field type for %s", linkName)
+			}
+
+			referenceIDs = append(referenceIDs, ReferenceID{ID: hasOneID, Name: linkName, Type: hasOneType})
+		} else {
+			hasMany, ok := links["linkage"].([]interface{})
+			if !ok {
+				fmt.Printf("%#v", links["linkage"])
+				return fmt.Errorf("invalid linkage object or array, must be an object with \"id\" and \"type\" field for %s", linkName)
+			}
+			for _, entry := range hasMany {
+				linkage, ok := entry.(map[string]interface{})
 				if !ok {
-					return fmt.Errorf("id inside %s must be a string", linkName)
+					return fmt.Errorf("entry in linkage array must be an object for %s", linkName)
 				}
-				referenceIDs = append(referenceIDs, ReferenceID{ID: id, Name: linkName, Type: linksTypeString})
+				linkageID, ok := linkage["id"].(string)
+				if !ok {
+					return fmt.Errorf("all linkage objects must have a field id for %s", linkName)
+				}
+				linkageType, ok := linkage["type"].(string)
+				if !ok {
+					return fmt.Errorf("all linkage objects must have a field type for %s", linkName)
+				}
+
+				referenceIDs = append(referenceIDs, ReferenceID{ID: linkageID, Name: linkName, Type: linkageType})
 			}
-
-			continue
 		}
-
-		return errors.New("Invalid object in links object")
 	}
 
 	if val.CanAddr() {
