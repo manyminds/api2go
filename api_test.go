@@ -366,8 +366,8 @@ var _ = Describe("RestHandler", func() {
 			api.Handler().ServeHTTP(rec, req)
 			Expect(rec.Code).To(Equal(http.StatusOK))
 			expected, err := json.Marshal(map[string]interface{}{
-				"data":   []map[string]interface{}{post1Json, post2Json, post3Json},
-				"linked": post1LinkedJSON,
+				"data":     []map[string]interface{}{post1Json, post2Json, post3Json},
+				"included": post1LinkedJSON,
 			})
 			Expect(err).ToNot(HaveOccurred())
 			Expect(rec.Body.Bytes()).To(MatchJSON(expected))
@@ -379,8 +379,8 @@ var _ = Describe("RestHandler", func() {
 			api.Handler().ServeHTTP(rec, req)
 			Expect(rec.Code).To(Equal(http.StatusOK))
 			expected, err := json.Marshal(map[string]interface{}{
-				"data":   post1Json,
-				"linked": post1LinkedJSON,
+				"data":     post1Json,
+				"included": post1LinkedJSON,
 			})
 			Expect(err).ToNot(HaveOccurred())
 			Expect(rec.Body.Bytes()).To(MatchJSON(expected))
@@ -392,8 +392,8 @@ var _ = Describe("RestHandler", func() {
 			api.Handler().ServeHTTP(rec, req)
 			Expect(rec.Code).To(Equal(http.StatusOK))
 			expected, err := json.Marshal(map[string]interface{}{
-				"data":   []interface{}{post1Json, post2Json},
-				"linked": post1LinkedJSON,
+				"data":     []interface{}{post1Json, post2Json},
+				"included": post1LinkedJSON,
 			})
 			Expect(err).ToNot(HaveOccurred())
 			Expect(rec.Body.Bytes()).To(MatchJSON(expected))

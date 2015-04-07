@@ -197,7 +197,7 @@ var _ = Describe("Marshalling", func() {
 						"type":  "posts",
 					},
 				},
-				"linked": []map[string]interface{}{
+				"included": []map[string]interface{}{
 					map[string]interface{}{
 						"id":   "1",
 						"name": "Test Author",
@@ -270,7 +270,7 @@ var _ = Describe("Marshalling", func() {
 						},
 					},
 				},
-				"linked": []map[string]interface{}{
+				"included": []map[string]interface{}{
 					map[string]interface{}{
 						"id":   "1",
 						"type": "users",
@@ -365,7 +365,7 @@ var _ = Describe("Marshalling", func() {
 		question2 := Question{ID: "2", Text: "Will it ever work?", InspiringQuestionID: sql.NullString{String: "1", Valid: true}, InspiringQuestion: &question1}
 		question3 := Question{ID: "3", Text: "It works now", InspiringQuestionID: sql.NullString{String: "1", Valid: true}, InspiringQuestion: &question1Duplicate}
 
-		It("Correctly marshalls question2 and sets question1 into linked", func() {
+		It("Correctly marshalls question2 and sets question1 into included", func() {
 			expected := map[string]interface{}{
 				"data": map[string]interface{}{
 					"id":   "2",
@@ -379,7 +379,7 @@ var _ = Describe("Marshalling", func() {
 						},
 					},
 				},
-				"linked": []map[string]interface{}{
+				"included": []map[string]interface{}{
 					map[string]interface{}{
 						"id":   "1",
 						"type": "questions",
@@ -427,7 +427,7 @@ var _ = Describe("Marshalling", func() {
 						},
 					},
 				},
-				"linked": []map[string]interface{}{
+				"included": []map[string]interface{}{
 					map[string]interface{}{
 						"id":   "1",
 						"type": "questions",

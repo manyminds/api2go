@@ -145,7 +145,7 @@ func marshalSlice(data interface{}, information ServerInformation) (map[string]i
 	//data key is always present
 	result["data"] = dataElements
 	if includedElements != nil && len(includedElements) > 0 {
-		result["linked"] = includedElements
+		result["included"] = includedElements
 	}
 
 	return result, nil
@@ -334,13 +334,13 @@ func marshalStruct(data MarshalIdentifier, information ServerInformation) (map[s
 
 	included, ok := data.(MarshalIncludedRelations)
 	if ok {
-		linked, err := getIncludedStructs(included, information)
+		included, err := getIncludedStructs(included, information)
 		if err != nil {
 			return result, err
 		}
 
-		if len(linked) > 0 {
-			result["linked"] = linked
+		if len(included) > 0 {
+			result["included"] = included
 		}
 	}
 

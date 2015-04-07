@@ -129,7 +129,7 @@ var _ = Describe("Test for the public api of this package", func() {
 				},
 					"type" : "books"
 			},
-			"linked" : 
+			"included" : 
 				[ 
 					{ "id" : "A Magical UserID",
 						"name" : "Terry Pratchett",
@@ -166,7 +166,7 @@ var _ = Describe("Test for the public api of this package", func() {
 					}
 				}
 			},
-			"linked":
+			"included":
 				[
 					{"content":"First Page","id":"Page 1","type":"pages"},
 					{"content":"Second Page","id":"Page 2","type":"pages"},
