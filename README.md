@@ -139,17 +139,33 @@ will yield
       "type": "posts",
       "links": {
         "comments": {
-          "ids": ["1", "2"],
-          "type": "comments",
-          "resource": "/posts/1/comments"
+          "linkage": [
+            {
+              "id": "1",
+              "type": "comments"
+            },
+            {
+              "id": "2",
+              "type": "comments"
+            }
+          ],
+          "resource": "\/posts\/1\/comments"
         }
       },
       "title": "Foobar"
     }
   ],
   "included": [
-    {"id": "1", "type": "comments", "text": "First!"},
-    {"id": "2", "type": "comments", "text": "Second!"}
+    {
+      "id": "1",
+      "type": "comments",
+      "text": "First!"
+    },
+    {
+      "id": "2",
+      "type": "comments",
+      "text": "Second!"
+    }
   ]
 }
 ```
@@ -268,9 +284,17 @@ specified on jsonapi.org. Post example:
       "title": "Foobar",
       "links": {
         "comments": {
-          "resource": "/v1/posts/1/comments",
-          "ids": ["1", "2"],
-          "type": "comments",
+          "resource": "\/v1\/posts\/1\/comments",
+          "linkage": [
+            {
+              "id": "1",
+              "type": "comments"
+            },
+            {
+              "id": "2",
+              "type": "comments"
+            }
+          ]
         }
       }
     }
