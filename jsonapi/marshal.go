@@ -306,8 +306,8 @@ func getLinksForServerInformation(relationer MarshalLinkedRelations, name string
 			links["self"] = fmt.Sprintf("%s/%s/%s/links/%s", prefix, getStructType(relationer), relationer.GetID(), name)
 			links["related"] = fmt.Sprintf("%s/%s/%s/%s", prefix, getStructType(relationer), relationer.GetID(), name)
 		} else {
-			links["self"] = fmt.Sprintf("%s/%s/links/%s", getStructType(relationer), relationer.GetID(), name)
-			links["related"] = fmt.Sprintf("%s/%s/%s", getStructType(relationer), relationer.GetID(), name)
+			links["self"] = fmt.Sprintf("/%s/%s/links/%s", getStructType(relationer), relationer.GetID(), name)
+			links["related"] = fmt.Sprintf("/%s/%s/%s", getStructType(relationer), relationer.GetID(), name)
 		}
 	}
 

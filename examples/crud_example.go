@@ -14,7 +14,7 @@
 // Create a chocolate with the name sweet
 // `curl -X POST http://localhost:31415/v0/chocolates -d '{"data" : [{"type" : "chocolates" , "name" : "Ritter Sport", "taste": "Very Good"}]}'`
 // Link the sweet
-// `curl -X POST http://localhost:31415/v0/users -d '{"data" : [{"type" : "users" , "username" : "marvin", "links": {"sweets": {"type": "chocolates", "ids": ["1"]}}}]}'`
+// `curl -X POST http://localhost:31415/v0/users -d '{"data" : [{"type" : "users" , "username" : "marvin", "links": {"sweets": {"linkage": {"type": "chocolates", "id": "1"}}}}]}'`
 package main
 
 import (
@@ -336,7 +336,7 @@ func (c *chocolateResource) Update(obj interface{}, r api2go.Request) error {
 }
 
 func main() {
-	api := api2go.NewAPI("v0")
+	api := api2go.NewAPIWithBaseURL("v0", "http://localhost:31415")
 	users := make(map[string]User)
 	chocStorage := ChocolateStorage{chocolates: make(map[string]Chocolate), idCount: 1}
 	api.AddResource(User{}, &userResource{users: users, chocStorage: &chocStorage})
