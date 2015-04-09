@@ -511,23 +511,12 @@ var _ = Describe("RestHandler", func() {
 			Expect(rec.Header().Get("Location")).To(Equal(""))
 			Expect(rec.Body.Bytes()).ToNot(HaveLen(0))
 		})
-
-		It("PUTSs multiple objects", func() {
-			reqBody := strings.NewReader(`{"posts": [{"title": "New Post"}, {"title" : "Second New Post"}]}`)
-			req, err := http.NewRequest("PUT", "/v1/posts/1", reqBody)
-			Expect(err).To(BeNil())
-			api.Handler().ServeHTTP(rec, req)
-			Expect(rec.Code).To(Equal(http.StatusInternalServerError))
-			Expect(rec.Header().Get("Location")).To(Equal(""))
-			Expect(rec.Body.Bytes()).ToNot(HaveLen(0))
-		})
-
 		It("OPTIONS on collection route", func() {
 			req, err := http.NewRequest("OPTIONS", "/v1/posts", nil)
 			api.Handler().ServeHTTP(rec, req)
 			Expect(err).To(BeNil())
 			Expect(rec.Code).To(Equal(http.StatusNoContent))
-			Expect(rec.Header().Get("Allow")).To(Equal("GET,POST,OPTIONS"))
+			Expect(rec.Header().Get("Allow")).To(Equal("GET,POST,PATCH,OPTIONS"))
 		})
 
 		It("OPTIONS on element route", func() {
@@ -535,7 +524,7 @@ var _ = Describe("RestHandler", func() {
 			api.Handler().ServeHTTP(rec, req)
 			Expect(err).To(BeNil())
 			Expect(rec.Code).To(Equal(http.StatusNoContent))
-			Expect(rec.Header().Get("Allow")).To(Equal("GET,PUT,DELETE,OPTIONS"))
+			Expect(rec.Header().Get("Allow")).To(Equal("GET,PATCH,DELETE,OPTIONS"))
 		})
 
 		It("DELETEs", func() {
@@ -546,22 +535,35 @@ var _ = Describe("RestHandler", func() {
 			Expect(len(source.posts)).To(Equal(2))
 		})
 
-		It("UPDATEs", func() {
-			reqBody := strings.NewReader(`{"data": {"id": "1", "title": "New Title", "type": "posts"}}`)
-			req, err := http.NewRequest("PUT", "/v1/posts/1", reqBody)
+		It("patch must contain type and id but does not have type", func() {
+			reqBody := strings.NewReader(`{"data": {"title": "New Title", "id": "id"}}`)
+			req, err := http.NewRequest("PATCH", "/v1/posts/1", reqBody)
 			Expect(err).To(BeNil())
 			api.Handler().ServeHTTP(rec, req)
-			Expect(rec.Code).To(Equal(http.StatusNoContent))
-			Expect(source.posts["1"].Title).To(Equal("New Title"))
+			Expect(rec.Code).To(Equal(http.StatusForbidden))
+			Expect(string(rec.Body.Bytes())).To(MatchJSON(`{"errors":[{"status":"403","title":"missing mandatory type key."}]}`))
 		})
 
-		It("UPDATEs as array", func() {
-			reqBody := strings.NewReader(`{"data": [{"id": "1", "title": "New Title", "type": "posts"}]}`)
-			req, err := http.NewRequest("PUT", "/v1/posts/1", reqBody)
+		It("patch must contain type and id but does not have id", func() {
+			reqBody := strings.NewReader(`{"data": {"title": "New Title", "type": "posts"}}`)
+			req, err := http.NewRequest("PATCH", "/v1/posts/1", reqBody)
+			Expect(err).To(BeNil())
+			api.Handler().ServeHTTP(rec, req)
+			Expect(rec.Code).To(Equal(http.StatusForbidden))
+			Expect(string(rec.Body.Bytes())).To(MatchJSON(`{"errors":[{"status":"403","title":"missing mandatory id key."}]}`))
+		})
+
+		It("UPDATEs", func() {
+			target := source.posts["1"]
+			target.Value = null.FloatFrom(2)
+			reqBody := strings.NewReader(`{"data": {"id": "1", "title": "New Title", "type": "posts"}}`)
+			req, err := http.NewRequest("PATCH", "/v1/posts/1", reqBody)
 			Expect(err).To(BeNil())
 			api.Handler().ServeHTTP(rec, req)
 			Expect(rec.Code).To(Equal(http.StatusNoContent))
 			Expect(source.posts["1"].Title).To(Equal("New Title"))
+			Expect(target.Title).To(Equal("New Title"))
+			Expect(target.Value).To(Equal(null.FloatFrom(2)))
 		})
 	})
 
