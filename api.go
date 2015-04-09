@@ -121,12 +121,12 @@ func (api *API) addResource(prototype interface{}, source DataSource) *resource 
 	}
 
 	api.router.Handle("OPTIONS", api.prefix+name, func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		w.Header().Set("Allow", "GET,POST,OPTIONS")
+		w.Header().Set("Allow", "GET,POST,PATCH,OPTIONS")
 		w.WriteHeader(http.StatusNoContent)
 	})
 
 	api.router.Handle("OPTIONS", api.prefix+name+"/:id", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		w.Header().Set("Allow", "GET,PUT,DELETE,OPTIONS")
+		w.Header().Set("Allow", "GET,PUT,PATCH,DELETE,OPTIONS")
 		w.WriteHeader(http.StatusNoContent)
 	})
 
@@ -165,7 +165,7 @@ func (api *API) addResource(prototype interface{}, source DataSource) *resource 
 		}
 	})
 
-	api.router.PUT(api.prefix+name+"/:id", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	api.router.PATCH(api.prefix+name+"/:id", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		err := res.handleUpdate(w, r, ps)
 		if err != nil {
 			handleError(err, w)
@@ -309,10 +309,47 @@ func (res *resource) handleUpdate(w http.ResponseWriter, r *http.Request, ps htt
 	if err != nil {
 		return err
 	}
+
 	ctx, err := unmarshalJSONRequest(r)
 	if err != nil {
 		return err
 	}
+
+	data, ok := ctx["data"]
+
+	if !ok {
+		return NewHTTPError(
+			errors.New("Forbidden"),
+			"missing mandatory data key.",
+			http.StatusForbidden,
+		)
+	}
+
+	check, ok := data.(map[string]interface{})
+	if !ok {
+		return NewHTTPError(
+			errors.New("Forbidden"),
+			"data must contain an object.",
+			http.StatusForbidden,
+		)
+	}
+
+	if _, ok := check["id"]; !ok {
+		return NewHTTPError(
+			errors.New("Forbidden"),
+			"missing mandatory id key.",
+			http.StatusForbidden,
+		)
+	}
+
+	if _, ok := check["type"]; !ok {
+		return NewHTTPError(
+			errors.New("Forbidden"),
+			"missing mandatory type key.",
+			http.StatusForbidden,
+		)
+	}
+
 	updatingObjs := reflect.MakeSlice(reflect.SliceOf(res.resourceType), 1, 1)
 	updatingObjs.Index(0).Set(reflect.ValueOf(obj))
 
