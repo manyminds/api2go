@@ -554,12 +554,16 @@ var _ = Describe("RestHandler", func() {
 		})
 
 		It("UPDATEs", func() {
+			target := source.posts["1"]
+			target.Value = null.FloatFrom(2)
 			reqBody := strings.NewReader(`{"data": {"id": "1", "title": "New Title", "type": "posts"}}`)
 			req, err := http.NewRequest("PATCH", "/v1/posts/1", reqBody)
 			Expect(err).To(BeNil())
 			api.Handler().ServeHTTP(rec, req)
 			Expect(rec.Code).To(Equal(http.StatusNoContent))
 			Expect(source.posts["1"].Title).To(Equal("New Title"))
+			Expect(target.Title).To(Equal("New Title"))
+			Expect(target.Value).To(Equal(null.FloatFrom(2)))
 		})
 	})
 
