@@ -39,24 +39,49 @@ type API struct {
 	router *httprouter.Router
 	// Route prefix, including slashes
 	prefix    string
+	info      information
 	resources []resource
+}
+
+type information struct {
+	prefix  string
+	baseURL string
+}
+
+func (i information) GetBaseURL() string {
+	return i.baseURL
+}
+
+func (i information) GetPrefix() string {
+	return i.prefix
 }
 
 // NewAPI returns an initialized API instance
 // `prefix` is added in front of all endpoints.
 func NewAPI(prefix string) *API {
 	// Add initial and trailing slash to prefix
-	prefix = strings.Trim(prefix, "/")
-	if len(prefix) > 0 {
-		prefix = "/" + prefix + "/"
+	prefixSlashes := strings.Trim(prefix, "/")
+	if len(prefixSlashes) > 0 {
+		prefixSlashes = "/" + prefixSlashes + "/"
 	} else {
-		prefix = "/"
+		prefixSlashes = "/"
 	}
 
 	return &API{
 		router: httprouter.New(),
-		prefix: prefix,
+		prefix: prefixSlashes,
+		info:   information{prefix: prefix},
 	}
+}
+
+// NewAPIWithBaseURL does the same as NewAPI with the addition of
+// a baseURL which get's added in front of all generated URLs.
+// For example http://localhost/v1/myResource/abc instead of /v1/myResource/abc
+func NewAPIWithBaseURL(prefix string, baseURL string) *API {
+	api := NewAPI(prefix)
+	api.info.baseURL = baseURL
+
+	return api
 }
 
 //SetRedirectTrailingSlash enables 307 redirects on urls ending with /
@@ -106,28 +131,28 @@ func (api *API) addResource(prototype interface{}, source DataSource) *resource 
 	})
 
 	api.router.GET(api.prefix+name, func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-		err := res.handleIndex(w, r, api.prefix)
+		err := res.handleIndex(w, r, api.info)
 		if err != nil {
 			handleError(err, w)
 		}
 	})
 
 	api.router.GET(api.prefix+name+"/:id", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		err := res.handleRead(w, r, ps, api.prefix)
+		err := res.handleRead(w, r, ps, api.info)
 		if err != nil {
 			handleError(err, w)
 		}
 	})
 
 	api.router.GET(api.prefix+name+"/:id/:linked", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		err := res.handleLinked(api, w, r, ps, api.prefix)
+		err := res.handleLinked(api, w, r, ps, api.info)
 		if err != nil {
 			handleError(err, w)
 		}
 	})
 
 	api.router.POST(api.prefix+name, func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		err := res.handleCreate(w, r, api.prefix)
+		err := res.handleCreate(w, r, api.prefix, api.info)
 		if err != nil {
 			handleError(err, w)
 		}
@@ -169,16 +194,16 @@ func buildRequest(r *http.Request) Request {
 	return req
 }
 
-func (res *resource) handleIndex(w http.ResponseWriter, r *http.Request, prefix string) error {
+func (res *resource) handleIndex(w http.ResponseWriter, r *http.Request, info information) error {
 	objs, err := res.source.FindAll(buildRequest(r))
 	if err != nil {
 		return err
 	}
 
-	return respondWith(objs, prefix, http.StatusOK, w)
+	return respondWith(objs, info, http.StatusOK, w)
 }
 
-func (res *resource) handleRead(w http.ResponseWriter, r *http.Request, ps httprouter.Params, prefix string) error {
+func (res *resource) handleRead(w http.ResponseWriter, r *http.Request, ps httprouter.Params, info information) error {
 	ids := strings.Split(ps.ByName("id"), ",")
 
 	var (
@@ -196,11 +221,11 @@ func (res *resource) handleRead(w http.ResponseWriter, r *http.Request, ps httpr
 		return err
 	}
 
-	return respondWith(obj, prefix, http.StatusOK, w)
+	return respondWith(obj, info, http.StatusOK, w)
 }
 
 // try to find the referenced resource and call the findAll Method with referencing resource id as param
-func (res *resource) handleLinked(api *API, w http.ResponseWriter, r *http.Request, ps httprouter.Params, prefix string) error {
+func (res *resource) handleLinked(api *API, w http.ResponseWriter, r *http.Request, ps httprouter.Params, info information) error {
 	id := ps.ByName("id")
 	linked := ps.ByName("linked")
 
@@ -220,7 +245,7 @@ func (res *resource) handleLinked(api *API, w http.ResponseWriter, r *http.Reque
 					if err != nil {
 						return err
 					}
-					return respondWith(obj, prefix, http.StatusOK, w)
+					return respondWith(obj, info, http.StatusOK, w)
 				}
 			}
 		}
@@ -231,10 +256,10 @@ func (res *resource) handleLinked(api *API, w http.ResponseWriter, r *http.Reque
 		Title:  "Not Found",
 		Detail: "No resource handler is registered to handle the linked resource " + linked,
 	}
-	return respondWith(err, prefix, http.StatusNotFound, w)
+	return respondWith(err, info, http.StatusNotFound, w)
 }
 
-func (res *resource) handleCreate(w http.ResponseWriter, r *http.Request, prefix string) error {
+func (res *resource) handleCreate(w http.ResponseWriter, r *http.Request, prefix string, info information) error {
 	ctx, err := unmarshalJSONRequest(r)
 	if err != nil {
 		return err
@@ -261,7 +286,7 @@ func (res *resource) handleCreate(w http.ResponseWriter, r *http.Request, prefix
 				Detail: "Client generated IDs are not supported.",
 			}
 
-			return respondWith(err, prefix, http.StatusForbidden, w)
+			return respondWith(err, info, http.StatusForbidden, w)
 		}
 	}
 
@@ -276,7 +301,7 @@ func (res *resource) handleCreate(w http.ResponseWriter, r *http.Request, prefix
 		return err
 	}
 
-	return respondWith(obj, prefix, http.StatusCreated, w)
+	return respondWith(obj, info, http.StatusCreated, w)
 }
 
 func (res *resource) handleUpdate(w http.ResponseWriter, r *http.Request, ps httprouter.Params) error {
@@ -317,8 +342,8 @@ func (res *resource) handleDelete(w http.ResponseWriter, r *http.Request, ps htt
 	return nil
 }
 
-func respondWith(obj interface{}, prefix string, status int, w http.ResponseWriter) error {
-	data, err := jsonapi.MarshalToJSON(obj)
+func respondWith(obj interface{}, info information, status int, w http.ResponseWriter) error {
+	data, err := jsonapi.MarshalToJSONWithURLs(obj, info)
 	if err != nil {
 		return err
 	}

@@ -148,8 +148,12 @@ var _ = Describe("Unmarshal", func() {
 						"title": post.Title,
 						"links": map[string]interface{}{
 							"comments": map[string]interface{}{
-								"ids":  []interface{}{"1"},
-								"type": "links",
+								"linkage": []interface{}{
+									map[string]interface{}{
+										"id":   "1",
+										"type": "links",
+									},
+								},
 							},
 						},
 					},
@@ -171,8 +175,12 @@ var _ = Describe("Unmarshal", func() {
 						"title": post.Title,
 						"links": map[string]interface{}{
 							"comments": map[string]interface{}{
-								"ids":  []interface{}{"1"},
-								"type": "votes",
+								"linkage": []interface{}{
+									map[string]interface{}{
+										"id":   "1",
+										"type": "votes",
+									},
+								},
 							},
 						},
 					},
@@ -209,8 +217,10 @@ var _ = Describe("Unmarshal", func() {
 						"title": "Test",
 						"links": map[string]interface{}{
 							"author": map[string]interface{}{
-								"id":   "1",
-								"type": "users",
+								"linkage": map[string]interface{}{
+									"id":   "1",
+									"type": "users",
+								},
 							},
 						},
 					},
@@ -232,12 +242,22 @@ var _ = Describe("Unmarshal", func() {
 						"title": "Test",
 						"links": map[string]interface{}{
 							"author": map[string]interface{}{
-								"id":   "1",
-								"type": "users",
+								"linkage": map[string]interface{}{
+									"id":   "1",
+									"type": "users",
+								},
 							},
 							"comments": map[string]interface{}{
-								"ids":  []interface{}{"1", "2"},
-								"type": "comments",
+								"linkage": []interface{}{
+									map[string]interface{}{
+										"id":   "1",
+										"type": "comments",
+									},
+									map[string]interface{}{
+										"id":   "2",
+										"type": "comments",
+									},
+								},
 							},
 						},
 					},

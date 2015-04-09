@@ -99,7 +99,7 @@ could also return an empty array, if there are currently no relations. This is w
 knows what is possible, even if nothing is referenced at the time.
 
 In addition to that, you can implement `MarshalIncludedRelations` which exports the complete referenced structs and embeds them in the json
-result inside the `linked` object.
+result inside the `included` object.
 
 We choose to do this because it gives you better flexibility and eliminates the conventions in the previous versions of api2go. **You can
 now choose how you internally manage relations.** So, there are no limits regarding the use of ORMs.
@@ -139,17 +139,33 @@ will yield
       "type": "posts",
       "links": {
         "comments": {
-          "ids": ["1", "2"],
-          "type": "comments",
-          "resource": "/posts/1/comments"
+          "linkage": [
+            {
+              "id": "1",
+              "type": "comments"
+            },
+            {
+              "id": "2",
+              "type": "comments"
+            }
+          ],
+          "resource": "\/posts\/1\/comments"
         }
       },
       "title": "Foobar"
     }
   ],
-  "linked": [
-    {"id": "1", "type": "comments", "text": "First!"},
-    {"id": "2", "type": "comments", "text": "Second!"}
+  "included": [
+    {
+      "id": "1",
+      "type": "comments",
+      "text": "First!"
+    },
+    {
+      "id": "2",
+      "type": "comments",
+      "text": "Second!"
+    }
   ]
 }
 ```
@@ -268,9 +284,17 @@ specified on jsonapi.org. Post example:
       "title": "Foobar",
       "links": {
         "comments": {
-          "resource": "/v1/posts/1/comments",
-          "ids": ["1", "2"],
-          "type": "comments",
+          "resource": "\/v1\/posts\/1\/comments",
+          "linkage": [
+            {
+              "id": "1",
+              "type": "comments"
+            },
+            {
+              "id": "2",
+              "type": "comments"
+            }
+          ]
         }
       }
     }

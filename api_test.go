@@ -293,14 +293,22 @@ var _ = Describe("RestHandler", func() {
 				"value": nil,
 				"links": map[string]interface{}{
 					"author": map[string]interface{}{
-						"id":   "1",
-						"type": "users",
-						//"resource": "/v1/posts/1/author",
+						"linkage": map[string]interface{}{
+							"id":   "1",
+							"type": "users",
+						},
+						"self":    "/v1/posts/1/links/author",
+						"related": "/v1/posts/1/author",
 					},
 					"comments": map[string]interface{}{
-						"ids":  []string{"1"},
-						"type": "comments",
-						//"resource": "/v1/posts/1/comments",
+						"linkage": []map[string]interface{}{
+							map[string]interface{}{
+								"id":   "1",
+								"type": "comments",
+							},
+						},
+						"self":    "/v1/posts/1/links/comments",
+						"related": "/v1/posts/1/comments",
 					},
 				},
 			}
@@ -325,12 +333,14 @@ var _ = Describe("RestHandler", func() {
 				"value": nil,
 				"links": map[string]interface{}{
 					"author": map[string]interface{}{
-						"type": "users",
-						//"resource": "/v1/posts/2/author",
+						"linkage": nil,
+						"self":    "/v1/posts/2/links/author",
+						"related": "/v1/posts/2/author",
 					},
 					"comments": map[string]interface{}{
-						"type": "comments",
-						//"resource": "/v1/posts/2/comments",
+						"linkage": []interface{}{},
+						"self":    "/v1/posts/2/links/comments",
+						"related": "/v1/posts/2/comments",
 					},
 				},
 			}
@@ -342,12 +352,14 @@ var _ = Describe("RestHandler", func() {
 				"value": nil,
 				"links": map[string]interface{}{
 					"author": map[string]interface{}{
-						"type": "users",
-						//"resource": "/v1/posts/3/author",
+						"linkage": nil,
+						"self":    "/v1/posts/3/links/author",
+						"related": "/v1/posts/3/author",
 					},
 					"comments": map[string]interface{}{
-						"type": "comments",
-						//"resource": "/v1/posts/3/comments",
+						"linkage": []interface{}{},
+						"self":    "/v1/posts/3/links/comments",
+						"related": "/v1/posts/3/comments",
 					},
 				},
 			}
@@ -366,8 +378,8 @@ var _ = Describe("RestHandler", func() {
 			api.Handler().ServeHTTP(rec, req)
 			Expect(rec.Code).To(Equal(http.StatusOK))
 			expected, err := json.Marshal(map[string]interface{}{
-				"data":   []map[string]interface{}{post1Json, post2Json, post3Json},
-				"linked": post1LinkedJSON,
+				"data":     []map[string]interface{}{post1Json, post2Json, post3Json},
+				"included": post1LinkedJSON,
 			})
 			Expect(err).ToNot(HaveOccurred())
 			Expect(rec.Body.Bytes()).To(MatchJSON(expected))
@@ -379,8 +391,8 @@ var _ = Describe("RestHandler", func() {
 			api.Handler().ServeHTTP(rec, req)
 			Expect(rec.Code).To(Equal(http.StatusOK))
 			expected, err := json.Marshal(map[string]interface{}{
-				"data":   post1Json,
-				"linked": post1LinkedJSON,
+				"data":     post1Json,
+				"included": post1LinkedJSON,
 			})
 			Expect(err).ToNot(HaveOccurred())
 			Expect(rec.Body.Bytes()).To(MatchJSON(expected))
@@ -392,8 +404,8 @@ var _ = Describe("RestHandler", func() {
 			api.Handler().ServeHTTP(rec, req)
 			Expect(rec.Code).To(Equal(http.StatusOK))
 			expected, err := json.Marshal(map[string]interface{}{
-				"data":   []interface{}{post1Json, post2Json},
-				"linked": post1LinkedJSON,
+				"data":     []interface{}{post1Json, post2Json},
+				"included": post1LinkedJSON,
 			})
 			Expect(err).ToNot(HaveOccurred())
 			Expect(rec.Body.Bytes()).To(MatchJSON(expected))
@@ -449,12 +461,14 @@ var _ = Describe("RestHandler", func() {
 					"value": nil,
 					"links": map[string]interface{}{
 						"author": map[string]interface{}{
-							"type": "users",
-							//"resource": "/v1/posts/4/author",
+							"linkage": nil,
+							"self":    "/v1/posts/4/links/author",
+							"related": "/v1/posts/4/author",
 						},
 						"comments": map[string]interface{}{
-							"type": "comments",
-							//"resource": "/v1/posts/4/comments",
+							"linkage": []interface{}{},
+							"self":    "/v1/posts/4/links/comments",
+							"related": "/v1/posts/4/comments",
 						},
 					},
 				},
@@ -589,7 +603,7 @@ var _ = Describe("RestHandler", func() {
 		})
 	})
 
-	Context("Extracting query parameters", func() {
+	Context("Extracting query parameters with complete BaseURL API", func() {
 		var (
 			source    *fixtureSource
 			post1JSON map[string]interface{}
@@ -612,12 +626,14 @@ var _ = Describe("RestHandler", func() {
 				"value": nil,
 				"links": map[string]interface{}{
 					"author": map[string]interface{}{
-						"type": "users",
-						//"resource": "/posts/1/author",
+						"linkage": nil,
+						"self":    "http://localhost:1337/v0/posts/1/links/author",
+						"related": "http://localhost:1337/v0/posts/1/author",
 					},
 					"comments": map[string]interface{}{
-						"type": "comments",
-						//"resource": "/posts/1/comments",
+						"linkage": []interface{}{},
+						"self":    "http://localhost:1337/v0/posts/1/links/comments",
+						"related": "http://localhost:1337/v0/posts/1/comments",
 					},
 				},
 			}
@@ -629,24 +645,27 @@ var _ = Describe("RestHandler", func() {
 				"value": nil,
 				"links": map[string]interface{}{
 					"author": map[string]interface{}{
-						"type": "users",
-						//"resource": "/posts/2/author",
+						"linkage": nil,
+						"self":    "http://localhost:1337/v0/posts/2/links/author",
+						"related": "http://localhost:1337/v0/posts/2/author",
 					},
 					"comments": map[string]interface{}{
-						"type": "comments",
-						//"resource": "/posts/2/comments",
+						"linkage": []interface{}{},
+						"self":    "http://localhost:1337/v0/posts/2/links/comments",
+						"related": "http://localhost:1337/v0/posts/2/comments",
 					},
 				},
 			}
 
-			api = NewAPI("")
+			api = NewAPIWithBaseURL("v0", "http://localhost:1337")
+
 			api.AddResource(Post{}, source)
 
 			rec = httptest.NewRecorder()
 		})
 
 		It("FindAll returns 2 posts if no limit was set", func() {
-			req, err := http.NewRequest("GET", "/posts", nil)
+			req, err := http.NewRequest("GET", "/v0/posts", nil)
 			Expect(err).To(BeNil())
 			api.Handler().ServeHTTP(rec, req)
 			Expect(rec.Code).To(Equal(http.StatusOK))
@@ -658,7 +677,7 @@ var _ = Describe("RestHandler", func() {
 		})
 
 		It("FindAll returns 1 post with limit 1", func() {
-			req, err := http.NewRequest("GET", "/posts?limit=1", nil)
+			req, err := http.NewRequest("GET", "/v0/posts?limit=1", nil)
 			Expect(err).To(BeNil())
 			api.Handler().ServeHTTP(rec, req)
 			Expect(rec.Code).To(Equal(http.StatusOK))
@@ -670,7 +689,7 @@ var _ = Describe("RestHandler", func() {
 		})
 
 		It("Extracts multiple parameters correctly", func() {
-			req, err := http.NewRequest("GET", "/posts?sort=title,date", nil)
+			req, err := http.NewRequest("GET", "/v0/posts?sort=title,date", nil)
 			Expect(err).To(BeNil())
 
 			api2goReq := buildRequest(req)
