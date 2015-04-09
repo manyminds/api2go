@@ -126,7 +126,7 @@ func (api *API) addResource(prototype interface{}, source DataSource) *resource 
 	})
 
 	api.router.Handle("OPTIONS", api.prefix+name+"/:id", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		w.Header().Set("Allow", "GET,PUT,PATCH,DELETE,OPTIONS")
+		w.Header().Set("Allow", "GET,PATCH,DELETE,OPTIONS")
 		w.WriteHeader(http.StatusNoContent)
 	})
 
@@ -358,7 +358,7 @@ func (res *resource) handleUpdate(w http.ResponseWriter, r *http.Request, ps htt
 		return err
 	}
 	if updatingObjs.Len() != 1 {
-		return errors.New("expected one object in PUT")
+		return errors.New("expected one object")
 	}
 
 	updatingObj := updatingObjs.Index(0).Interface()

@@ -524,7 +524,7 @@ var _ = Describe("RestHandler", func() {
 			api.Handler().ServeHTTP(rec, req)
 			Expect(err).To(BeNil())
 			Expect(rec.Code).To(Equal(http.StatusNoContent))
-			Expect(rec.Header().Get("Allow")).To(Equal("GET,PUT,PATCH,DELETE,OPTIONS"))
+			Expect(rec.Header().Get("Allow")).To(Equal("GET,PATCH,DELETE,OPTIONS"))
 		})
 
 		It("DELETEs", func() {
