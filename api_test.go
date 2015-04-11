@@ -7,7 +7,6 @@ import (
 
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"strconv"
 	"strings"
 
@@ -747,19 +746,19 @@ var _ = Describe("RestHandler", func() {
 			result := map[string]string{}
 			if links, ok := response["links"].(map[string]interface{}); ok {
 				if first, ok := links["first"]; ok {
-					result["first"], err = url.QueryUnescape(first.(string))
+					result["first"] = first.(string)
 					Expect(err).ToNot(HaveOccurred())
 				}
 				if next, ok := links["next"]; ok {
-					result["next"], err = url.QueryUnescape(next.(string))
+					result["next"] = next.(string)
 					Expect(err).ToNot(HaveOccurred())
 				}
 				if prev, ok := links["prev"]; ok {
-					result["prev"], err = url.QueryUnescape(prev.(string))
+					result["prev"] = prev.(string)
 					Expect(err).ToNot(HaveOccurred())
 				}
 				if last, ok := links["last"]; ok {
-					result["last"], err = url.QueryUnescape(last.(string))
+					result["last"] = last.(string)
 					Expect(err).ToNot(HaveOccurred())
 				}
 			}

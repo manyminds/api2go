@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"reflect"
 	"strconv"
 	"strings"
@@ -104,10 +105,12 @@ func (p paginationQueryParams) getLinks(r *http.Request, count uint, info inform
 
 		if p.number != "1" {
 			params.Set("page[number]", "1")
-			result["first"] = fmt.Sprintf("%s?%s", requestURL, params.Encode())
+			query, _ := url.QueryUnescape(params.Encode())
+			result["first"] = fmt.Sprintf("%s?%s", requestURL, query)
 
 			params.Set("page[number]", strconv.FormatUint(number-1, 10))
-			result["prev"] = fmt.Sprintf("%s?%s", requestURL, params.Encode())
+			query, _ = url.QueryUnescape(params.Encode())
+			result["prev"] = fmt.Sprintf("%s?%s", requestURL, query)
 		}
 
 		// calculate last page number
@@ -124,10 +127,12 @@ func (p paginationQueryParams) getLinks(r *http.Request, count uint, info inform
 
 		if number != totalPages {
 			params.Set("page[number]", strconv.FormatUint(number+1, 10))
-			result["next"] = fmt.Sprintf("%s?%s", requestURL, params.Encode())
+			query, _ := url.QueryUnescape(params.Encode())
+			result["next"] = fmt.Sprintf("%s?%s", requestURL, query)
 
 			params.Set("page[number]", strconv.FormatUint(totalPages, 10))
-			result["last"] = fmt.Sprintf("%s?%s", requestURL, params.Encode())
+			query, _ = url.QueryUnescape(params.Encode())
+			result["last"] = fmt.Sprintf("%s?%s", requestURL, query)
 		}
 	} else {
 		// we have offset & limit params
@@ -143,7 +148,8 @@ func (p paginationQueryParams) getLinks(r *http.Request, count uint, info inform
 
 		if p.offset != "0" {
 			params.Set("page[offset]", "0")
-			result["first"] = fmt.Sprintf("%s?%s", requestURL, params.Encode())
+			query, _ := url.QueryUnescape(params.Encode())
+			result["first"] = fmt.Sprintf("%s?%s", requestURL, query)
 
 			var prevOffset uint64
 			if limit > offset {
@@ -152,16 +158,19 @@ func (p paginationQueryParams) getLinks(r *http.Request, count uint, info inform
 				prevOffset = offset - limit
 			}
 			params.Set("page[offset]", strconv.FormatUint(prevOffset, 10))
-			result["prev"] = fmt.Sprintf("%s?%s", requestURL, params.Encode())
+			query, _ = url.QueryUnescape(params.Encode())
+			result["prev"] = fmt.Sprintf("%s?%s", requestURL, query)
 		}
 
 		// check if there are more entries to be loaded
 		if (offset + limit) < uint64(count) {
 			params.Set("page[offset]", strconv.FormatUint(offset+limit, 10))
-			result["next"] = fmt.Sprintf("%s?%s", requestURL, params.Encode())
+			query, _ := url.QueryUnescape(params.Encode())
+			result["next"] = fmt.Sprintf("%s?%s", requestURL, query)
 
 			params.Set("page[offset]", strconv.FormatUint(uint64(count)-limit, 10))
-			result["last"] = fmt.Sprintf("%s?%s", requestURL, params.Encode())
+			query, _ = url.QueryUnescape(params.Encode())
+			result["last"] = fmt.Sprintf("%s?%s", requestURL, query)
 		}
 	}
 
