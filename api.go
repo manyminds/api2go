@@ -330,11 +330,6 @@ func buildRequest(r *http.Request) Request {
 }
 
 func (res *resource) handleIndex(w http.ResponseWriter, r *http.Request, info information) error {
-	var (
-		objs interface{}
-		err  error
-	)
-
 	pagination := newPaginationQueryParams(r)
 	if pagination.isValid() {
 		source, ok := res.source.(PaginatedFindAll)
@@ -343,7 +338,7 @@ func (res *resource) handleIndex(w http.ResponseWriter, r *http.Request, info in
 		}
 
 		var count uint
-		objs, count, err = source.PaginatedFindAll(buildRequest(r))
+		objs, count, err := source.PaginatedFindAll(buildRequest(r))
 		if err != nil {
 			return err
 		}
@@ -360,7 +355,7 @@ func (res *resource) handleIndex(w http.ResponseWriter, r *http.Request, info in
 		return NewHTTPError(nil, "Resource does not implement the FindAll interface", http.StatusNotFound)
 	}
 
-	objs, err = source.FindAll(buildRequest(r))
+	objs, err := source.FindAll(buildRequest(r))
 	if err != nil {
 		return err
 	}
@@ -407,13 +402,36 @@ func (res *resource) handleLinked(api *API, w http.ResponseWriter, r *http.Reque
 			fieldType := jsonapi.Pluralize(jsonapi.Jsonify(field.Type.Elem().Name()))
 			for _, resource := range api.resources {
 				if resource.name == fieldType {
+					request := buildRequest(r)
+					request.QueryParams[res.name+"ID"] = []string{id}
+
+					// check for pagination, otherwise normal FindAll
+					pagination := newPaginationQueryParams(r)
+					if pagination.isValid() {
+						source, ok := resource.source.(PaginatedFindAll)
+						if !ok {
+							return NewHTTPError(nil, "Resource does not implement the PaginatedFindAll interface", http.StatusNotFound)
+						}
+
+						var count uint
+						objs, count, err := source.PaginatedFindAll(request)
+						if err != nil {
+							return err
+						}
+
+						paginationLinks, err := pagination.getLinks(r, count, info)
+						if err != nil {
+							return err
+						}
+
+						return respondWithPagination(objs, info, http.StatusOK, paginationLinks, w)
+					}
+
 					source, ok := resource.source.(FindAll)
 					if !ok {
 						return NewHTTPError(nil, "Resource does not implement the FindAll interface", http.StatusNotFound)
 					}
 
-					request := buildRequest(r)
-					request.QueryParams[res.name+"ID"] = []string{id}
 					obj, err := source.FindAll(request)
 					if err != nil {
 						return err
