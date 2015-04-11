@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"net/url"
 	"reflect"
 	"strconv"
 	"strings"
@@ -88,7 +87,6 @@ func (p paginationQueryParams) getLinks(r *http.Request, count uint, info inform
 	result = make(map[string]string)
 
 	params := r.URL.Query()
-	filterPaginationQueryParams(&params)
 	prefix := ""
 	baseURL := info.GetBaseURL()
 	if baseURL != "" {
@@ -120,7 +118,7 @@ func (p paginationQueryParams) getLinks(r *http.Request, count uint, info inform
 		}
 		totalPages := (uint64(count) / size)
 		if (uint64(count) % size) != 0 {
-			// there is one more page with some items < size
+			// there is one more page with some len(items) < size
 			totalPages++
 		}
 
@@ -133,14 +131,41 @@ func (p paginationQueryParams) getLinks(r *http.Request, count uint, info inform
 		}
 	} else {
 		// we have offset & limit params
+		var offset, limit uint64
+		offset, err = strconv.ParseUint(p.offset, 10, 64)
+		if err != nil {
+			return
+		}
+		limit, err = strconv.ParseUint(p.limit, 10, 64)
+		if err != nil {
+			return
+		}
+
+		if p.offset != "0" {
+			params.Set("page[offset]", "0")
+			result["first"] = fmt.Sprintf("%s?%s", requestURL, params.Encode())
+
+			var prevOffset uint64
+			if limit > offset {
+				prevOffset = 0
+			} else {
+				prevOffset = offset - limit
+			}
+			params.Set("page[offset]", strconv.FormatUint(prevOffset, 10))
+			result["prev"] = fmt.Sprintf("%s?%s", requestURL, params.Encode())
+		}
+
+		// check if there are more entries to be loaded
+		if (offset + limit) < uint64(count) {
+			params.Set("page[offset]", strconv.FormatUint(offset+limit, 10))
+			result["next"] = fmt.Sprintf("%s?%s", requestURL, params.Encode())
+
+			params.Set("page[offset]", strconv.FormatUint(uint64(count)-limit, 10))
+			result["last"] = fmt.Sprintf("%s?%s", requestURL, params.Encode())
+		}
 	}
 
 	return
-}
-
-func filterPaginationQueryParams(params *url.Values) {
-	params.Del("page[number]")
-	params.Del("page[offset]")
 }
 
 // API is a REST JSONAPI.

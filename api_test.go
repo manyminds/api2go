@@ -127,6 +127,7 @@ func (s *fixtureSource) FindAll(req Request) (interface{}, error) {
 	return postsSlice, nil
 }
 
+// this does not read the query parameters, which you would do to limit the result in real world usage
 func (s *fixtureSource) PaginatedFindAll(req Request) (interface{}, uint, error) {
 	postsSlice := []Post{}
 
@@ -742,25 +743,25 @@ var _ = Describe("RestHandler", func() {
 			Expect(rec.Code).To(Equal(http.StatusOK))
 			var response map[string]interface{}
 			Expect(json.Unmarshal(rec.Body.Bytes(), &response)).To(BeNil())
-			Expect(response["links"]).ToNot(BeEmpty())
-			links := response["links"].(map[string]interface{})
 
 			result := map[string]string{}
-			if first, ok := links["first"]; ok {
-				result["first"], err = url.QueryUnescape(first.(string))
-				Expect(err).ToNot(HaveOccurred())
-			}
-			if next, ok := links["next"]; ok {
-				result["next"], err = url.QueryUnescape(next.(string))
-				Expect(err).ToNot(HaveOccurred())
-			}
-			if prev, ok := links["prev"]; ok {
-				result["prev"], err = url.QueryUnescape(prev.(string))
-				Expect(err).ToNot(HaveOccurred())
-			}
-			if last, ok := links["last"]; ok {
-				result["last"], err = url.QueryUnescape(last.(string))
-				Expect(err).ToNot(HaveOccurred())
+			if links, ok := response["links"].(map[string]interface{}); ok {
+				if first, ok := links["first"]; ok {
+					result["first"], err = url.QueryUnescape(first.(string))
+					Expect(err).ToNot(HaveOccurred())
+				}
+				if next, ok := links["next"]; ok {
+					result["next"], err = url.QueryUnescape(next.(string))
+					Expect(err).ToNot(HaveOccurred())
+				}
+				if prev, ok := links["prev"]; ok {
+					result["prev"], err = url.QueryUnescape(prev.(string))
+					Expect(err).ToNot(HaveOccurred())
+				}
+				if last, ok := links["last"]; ok {
+					result["last"], err = url.QueryUnescape(last.(string))
+					Expect(err).ToNot(HaveOccurred())
+				}
 			}
 
 			return result
@@ -796,10 +797,96 @@ var _ = Describe("RestHandler", func() {
 				Expect(links["prev"]).To(Equal("/v1/posts?page[number]=3&page[size]=2"))
 				Expect(links["first"]).To(Equal("/v1/posts?page[number]=1&page[size]=2"))
 			})
+
+			It("Does not generate links if results fit on one page", func() {
+				links := doRequest("/v1/posts?page[number]=1&page[size]=10")
+				Expect(links).To(HaveLen(0))
+			})
+		})
+
+		// If the combination of parameters is invalid, no links are generated and the normal FindAll method get's called
+		Context("invalid parameter combinations", func() {
+			It("all 4 of them", func() {
+				links := doRequest("/v1/posts?page[number]=1&page[size]=1&page[offset]=1&page[limit]=1")
+				Expect(links).To(HaveLen(0))
+			})
+
+			It("number only", func() {
+				links := doRequest("/v1/posts?page[number]=1")
+				Expect(links).To(HaveLen(0))
+			})
+
+			It("size only", func() {
+				links := doRequest("/v1/posts?page[size]=1")
+				Expect(links).To(HaveLen(0))
+			})
+
+			It("offset only", func() {
+				links := doRequest("/v1/posts?page[offset]=1")
+				Expect(links).To(HaveLen(0))
+			})
+
+			It("limit only", func() {
+				links := doRequest("/v1/posts?page[limit]=1")
+				Expect(links).To(HaveLen(0))
+			})
+
+			It("number, size & offset", func() {
+				links := doRequest("/v1/posts?page[number]=1&page[size]=1&page[offset]=1")
+				Expect(links).To(HaveLen(0))
+			})
+
+			It("number, size & limit", func() {
+				links := doRequest("/v1/posts?page[number]=1&page[size]=1&page[limit]=1")
+				Expect(links).To(HaveLen(0))
+			})
+
+			It("limit, offset & number", func() {
+				links := doRequest("/v1/posts?page[limit]=1&page[offset]=1&page[number]=1")
+				Expect(links).To(HaveLen(0))
+			})
+
+			It("limit, offset & size", func() {
+				links := doRequest("/v1/posts?page[limit]=1&page[offset]=1&page[size]=1")
+				Expect(links).To(HaveLen(0))
+			})
 		})
 
 		Context("offset & limit links", func() {
+			It("No prev and first on offset = 0, limit = 1", func() {
+				links := doRequest("/v1/posts?page[offset]=0&page[limit]=1")
+				Expect(links).To(HaveLen(2))
+				Expect(links["next"]).To(Equal("/v1/posts?page[limit]=1&page[offset]=1"))
+				Expect(links["last"]).To(Equal("/v1/posts?page[limit]=1&page[offset]=6"))
+			})
 
+			It("No prev and first on offset = 0, limit = 2", func() {
+				links := doRequest("/v1/posts?page[offset]=0&page[limit]=2")
+				Expect(links).To(HaveLen(2))
+				Expect(links["next"]).To(Equal("/v1/posts?page[limit]=2&page[offset]=2"))
+				Expect(links["last"]).To(Equal("/v1/posts?page[limit]=2&page[offset]=5"))
+			})
+
+			It("All links on offset = 2, limit = 2", func() {
+				links := doRequest("/v1/posts?page[offset]=2&page[limit]=2")
+				Expect(links).To(HaveLen(4))
+				Expect(links["first"]).To(Equal("/v1/posts?page[limit]=2&page[offset]=0"))
+				Expect(links["prev"]).To(Equal("/v1/posts?page[limit]=2&page[offset]=0"))
+				Expect(links["next"]).To(Equal("/v1/posts?page[limit]=2&page[offset]=4"))
+				Expect(links["last"]).To(Equal("/v1/posts?page[limit]=2&page[offset]=5"))
+			})
+
+			It("No next and last on offset = 5, limit = 2", func() {
+				links := doRequest("/v1/posts?page[offset]=5&page[limit]=2")
+				Expect(links).To(HaveLen(2))
+				Expect(links["prev"]).To(Equal("/v1/posts?page[limit]=2&page[offset]=3"))
+				Expect(links["first"]).To(Equal("/v1/posts?page[limit]=2&page[offset]=0"))
+			})
+
+			It("Does not generate links if results fit on one page", func() {
+				links := doRequest("/v1/posts?page[offset]=0&page[limit]=10")
+				Expect(links).To(HaveLen(0))
+			})
 		})
 	})
 })
