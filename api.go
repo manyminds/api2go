@@ -3,10 +3,13 @@ package api2go
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"reflect"
+	"strconv"
 	"strings"
 
 	"github.com/julienschmidt/httprouter"
@@ -47,6 +50,97 @@ type FindMultiple interface {
 // OR page[offset] AND page[limit]
 type PaginatedFindAll interface {
 	PaginatedFindAll(req Request) (obj interface{}, totalCount uint, err error)
+}
+
+type paginationQueryParams struct {
+	number, size, offset, limit string
+}
+
+func newPaginationQueryParams(r *http.Request) paginationQueryParams {
+	var result paginationQueryParams
+
+	queryParams := r.URL.Query()
+	result.number = queryParams.Get("page[number]")
+	result.size = queryParams.Get("page[size]")
+	result.offset = queryParams.Get("page[offset]")
+	result.limit = queryParams.Get("page[limit]")
+
+	return result
+}
+
+func (p paginationQueryParams) isValid() bool {
+	if p.number == "" && p.size == "" && p.offset == "" && p.limit == "" {
+		return false
+	}
+
+	if p.number != "" && p.size != "" && p.offset == "" && p.limit == "" {
+		return true
+	}
+
+	if p.number == "" && p.size == "" && p.offset != "" && p.limit != "" {
+		return true
+	}
+
+	return false
+}
+
+func (p paginationQueryParams) getLinks(r *http.Request, count uint, info information) (result map[string]string, err error) {
+	result = make(map[string]string)
+
+	params := r.URL.Query()
+	filterPaginationQueryParams(&params)
+	prefix := ""
+	baseURL := info.GetBaseURL()
+	if baseURL != "" {
+		prefix = baseURL
+	}
+	requestURL := fmt.Sprintf("%s%s", prefix, r.URL.Path)
+
+	if p.number != "" {
+		// we have number & size params
+		var number uint64
+		number, err = strconv.ParseUint(p.number, 10, 64)
+		if err != nil {
+			return
+		}
+
+		if p.number != "1" {
+			params.Set("page[number]", "1")
+			result["first"] = fmt.Sprintf("%s?%s", requestURL, params.Encode())
+
+			params.Set("page[number]", strconv.FormatUint(number-1, 10))
+			result["prev"] = fmt.Sprintf("%s?%s", requestURL, params.Encode())
+		}
+
+		// calculate last page number
+		var size uint64
+		size, err = strconv.ParseUint(p.size, 10, 64)
+		if err != nil {
+			return
+		}
+		totalPages := (uint64(count) / size)
+		if (uint64(count) % size) != 0 {
+			// there is one more page with some items < size
+			totalPages++
+		}
+
+		if number != totalPages {
+			params.Set("page[number]", strconv.FormatUint(number+1, 10))
+			result["next"] = fmt.Sprintf("%s?%s", requestURL, params.Encode())
+
+			params.Set("page[number]", strconv.FormatUint(totalPages, 10))
+			result["last"] = fmt.Sprintf("%s?%s", requestURL, params.Encode())
+		}
+	} else {
+		// we have offset & limit params
+	}
+
+	return
+}
+
+func filterPaginationQueryParams(params *url.Values) {
+	params.Del("page[number]")
+	params.Del("page[offset]")
 }
 
 // API is a REST JSONAPI.
@@ -211,12 +305,37 @@ func buildRequest(r *http.Request) Request {
 }
 
 func (res *resource) handleIndex(w http.ResponseWriter, r *http.Request, info information) error {
+	var (
+		objs interface{}
+		err  error
+	)
+
+	pagination := newPaginationQueryParams(r)
+	if pagination.isValid() {
+		source, ok := res.source.(PaginatedFindAll)
+		if !ok {
+			return NewHTTPError(nil, "Resource does not implement the PaginatedFindAll interface", http.StatusNotFound)
+		}
+
+		var count uint
+		objs, count, err = source.PaginatedFindAll(buildRequest(r))
+		if err != nil {
+			return err
+		}
+
+		paginationLinks, err := pagination.getLinks(r, count, info)
+		if err != nil {
+			return err
+		}
+
+		return respondWithPagination(objs, info, http.StatusOK, paginationLinks, w)
+	}
 	source, ok := res.source.(FindAll)
 	if !ok {
 		return NewHTTPError(nil, "Resource does not implement the FindAll interface", http.StatusNotFound)
 	}
 
-	objs, err := source.FindAll(buildRequest(r))
+	objs, err = source.FindAll(buildRequest(r))
 	if err != nil {
 		return err
 	}
@@ -416,6 +535,24 @@ func respondWith(obj interface{}, info information, status int, w http.ResponseW
 	w.Header().Set("Content-Type", "application/vnd.api+json")
 	w.WriteHeader(status)
 	w.Write(data)
+	return nil
+}
+
+func respondWithPagination(obj interface{}, info information, status int, links map[string]string, w http.ResponseWriter) error {
+	data, err := jsonapi.MarshalWithURLs(obj, info)
+	if err != nil {
+		return err
+	}
+
+	data["links"] = links
+	result, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+
+	w.Header().Set("Content-Type", "application/vnd.api+json")
+	w.WriteHeader(status)
+	w.Write(result)
 	return nil
 }
 
