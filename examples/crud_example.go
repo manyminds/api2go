@@ -5,6 +5,10 @@
 // `curl -X POST http://localhost:31415/v0/users -d '{"data" : [{"type" : "users" , "username" : "marvin"}]}'`
 // List users:
 // `curl -X GET http://localhost:31415/v0/users`
+// List paginated users:
+// `curl -X GET http://localhost:31415/v0/users?page[offset]=0&page[limit]=2`
+// OR
+// `curl -X GET http://localhost:31415/v0/users?page[number]=1&page[size]=2`
 // Update:
 // `curl -vX PUT http://localhost:31415/v0/users/1 -d '{ "data" : {"type" : "users", "username" : "better marvin", "id" : "1"}}'`
 // Delete:
@@ -20,6 +24,8 @@ package main
 import (
 	"errors"
 	"fmt"
+	"sort"
+	"strconv"
 
 	"github.com/univedo/api2go"
 	"github.com/univedo/api2go/jsonapi"
@@ -185,6 +191,80 @@ func (s *userResource) FindAll(r api2go.Request) (interface{}, error) {
 	}
 
 	return users, nil
+}
+
+func (s *userResource) PaginatedFindAll(r api2go.Request) (interface{}, uint, error) {
+	var (
+		users                       []User
+		number, size, offset, limit string
+		keys                        []int
+	)
+
+	for k := range s.users {
+		i, err := strconv.ParseInt(k, 10, 64)
+		if err != nil {
+			return nil, 0, err
+		}
+
+		keys = append(keys, int(i))
+	}
+	sort.Ints(keys)
+
+	numberQuery, ok := r.QueryParams["page[number]"]
+	if ok {
+		number = numberQuery[0]
+	}
+	sizeQuery, ok := r.QueryParams["page[size]"]
+	if ok {
+		size = sizeQuery[0]
+	}
+	offsetQuery, ok := r.QueryParams["page[offset]"]
+	if ok {
+		offset = offsetQuery[0]
+	}
+	limitQuery, ok := r.QueryParams["page[limit]"]
+	if ok {
+		limit = limitQuery[0]
+	}
+
+	if size != "" {
+		sizeI, err := strconv.ParseUint(size, 10, 64)
+		if err != nil {
+			return nil, 0, err
+		}
+
+		numberI, err := strconv.ParseUint(number, 10, 64)
+		if err != nil {
+			return nil, 0, err
+		}
+
+		start := sizeI * (numberI - 1)
+		for i := start; i < start+sizeI; i++ {
+			if i >= uint64(len(s.users)) {
+				break
+			}
+			users = append(users, s.users[strconv.FormatInt(int64(keys[i]), 10)])
+		}
+	} else {
+		limitI, err := strconv.ParseUint(limit, 10, 64)
+		if err != nil {
+			return nil, 0, err
+		}
+
+		offsetI, err := strconv.ParseUint(offset, 10, 64)
+		if err != nil {
+			return nil, 0, err
+		}
+
+		for i := offsetI; i < offsetI+limitI; i++ {
+			if i >= uint64(len(s.users)) {
+				break
+			}
+			users = append(users, s.users[strconv.FormatInt(int64(keys[i]), 10)])
+		}
+	}
+
+	return users, uint(len(s.users)), nil
 }
 
 // FindOne to satisfy `api2go.DataSource` interface

@@ -271,6 +271,36 @@ GET /people?fields=id,name,age
 req.QueryParams["fields"] contains values: ["id", "name", "age"]
 ```
 
+### Using Pagination
+Api2go can automatically generate the required links for pagination. Currently there are 2 combinations of query
+parameters supported:
+
+- page[number], page[size]
+- page[offset], page[limit]
+
+Pagination is optional. If you want to support pagination, you have to implement the `PaginatedFindAll` method
+in you resource struct. For an example, you best look into our example project.
+
+Example request
+
+```
+GET /v0/users?page[number]=2&page[size]=2
+```
+
+would return a json with the top level links object
+
+```json
+{
+  "links": {
+    "first": "http://localhost:31415/v0/users?page[number]=1&page[size]=2",
+    "last": "http://localhost:31415/v0/users?page[number]=5&page[size]=2",
+    "next": "http://localhost:31415/v0/users?page[number]=3&page[size]=2",
+    "prev": "http://localhost:31415/v0/users?page[number]=1&page[size]=2"
+  },
+  "data": [...]
+}
+```
+
 ### Loading related resources
 Api2go always creates a `resource` property for elements in the `links` property of the result. This is like it's
 specified on jsonapi.org. Post example:
