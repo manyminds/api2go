@@ -281,12 +281,28 @@ func (api *API) addResource(prototype interface{}, source CRUD) *resource {
 		}
 	})
 
-	api.router.GET(api.prefix+name+"/:id/:linked", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		err := res.handleLinked(api, w, r, ps, api.info)
+	api.router.GET(api.prefix+name+"/:id/links/:name", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+		err := res.handleReadRelation(w, r, ps, api.info)
 		if err != nil {
 			handleError(err, w)
 		}
 	})
+
+	// generate all routes for linked relations if there are relations
+	casted, ok := prototype.(jsonapi.MarshalReferences)
+	if ok {
+		relations := casted.GetReferences()
+		for _, relation := range relations {
+			api.router.GET(api.prefix+name+"/:id/"+relation.Name, func(relation jsonapi.Reference) httprouter.Handle {
+				return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+					err := res.handleLinked(api, w, r, ps, relation, api.info)
+					if err != nil {
+						handleError(err, w)
+					}
+				}
+			}(relation))
+		}
+	}
 
 	api.router.POST(api.prefix+name, func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		err := res.handleCreate(w, r, api.prefix, api.info)
@@ -369,12 +385,7 @@ func (res *resource) handleIndex(w http.ResponseWriter, r *http.Request, info in
 func (res *resource) handleRead(w http.ResponseWriter, r *http.Request, ps httprouter.Params, info information) error {
 	id := ps.ByName("id")
 
-	var (
-		obj interface{}
-		err error
-	)
-
-	obj, err = res.source.FindOne(id, buildRequest(r))
+	obj, err := res.source.FindOne(id, buildRequest(r))
 
 	if err != nil {
 		return err
@@ -383,64 +394,106 @@ func (res *resource) handleRead(w http.ResponseWriter, r *http.Request, ps httpr
 	return respondWith(obj, info, http.StatusOK, w)
 }
 
-// try to find the referenced resource and call the findAll Method with referencing resource id as param
-func (res *resource) handleLinked(api *API, w http.ResponseWriter, r *http.Request, ps httprouter.Params, info information) error {
+func (res *resource) handleReadRelation(w http.ResponseWriter, r *http.Request, ps httprouter.Params, info information) error {
 	id := ps.ByName("id")
-	linked := ps.ByName("linked")
-	// Iterate over all struct fields and determine the type of linked
-	for i := 0; i < res.resourceType.NumField(); i++ {
-		field := res.resourceType.Field(i)
-		fieldName := jsonapi.Jsonify(field.Name)
-		kind := field.Type.Kind()
-		if (kind == reflect.Ptr || kind == reflect.Slice) && fieldName == linked {
-			// Check if there is a resource for this type
-			fieldType := jsonapi.Pluralize(jsonapi.Jsonify(field.Type.Elem().Name()))
-			for _, resource := range api.resources {
-				if resource.name == fieldType {
-					request := buildRequest(r)
-					request.QueryParams[res.name+"ID"] = []string{id}
+	name := ps.ByName("name")
 
-					// check for pagination, otherwise normal FindAll
-					pagination := newPaginationQueryParams(r)
-					if pagination.isValid() {
-						source, ok := resource.source.(PaginatedFindAll)
-						if !ok {
-							return NewHTTPError(nil, "Resource does not implement the PaginatedFindAll interface", http.StatusNotFound)
-						}
+	obj, err := res.source.FindOne(id, buildRequest(r))
+	if err != nil {
+		return err
+	}
 
-						var count uint
-						objs, count, err := source.PaginatedFindAll(request)
-						if err != nil {
-							return err
-						}
+	internalError := NewHTTPError(nil, "Internal server error, invalid object structure", http.StatusInternalServerError)
 
-						paginationLinks, err := pagination.getLinks(r, count, info)
-						if err != nil {
-							return err
-						}
+	marshalled, err := jsonapi.MarshalWithURLs(obj, info)
+	data, ok := marshalled["data"]
+	if !ok {
+		return internalError
+	}
+	links, ok := data.(map[string]interface{})["links"]
+	if !ok {
+		return internalError
+	}
+	relation, ok := links.(map[string]map[string]interface{})[name]
+	if !ok {
+		return NewHTTPError(nil, fmt.Sprintf("There is no relation with the name %s", name), http.StatusNotFound)
+	}
+	self, ok := relation["self"]
+	if !ok {
+		return internalError
+	}
+	related, ok := relation["related"]
+	if !ok {
+		return internalError
+	}
+	relationData, ok := relation["linkage"]
+	if !ok {
+		return internalError
+	}
 
-						return respondWithPagination(objs, info, http.StatusOK, paginationLinks, w)
-					}
+	result := map[string]interface{}{}
+	result["links"] = map[string]interface{}{
+		"self":    self,
+		"related": related,
+	}
+	result["data"] = relationData
 
-					source, ok := resource.source.(FindAll)
-					if !ok {
-						return NewHTTPError(nil, "Resource does not implement the FindAll interface", http.StatusNotFound)
-					}
+	json, err := json.Marshal(result)
+	if err != nil {
+		return err
+	}
 
-					obj, err := source.FindAll(request)
-					if err != nil {
-						return err
-					}
-					return respondWith(obj, info, http.StatusOK, w)
+	writeResult(w, json, http.StatusOK)
+	return nil
+}
+
+// try to find the referenced resource and call the findAll Method with referencing resource id as param
+func (res *resource) handleLinked(api *API, w http.ResponseWriter, r *http.Request, ps httprouter.Params, linked jsonapi.Reference, info information) error {
+	id := ps.ByName("id")
+	for _, resource := range api.resources {
+		if resource.name == linked.Type {
+			request := buildRequest(r)
+			request.QueryParams[res.name+"ID"] = []string{id}
+
+			// check for pagination, otherwise normal FindAll
+			pagination := newPaginationQueryParams(r)
+			if pagination.isValid() {
+				source, ok := resource.source.(PaginatedFindAll)
+				if !ok {
+					return NewHTTPError(nil, "Resource does not implement the PaginatedFindAll interface", http.StatusNotFound)
 				}
+
+				var count uint
+				objs, count, err := source.PaginatedFindAll(request)
+				if err != nil {
+					return err
+				}
+
+				paginationLinks, err := pagination.getLinks(r, count, info)
+				if err != nil {
+					return err
+				}
+
+				return respondWithPagination(objs, info, http.StatusOK, paginationLinks, w)
 			}
+
+			source, ok := resource.source.(FindAll)
+			if !ok {
+				return NewHTTPError(nil, "Resource does not implement the FindAll interface", http.StatusNotFound)
+			}
+
+			obj, err := source.FindAll(request)
+			if err != nil {
+				return err
+			}
+			return respondWith(obj, info, http.StatusOK, w)
 		}
 	}
 
 	err := Error{
 		Status: string(http.StatusNotFound),
 		Title:  "Not Found",
-		Detail: "No resource handler is registered to handle the linked resource " + linked,
+		Detail: "No resource handler is registered to handle the linked resource " + linked.Name,
 	}
 	return respondWith(err, info, http.StatusNotFound, w)
 }
@@ -565,14 +618,19 @@ func (res *resource) handleDelete(w http.ResponseWriter, r *http.Request, ps htt
 	return nil
 }
 
+func writeResult(w http.ResponseWriter, data []byte, status int) {
+	w.Header().Set("Content-Type", "application/vnd.api+json")
+	w.WriteHeader(status)
+	w.Write(data)
+}
+
 func respondWith(obj interface{}, info information, status int, w http.ResponseWriter) error {
 	data, err := jsonapi.MarshalToJSONWithURLs(obj, info)
 	if err != nil {
 		return err
 	}
-	w.Header().Set("Content-Type", "application/vnd.api+json")
-	w.WriteHeader(status)
-	w.Write(data)
+
+	writeResult(w, data, status)
 	return nil
 }
 
@@ -588,9 +646,7 @@ func respondWithPagination(obj interface{}, info information, status int, links 
 		return err
 	}
 
-	w.Header().Set("Content-Type", "application/vnd.api+json")
-	w.WriteHeader(status)
-	w.Write(result)
+	writeResult(w, result, status)
 	return nil
 }
 

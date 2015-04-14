@@ -401,6 +401,22 @@ var _ = Describe("RestHandler", func() {
 			Expect(rec.Body.Bytes()).To(MatchJSON(`{"data": [{"id": "1", "value": "This is a stupid post!", "type": "comments"}]}`))
 		})
 
+		It("GETs relationship data from relationship url for to-many", func() {
+			req, err := http.NewRequest("GET", "/v1/posts/1/links/comments", nil)
+			Expect(err).ToNot(HaveOccurred())
+			api.Handler().ServeHTTP(rec, req)
+			Expect(rec.Code).To(Equal(http.StatusOK))
+			Expect(rec.Body.Bytes()).To(MatchJSON(`{"data": [{"id": "1", "type": "comments"}], "links": {"self": "/v1/posts/1/links/comments", "related": "/v1/posts/1/comments"}}`))
+		})
+
+		It("GETs relationship data from relationship url for to-one", func() {
+			req, err := http.NewRequest("GET", "/v1/posts/1/links/author", nil)
+			Expect(err).ToNot(HaveOccurred())
+			api.Handler().ServeHTTP(rec, req)
+			Expect(rec.Code).To(Equal(http.StatusOK))
+			Expect(rec.Body.Bytes()).To(MatchJSON(`{"data": {"id": "1", "type": "users"}, "links": {"self": "/v1/posts/1/links/author", "related": "/v1/posts/1/author"}}`))
+		})
+
 		It("Gets 404 if a related struct was not found", func() {
 			req, err := http.NewRequest("GET", "/v1/posts/1/unicorns", nil)
 			Expect(err).ToNot(HaveOccurred())
