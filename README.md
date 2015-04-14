@@ -1,5 +1,7 @@
 # api2go
 
+[![Join the chat at https://gitter.im/univedo/api2go](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/univedo/api2go?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 [![GoDoc](https://godoc.org/github.com/univedo/api2go?status.svg)](https://godoc.org/github.com/univedo/api2go)
 [![Build Status](https://travis-ci.org/univedo/api2go.svg?branch=master)](https://travis-ci.org/univedo/api2go)
 
