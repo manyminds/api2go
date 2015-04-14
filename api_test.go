@@ -144,22 +144,6 @@ func (s *fixtureSource) FindOne(id string, req Request) (interface{}, error) {
 	return nil, NewHTTPError(nil, "post not found", http.StatusNotFound)
 }
 
-func (s *fixtureSource) FindMultiple(IDs []string, req Request) (interface{}, error) {
-	var posts []Post
-
-	for _, id := range IDs {
-		if p, ok := s.posts[id]; ok {
-			posts = append(posts, *p)
-		}
-	}
-
-	if len(posts) > 0 {
-		return posts, nil
-	}
-
-	return nil, NewHTTPError(nil, "post not found", http.StatusNotFound)
-}
-
 func (s *fixtureSource) Create(obj interface{}, req Request) (string, error) {
 	p := obj.(Post)
 
@@ -213,10 +197,6 @@ func (s *userSource) FindOne(id string, req Request) (interface{}, error) {
 	return nil, nil
 }
 
-func (s *userSource) FindMultiple(IDs []string, req Request) (interface{}, error) {
-	return nil, nil
-}
-
 func (s *userSource) Create(obj interface{}, req Request) (string, error) {
 	return "", nil
 }
@@ -246,10 +226,6 @@ func (s *commentSource) FindAll(req Request) (interface{}, error) {
 }
 
 func (s *commentSource) FindOne(id string, req Request) (interface{}, error) {
-	return nil, nil
-}
-
-func (s *commentSource) FindMultiple(IDs []string, req Request) (interface{}, error) {
 	return nil, nil
 }
 
@@ -403,19 +379,6 @@ var _ = Describe("RestHandler", func() {
 			Expect(rec.Code).To(Equal(http.StatusOK))
 			expected, err := json.Marshal(map[string]interface{}{
 				"data":     post1Json,
-				"included": post1LinkedJSON,
-			})
-			Expect(err).ToNot(HaveOccurred())
-			Expect(rec.Body.Bytes()).To(MatchJSON(expected))
-		})
-
-		It("GETs multiple objects", func() {
-			req, err := http.NewRequest("GET", "/v1/posts/1,2", nil)
-			Expect(err).To(BeNil())
-			api.Handler().ServeHTTP(rec, req)
-			Expect(rec.Code).To(Equal(http.StatusOK))
-			expected, err := json.Marshal(map[string]interface{}{
-				"data":     []interface{}{post1Json, post2Json},
 				"included": post1LinkedJSON,
 			})
 			Expect(err).ToNot(HaveOccurred())
