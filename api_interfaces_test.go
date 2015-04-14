@@ -58,13 +58,6 @@ var _ = Describe("Test interface api type casting", func() {
 		Expect(rec.Code).To(Equal(http.StatusNotFound))
 	})
 
-	It("FindMultiple returns 404 for simple CRUD", func() {
-		req, err := http.NewRequest("GET", "/v1/someDatas/1,2", nil)
-		Expect(err).ToNot(HaveOccurred())
-		api.Handler().ServeHTTP(rec, req)
-		Expect(rec.Code).To(Equal(http.StatusNotFound))
-	})
-
 	It("Works for a normal FindOne", func() {
 		req, err := http.NewRequest("GET", "/v1/someDatas/12345", nil)
 		Expect(err).ToNot(HaveOccurred())

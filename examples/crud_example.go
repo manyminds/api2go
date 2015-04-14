@@ -13,8 +13,6 @@
 // `curl -vX PATCH http://localhost:31415/v0/users/1 -d '{ "data" : {"type" : "users", "username" : "better marvin", "id" : "1"}}'`
 // Delete:
 // `curl -vX DELETE http://localhost:31415/v0/users/2`
-// FindMultiple (this only works if you've called create a bunch of times :)
-// `curl -X GET http://localhost:31415/v0/users/3,4`
 // Create a chocolate with the name sweet
 // `curl -X POST http://localhost:31415/v0/chocolates -d '{"data" : [{"type" : "chocolates" , "name" : "Ritter Sport", "taste": "Very Good"}]}'`
 // Link the sweet
@@ -277,24 +275,6 @@ func (s *userResource) FindOne(ID string, r api2go.Request) (interface{}, error)
 	return nil, api2go.NewHTTPError(errors.New("Not Found"), "Not Found", http.StatusNotFound)
 }
 
-// FindMultiple to satifiy `api2go.DataSource` interface
-func (s *userResource) FindMultiple(IDs []string, r api2go.Request) (interface{}, error) {
-	var users []User
-
-	for _, id := range IDs {
-		user, err := s.FindOne(id, r)
-		if err != nil {
-			return nil, err
-		}
-
-		if typedUser, ok := user.(User); ok {
-			users = append(users, typedUser)
-		}
-	}
-
-	return users, nil
-}
-
 // Create method to satisfy `api2go.DataSource` interface
 func (s *userResource) Create(obj interface{}, r api2go.Request) (string, error) {
 	user, ok := obj.(User)
@@ -374,23 +354,6 @@ func (c *chocolateResource) FindAll(r api2go.Request) (interface{}, error) {
 
 func (c *chocolateResource) FindOne(ID string, r api2go.Request) (interface{}, error) {
 	return c.storage.GetOne(ID)
-}
-
-func (c *chocolateResource) FindMultiple(IDs []string, r api2go.Request) (interface{}, error) {
-	var chocolates []Chocolate
-
-	for _, id := range IDs {
-		choc, err := c.FindOne(id, r)
-		if err != nil {
-			return nil, err
-		}
-
-		if typedChoc, ok := choc.(Chocolate); ok {
-			chocolates = append(chocolates, typedChoc)
-		}
-	}
-
-	return chocolates, nil
 }
 
 func (c *chocolateResource) Create(obj interface{}, r api2go.Request) (string, error) {
