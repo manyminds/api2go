@@ -10,7 +10,7 @@
 // OR
 // `curl -X GET http://localhost:31415/v0/users?page[number]=1&page[size]=2`
 // Update:
-// `curl -vX PUT http://localhost:31415/v0/users/1 -d '{ "data" : {"type" : "users", "username" : "better marvin", "id" : "1"}}'`
+// `curl -vX PATCH http://localhost:31415/v0/users/1 -d '{ "data" : {"type" : "users", "username" : "better marvin", "id" : "1"}}'`
 // Delete:
 // `curl -vX DELETE http://localhost:31415/v0/users/2`
 // FindMultiple (this only works if you've called create a bunch of times :)

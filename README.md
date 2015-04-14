@@ -231,7 +231,7 @@ OPTIONS /v1/posts/<id>
 GET     /v1/posts
 POST    /v1/posts
 GET     /v1/posts/<id>
-PUT     /v1/posts/<id>
+PATCH   /v1/posts/<id>
 DELETE  /v1/posts/<id>
 GET     /v1/posts/<id>,<id>,...
 GET     /v1/posts/<id>/comments
