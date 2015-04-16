@@ -1,6 +1,8 @@
 package jsonapi
 
 import (
+	"errors"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -48,17 +50,24 @@ func (b Book) GetReferencedIDs() []ReferenceID {
 	return result
 }
 
-func (b *Book) SetReferencedIDs(IDs []ReferenceID) error {
-	for _, reference := range IDs {
-		switch reference.Name {
-		case "author":
-			b.AuthorID = reference.ID
-		case "pages":
-			b.PagesIDs = append(b.PagesIDs, reference.ID)
-		}
+func (b *Book) SetToOneReferenceID(name, ID string) error {
+	if name == "author" {
+		b.AuthorID = ID
+
+		return nil
 	}
 
-	return nil
+	return errors.New("There is no to-one relationship with name " + name)
+}
+
+func (b *Book) SetToManyReferenceIDs(name string, IDs []string) error {
+	if name == "pages" {
+		b.PagesIDs = IDs
+
+		return nil
+	}
+
+	return errors.New("There is no to-many relationship with name " + name)
 }
 
 func (b Book) GetReferencedStructs() []MarshalIdentifier {

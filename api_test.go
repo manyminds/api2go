@@ -58,8 +58,14 @@ func (p Post) GetReferencedIDs() []jsonapi.ReferenceID {
 	return result
 }
 
-func (p *Post) SetReferencedIDs(IDs []jsonapi.ReferenceID) error {
-	return nil
+func (p *Post) SetToOneReferenceID(name, ID string) error {
+	if name == "author" {
+		p.Author = &User{ID: ID}
+
+		return nil
+	}
+
+	return errors.New("There is no to-one relationship with the name " + name)
 }
 
 func (p Post) GetReferencedStructs() []jsonapi.MarshalIdentifier {
@@ -175,6 +181,7 @@ func (s *fixtureSource) Update(obj interface{}, req Request) error {
 	p := obj.(Post)
 	if oldP, ok := s.posts[p.ID]; ok {
 		oldP.Title = p.Title
+		oldP.Author = p.Author
 		return nil
 	}
 	return NewHTTPError(nil, "post not found", http.StatusNotFound)
@@ -554,6 +561,31 @@ var _ = Describe("RestHandler", func() {
 			Expect(source.posts["1"].Title).To(Equal("New Title"))
 			Expect(target.Title).To(Equal("New Title"))
 			Expect(target.Value).To(Equal(null.FloatFrom(2)))
+		})
+
+		It("Patch updates to-one relationships", func() {
+			target := source.posts["1"]
+			reqBody := strings.NewReader(`{
+				"data": {
+					"type": "posts",
+					"id": "1",
+					"links": {
+						"author": {
+							"linkage": {
+								"type": "users",
+								"id": "2"
+							}
+						}
+					}
+				}
+			}
+			`)
+			req, err := http.NewRequest("PATCH", "/v1/posts/1", reqBody)
+			Expect(err).To(BeNil())
+			api.Handler().ServeHTTP(rec, req)
+			Expect(rec.Body.String()).To(Equal(""))
+			Expect(rec.Code).To(Equal(http.StatusNoContent))
+			Expect(target.Author.GetID()).To(Equal("2"))
 		})
 	})
 

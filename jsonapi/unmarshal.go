@@ -14,9 +14,14 @@ type UnmarshalIdentifier interface {
 	SetID(string) error
 }
 
-// UnmarshalLinkedRelations same as MarshalLinkedRelations for unmarshaling
-type UnmarshalLinkedRelations interface {
-	SetReferencedIDs([]ReferenceID) error
+// UnmarshalToOneRelations must be implemented to unmarshal to-one relations
+type UnmarshalToOneRelations interface {
+	SetToOneReferenceID(name, ID string) error
+}
+
+// UnmarshalToManyRelations must be implemented to unmarshal to-many relations
+type UnmarshalToManyRelations interface {
+	SetToManyReferenceIDs(name string, IDs []string) error
 }
 
 // Unmarshal reads a JSONAPI map to a model struct
@@ -234,8 +239,6 @@ func setFieldValue(field *reflect.Value, value reflect.Value) (err error) {
 }
 
 func unmarshalLinks(val reflect.Value, linksMap map[string]interface{}) error {
-	referenceIDs := []ReferenceID{}
-
 	for linkName, links := range linksMap {
 		links, ok := links.(map[string]interface{})
 		if !ok {
@@ -249,24 +252,37 @@ func unmarshalLinks(val reflect.Value, linksMap map[string]interface{}) error {
 			return fmt.Errorf("type field for %s links must be a string", linkName)
 		}
 
+		if val.CanAddr() {
+			val = val.Addr()
+		}
+
 		hasOne, ok := links["linkage"].(map[string]interface{})
 		if ok {
 			hasOneID, ok := hasOne["id"].(string)
 			if !ok {
 				return fmt.Errorf("linkage object must have a field id for %s", linkName)
 			}
-			hasOneType, ok := hasOne["type"].(string)
+
+			target, ok := val.Interface().(UnmarshalToOneRelations)
 			if !ok {
-				return fmt.Errorf("linkage object must have a field type for %s", linkName)
+				return errors.New("target struct must implement interface UnmarshalToOneRelations")
 			}
 
-			referenceIDs = append(referenceIDs, ReferenceID{ID: hasOneID, Name: linkName, Type: hasOneType})
+			target.SetToOneReferenceID(linkName, hasOneID)
 		} else {
 			hasMany, ok := links["linkage"].([]interface{})
 			if !ok {
 				fmt.Printf("%#v", links["linkage"])
 				return fmt.Errorf("invalid linkage object or array, must be an object with \"id\" and \"type\" field for %s", linkName)
 			}
+
+			target, ok := val.Interface().(UnmarshalToManyRelations)
+			if !ok {
+				return errors.New("target struct must implement interface UnmarshalToManyRelations")
+			}
+
+			hasManyIDs := []string{}
+
 			for _, entry := range hasMany {
 				linkage, ok := entry.(map[string]interface{})
 				if !ok {
@@ -276,25 +292,13 @@ func unmarshalLinks(val reflect.Value, linksMap map[string]interface{}) error {
 				if !ok {
 					return fmt.Errorf("all linkage objects must have a field id for %s", linkName)
 				}
-				linkageType, ok := linkage["type"].(string)
-				if !ok {
-					return fmt.Errorf("all linkage objects must have a field type for %s", linkName)
-				}
 
-				referenceIDs = append(referenceIDs, ReferenceID{ID: linkageID, Name: linkName, Type: linkageType})
+				hasManyIDs = append(hasManyIDs, linkageID)
 			}
+
+			target.SetToManyReferenceIDs(linkName, hasManyIDs)
 		}
 	}
-
-	if val.CanAddr() {
-		val = val.Addr()
-	}
-
-	target, ok := val.Interface().(UnmarshalLinkedRelations)
-	if !ok {
-		return errors.New("target struct must implement interface UnmarshalLinkedRelations")
-	}
-	target.SetReferencedIDs(referenceIDs)
 
 	return nil
 }

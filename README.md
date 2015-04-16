@@ -125,11 +125,18 @@ We choose to do this because it gives you better flexibility and eliminates the 
 now choose how you internally manage relations.** So, there are no limits regarding the use of ORMs.
 
 ### Unmarshalling with references to other structs
-Incoming jsons can also contain reference IDs. In order to unmarshal them correctly, you have to implement the following interface
+Incoming jsons can also contain reference IDs. In order to unmarshal them correctly, you have to implement the following interfaces. If you only have to-one
+relationships, the `UnmarshalToOneRelations` interface is enough. 
 
 ```go
-type UnmarshalLinkedRelations interface {
-	SetReferencedIDs([]ReferenceID) error
+// UnmarshalToOneRelations must be implemented to unmarshal to-one relations
+type UnmarshalToOneRelations interface {
+	SetToOneReferenceID(name, ID string) error
+}
+
+// UnmarshalToManyRelations must be implemented to unmarshal to-many relations
+type UnmarshalToManyRelations interface {
+	SetToManyReferenceIDs(name string, IDs []string) error
 }
 ```
 

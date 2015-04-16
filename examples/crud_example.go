@@ -87,15 +87,13 @@ func (u User) GetReferencedStructs() []jsonapi.MarshalIdentifier {
 	return result
 }
 
-// SetReferencedIDs to satisfy the jsonapi.UnmarshalLinkedRelations interface
-func (u *User) SetReferencedIDs(references []jsonapi.ReferenceID) error {
-	for _, reference := range references {
-		if reference.Name == "sweets" {
-			u.ChocolatesIDs = append(u.ChocolatesIDs, reference.ID)
-		}
+// SetToManyReferenceIDs sets the sweets reference IDs and satisfies the jsonapi.UnmarshalToManyRelations interface
+func (u *User) SetToManyReferenceIDs(name string, IDs []string) error {
+	if name == "sweets" {
+		u.ChocolatesIDs = IDs
 	}
 
-	return nil
+	return errors.New("There is no to-many relationship with the name " + name)
 }
 
 // Chocolate is the chocolate that a user consumes in order to get fat and happy
