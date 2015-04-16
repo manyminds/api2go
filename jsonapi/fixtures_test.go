@@ -66,6 +66,7 @@ func (u *User) SetID(stringID string) error {
 
 type SimplePost struct {
 	ID, Title, Text string
+	Size            int
 	Created         time.Time
 }
 
