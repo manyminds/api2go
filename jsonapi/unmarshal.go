@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 	"time"
 )
 
@@ -142,6 +143,7 @@ func UnmarshalInto(input map[string]interface{}, targetStructType reflect.Type, 
 				if !ok {
 					return errors.New("type must be string")
 				}
+
 				expectedType := Pluralize(Jsonify(targetStructType.Name()))
 				if structType != expectedType {
 					return fmt.Errorf("type %s does not match expected type %s of target struct", structType, expectedType)
@@ -152,8 +154,29 @@ func UnmarshalInto(input map[string]interface{}, targetStructType reflect.Type, 
 				fieldName := Dejsonify(k)
 				field := val.FieldByName(fieldName)
 				if !field.IsValid() {
-					return errors.New("expected struct " + targetStructType.Name() + " to have field " + fieldName)
+					//check if there is any field tag with the given name available
+					for x := 0; x < val.NumField(); x++ {
+						tfield := val.Type().Field(x)
+						if tag := tfield.Tag.Get("jsonapi"); tag != "" {
+							//check key value pairs. Currently only name is supported.
+							if strings.Contains(tag, "name") && strings.Contains(tag, "=") {
+								entry := strings.Split(tag, "=")
+								if len(entry) == 2 && entry[0] == "name" {
+									if entry[1] == strings.ToLower(fieldName) {
+										field = val.Field(x)
+									}
+								} else {
+									return errors.New("tag must be formatted correctly for field " + fieldName)
+								}
+							}
+						}
+					}
+
+					if !field.IsValid() {
+						return errors.New("expected struct " + targetStructType.Name() + " to have field " + fieldName)
+					}
 				}
+
 				value := reflect.ValueOf(v)
 
 				if value.IsValid() {

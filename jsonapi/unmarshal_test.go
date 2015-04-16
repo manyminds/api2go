@@ -16,28 +16,28 @@ var _ = Describe("Unmarshal", func() {
 		secondPost := SimplePost{ID: "2", Title: "Second Post", Text: "Foobar!", Created: t}
 		singlePostMap := map[string]interface{}{
 			"data": map[string]interface{}{
-				"id":      "1",
-				"type":    "simplePosts",
-				"title":   firstPost.Title,
-				"text":    firstPost.Text,
-				"created": "2014-11-10T16:30:48.823Z",
+				"id":          "1",
+				"type":        "simplePosts",
+				"title":       firstPost.Title,
+				"text":        firstPost.Text,
+				"create-date": "2014-11-10T16:30:48.823Z",
 			},
 		}
 		multiplePostMap := map[string]interface{}{
 			"data": []interface{}{
 				map[string]interface{}{
-					"id":      "1",
-					"type":    "simplePosts",
-					"title":   firstPost.Title,
-					"text":    firstPost.Text,
-					"created": "2014-11-10T16:30:48.823Z",
+					"id":          "1",
+					"type":        "simplePosts",
+					"title":       firstPost.Title,
+					"text":        firstPost.Text,
+					"create-date": "2014-11-10T16:30:48.823Z",
 				},
 				map[string]interface{}{
-					"id":      "2",
-					"type":    "simplePosts",
-					"title":   secondPost.Title,
-					"text":    secondPost.Text,
-					"created": "2014-11-10T16:30:48.823Z",
+					"id":          "2",
+					"type":        "simplePosts",
+					"title":       secondPost.Title,
+					"text":        secondPost.Text,
+					"create-date": "2014-11-10T16:30:48.823Z",
 				},
 			},
 		}
