@@ -2,7 +2,7 @@
 // to play with this example server you can for example run some of the following curl requests
 
 // Create a new user:
-// `curl -X POST http://localhost:31415/v0/users -d '{"data" : [{"type" : "users" , "username" : "marvin"}]}'`
+// `curl -X POST http://localhost:31415/v0/users -d '{"data" : [{"type" : "users" , "user-name" : "marvin"}]}'`
 // List users:
 // `curl -X GET http://localhost:31415/v0/users`
 // List paginated users:
@@ -10,13 +10,13 @@
 // OR
 // `curl -X GET http://localhost:31415/v0/users?page[number]=1&page[size]=2`
 // Update:
-// `curl -vX PATCH http://localhost:31415/v0/users/1 -d '{ "data" : {"type" : "users", "username" : "better marvin", "id" : "1"}}'`
+// `curl -vX PATCH http://localhost:31415/v0/users/1 -d '{ "data" : {"type" : "users", "user-name" : "better marvin", "id" : "1"}}'`
 // Delete:
 // `curl -vX DELETE http://localhost:31415/v0/users/2`
 // Create a chocolate with the name sweet
 // `curl -X POST http://localhost:31415/v0/chocolates -d '{"data" : [{"type" : "chocolates" , "name" : "Ritter Sport", "taste": "Very Good"}]}'`
 // Link the sweet
-// `curl -X POST http://localhost:31415/v0/users -d '{"data" : [{"type" : "users" , "username" : "marvin", "links": {"sweets": {"linkage": {"type": "chocolates", "id": "1"}}}}]}'`
+// `curl -X POST http://localhost:31415/v0/users -d '{"data" : [{"type" : "users" , "user-name" : "marvin", "links": {"sweets": {"linkage": {"type": "chocolates", "id": "1"}}}}]}'`
 package main
 
 import (
@@ -33,8 +33,9 @@ import "net/http"
 
 //User is a generic database user
 type User struct {
-	ID            string
-	Username      string
+	ID string
+	//rename the username field to user-name.
+	Username      string      `jsonapi:"name=user-name"`
 	PasswordHash  string      `json:"-"`
 	Chocolates    []Chocolate `json:"-"`
 	ChocolatesIDs []string    `json:"-"`

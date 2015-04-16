@@ -54,7 +54,7 @@ type Post struct {
 
 type Comment struct {
   ID   int
-  Text string
+  Text string `jsonapi:"name=content"`
 }
 ```
 
@@ -64,6 +64,9 @@ a UUID or a BSON Object for MongoDB etc...
 
 If the struct already has a field named `ID`, or `Id`, it will be ignored automatically. If your ID field has a different name, please use the
 json ignore tag. Api2go will use the `GetID` method that you implemented for your struct to fetch the ID of the struct.
+
+In order to use different internal names for elements, you can specify a jsonapi tag. The api will marshal results now with the name in the tag.
+Create/Update/Delete works accordingly, but will fallback to the internal value as well if possible.
 
 ### MarshalIdentifier
 ```go
