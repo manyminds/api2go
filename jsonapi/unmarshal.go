@@ -171,10 +171,17 @@ func UnmarshalInto(input map[string]interface{}, targetStructType reflect.Type, 
 						if field.CanAddr() {
 							switch field.Addr().Interface().(type) {
 							default:
-								setFieldValue(&field, plainValue)
+								err := setFieldValue(&field, plainValue)
+								if err != nil {
+									return fmt.Errorf("Could not set field '%s'. %s", fieldName, err.Error())
+								}
+
 							}
 						} else {
-							setFieldValue(&field, plainValue)
+							err := setFieldValue(&field, plainValue)
+							if err != nil {
+								return fmt.Errorf("Could not set field '%s'. %s", fieldName, err.Error())
+							}
 						}
 					}
 				}
@@ -192,7 +199,14 @@ func UnmarshalInto(input map[string]interface{}, targetStructType reflect.Type, 
 // setFieldValue in a json object, there is only the number type, which defaults to float64. This method convertes float64 to the value
 // of the underlying struct field, for example uint64, or int32 etc...
 // If the field type is not one of the integers, it just sets the value
-func setFieldValue(field *reflect.Value, value reflect.Value) {
+func setFieldValue(field *reflect.Value, value reflect.Value) (err error) {
+	// catch all invalid types and return an error
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("Value '%v' had wrong type", value.Interface())
+		}
+	}()
+
 	switch field.Type().Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		field.SetInt(int64(value.Float()))
@@ -201,6 +215,8 @@ func setFieldValue(field *reflect.Value, value reflect.Value) {
 	default:
 		field.Set(value)
 	}
+
+	return nil
 }
 
 func unmarshalLinks(val reflect.Value, linksMap map[string]interface{}) error {

@@ -26,6 +26,7 @@ var _ = Describe("Marshalling", func() {
 				"id":      "first",
 				"title":   firstPost.Title,
 				"text":    firstPost.Text,
+				"size":    0,
 				"created": created,
 			}
 
@@ -35,6 +36,7 @@ var _ = Describe("Marshalling", func() {
 				"id":      "second",
 				"title":   secondPost.Title,
 				"text":    secondPost.Text,
+				"size":    0,
 				"created": created,
 			}
 

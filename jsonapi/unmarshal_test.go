@@ -85,7 +85,7 @@ var _ = Describe("Unmarshal", func() {
 		It("errors on non-array root", func() {
 			var posts []SimplePost
 			err := Unmarshal(map[string]interface{}{
-				"simplePosts": 42,
+				"data": 42,
 			}, &posts)
 			Expect(err).ToNot(BeNil())
 		})
@@ -93,7 +93,7 @@ var _ = Describe("Unmarshal", func() {
 		It("errors on non-documents", func() {
 			var posts []SimplePost
 			err := Unmarshal(map[string]interface{}{
-				"simplePosts": []interface{}{42},
+				"data": []interface{}{42},
 			}, &posts)
 			Expect(err).ToNot(BeNil())
 		})
@@ -101,13 +101,27 @@ var _ = Describe("Unmarshal", func() {
 		It("errors with wrong keys", func() {
 			var posts []SimplePost
 			err := Unmarshal(map[string]interface{}{
-				"simplePosts": []interface{}{
+				"data": []interface{}{
 					map[string]interface{}{
 						"foobar": 42,
 					},
 				},
 			}, &posts)
 			Expect(err).ToNot(BeNil())
+		})
+
+		It("errors with wrong type, expected int, got a string", func() {
+			var posts []SimplePost
+			err := Unmarshal(map[string]interface{}{
+				"data": []interface{}{
+					map[string]interface{}{
+						"text": "Gopher",
+						"size": "blubb",
+					},
+				},
+			}, &posts)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(Equal("Could not set field 'Size'. Value 'blubb' had wrong type"))
 		})
 
 		It("errors with invalid time format", func() {
