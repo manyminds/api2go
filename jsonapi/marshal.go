@@ -384,6 +384,11 @@ func getStructFields(data MarshalIdentifier) map[string]interface{} {
 			continue
 		}
 
+		name := GetTagValueByName(valType.Field(i), "name")
+		if name != "" {
+			keyName = name
+		}
+
 		result[keyName] = field.Interface()
 	}
 
