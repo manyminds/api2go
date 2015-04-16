@@ -22,22 +22,22 @@ var _ = Describe("Marshalling", func() {
 			created, _ = time.Parse(time.RFC3339, "2014-11-10T16:30:48.823Z")
 			firstPost = SimplePost{ID: "first", Title: "First Post", Text: "Lipsum", Created: created}
 			firstPostMap = map[string]interface{}{
-				"type":    "simplePosts",
-				"id":      "first",
-				"title":   firstPost.Title,
-				"text":    firstPost.Text,
-				"size":    0,
-				"created": created,
+				"type":        "simplePosts",
+				"id":          "first",
+				"title":       firstPost.Title,
+				"text":        firstPost.Text,
+				"size":        0,
+				"create-date": created,
 			}
 
 			secondPost = SimplePost{ID: "second", Title: "Second Post", Text: "Getting more advanced!", Created: created}
 			secondPostMap = map[string]interface{}{
-				"type":    "simplePosts",
-				"id":      "second",
-				"title":   secondPost.Title,
-				"text":    secondPost.Text,
-				"size":    0,
-				"created": created,
+				"type":        "simplePosts",
+				"id":          "second",
+				"title":       secondPost.Title,
+				"text":        secondPost.Text,
+				"size":        0,
+				"create-date": created,
 			}
 
 			firstUserMap = map[string]interface{}{

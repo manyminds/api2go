@@ -157,18 +157,9 @@ func UnmarshalInto(input map[string]interface{}, targetStructType reflect.Type, 
 					//check if there is any field tag with the given name available
 					for x := 0; x < val.NumField(); x++ {
 						tfield := val.Type().Field(x)
-						if tag := tfield.Tag.Get("jsonapi"); tag != "" {
-							//check key value pairs. Currently only name is supported.
-							if strings.Contains(tag, "name") && strings.Contains(tag, "=") {
-								entry := strings.Split(tag, "=")
-								if len(entry) == 2 && entry[0] == "name" {
-									if entry[1] == strings.ToLower(fieldName) {
-										field = val.Field(x)
-									}
-								} else {
-									return errors.New("tag must be formatted correctly for field " + fieldName)
-								}
-							}
+						name := GetTagValueByName(tfield, "name")
+						if name == strings.ToLower(fieldName) {
+							field = val.Field(x)
 						}
 					}
 
