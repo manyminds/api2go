@@ -319,6 +319,14 @@ func unmarshalLinks(val reflect.Value, linksMap map[string]interface{}) error {
 			}
 
 			target.SetToOneReferenceID(linkName, hasOneID)
+		} else if links["linkage"] == nil {
+			// this means that a to-one relationship must be deleted
+			target, ok := val.Interface().(UnmarshalToOneRelations)
+			if !ok {
+				return errors.New("target struct must implement interface UnmarshalToOneRelations")
+			}
+
+			target.SetToOneReferenceID(linkName, "")
 		} else {
 			hasMany, ok := links["linkage"].([]interface{})
 			if !ok {

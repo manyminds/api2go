@@ -667,12 +667,12 @@ func unmarshalJSONRequest(r *http.Request) (map[string]interface{}, error) {
 func handleError(err error, w http.ResponseWriter) {
 	log.Println(err)
 	if e, ok := err.(HTTPError); ok {
-		http.Error(w, marshalError(e), e.status)
+		writeResult(w, []byte(marshalError(e)), e.status)
 		return
 
 	}
 
-	http.Error(w, marshalError(err), http.StatusInternalServerError)
+	writeResult(w, []byte(marshalError(err)), http.StatusInternalServerError)
 }
 
 // Handler returns the http.Handler instance for the API.

@@ -60,9 +60,25 @@ func (p Post) GetReferencedIDs() []jsonapi.ReferenceID {
 
 func (p *Post) SetToOneReferenceID(name, ID string) error {
 	if name == "author" {
-		p.Author = &User{ID: ID}
+		if ID == "" {
+			p.Author = nil
+		} else {
+			p.Author = &User{ID: ID}
+		}
 
 		return nil
+	}
+
+	return errors.New("There is no to-one relationship with the name " + name)
+}
+
+func (p *Post) SetToManyReferenceIDs(name string, IDs []string) error {
+	if name == "comments" {
+		comments := []Comment{}
+		for _, ID := range IDs {
+			comments = append(comments, Comment{ID: ID})
+		}
+		p.Comments = comments
 	}
 
 	return errors.New("There is no to-one relationship with the name " + name)
@@ -182,6 +198,7 @@ func (s *fixtureSource) Update(obj interface{}, req Request) error {
 	if oldP, ok := s.posts[p.ID]; ok {
 		oldP.Title = p.Title
 		oldP.Author = p.Author
+		oldP.Comments = p.Comments
 		return nil
 	}
 	return NewHTTPError(nil, "post not found", http.StatusNotFound)
@@ -550,22 +567,28 @@ var _ = Describe("RestHandler", func() {
 			Expect(string(rec.Body.Bytes())).To(MatchJSON(`{"errors":[{"status":"403","title":"missing mandatory id key."}]}`))
 		})
 
-		It("UPDATEs", func() {
-			target := source.posts["1"]
-			target.Value = null.FloatFrom(2)
-			reqBody := strings.NewReader(`{"data": {"id": "1", "title": "New Title", "type": "posts"}}`)
-			req, err := http.NewRequest("PATCH", "/v1/posts/1", reqBody)
-			Expect(err).To(BeNil())
-			api.Handler().ServeHTTP(rec, req)
-			Expect(rec.Code).To(Equal(http.StatusNoContent))
-			Expect(source.posts["1"].Title).To(Equal("New Title"))
-			Expect(target.Title).To(Equal("New Title"))
-			Expect(target.Value).To(Equal(null.FloatFrom(2)))
-		})
+		Context("Updating", func() {
+			doRequest := func(payload, url, method string) {
+				reqBody := strings.NewReader(payload)
+				req, err := http.NewRequest(method, url, reqBody)
+				Expect(err).To(BeNil())
+				api.Handler().ServeHTTP(rec, req)
+				Expect(rec.Body.String()).To(Equal(""))
+				Expect(rec.Code).To(Equal(http.StatusNoContent))
+			}
 
-		It("Patch updates to-one relationships", func() {
-			target := source.posts["1"]
-			reqBody := strings.NewReader(`{
+			It("UPDATEs", func() {
+				target := source.posts["1"]
+				target.Value = null.FloatFrom(2)
+				doRequest(`{"data": {"id": "1", "title": "New Title", "type": "posts"}}`, "/v1/posts/1", "PATCH")
+				Expect(source.posts["1"].Title).To(Equal("New Title"))
+				Expect(target.Title).To(Equal("New Title"))
+				Expect(target.Value).To(Equal(null.FloatFrom(2)))
+			})
+
+			It("Patch updates to-one relationships", func() {
+				target := source.posts["1"]
+				doRequest(`{
 				"data": {
 					"type": "posts",
 					"id": "1",
@@ -579,13 +602,65 @@ var _ = Describe("RestHandler", func() {
 					}
 				}
 			}
-			`)
-			req, err := http.NewRequest("PATCH", "/v1/posts/1", reqBody)
-			Expect(err).To(BeNil())
-			api.Handler().ServeHTTP(rec, req)
-			Expect(rec.Body.String()).To(Equal(""))
-			Expect(rec.Code).To(Equal(http.StatusNoContent))
-			Expect(target.Author.GetID()).To(Equal("2"))
+			`, "/v1/posts/1", "PATCH")
+				Expect(target.Author.GetID()).To(Equal("2"))
+			})
+
+			It("Patch can delete to-one relationships", func() {
+				target := source.posts["1"]
+				doRequest(`{
+				"data": {
+					"type": "posts",
+					"id": "1",
+					"links": {
+						"author": {
+							"linkage": null
+						}
+					}
+				}
+			}
+			`, "/v1/posts/1", "PATCH")
+				Expect(target.Author).To(BeNil())
+			})
+
+			It("Patch updates to-many relationships", func() {
+				target := source.posts["1"]
+				doRequest(`{
+				"data": {
+					"type": "posts",
+					"id": "1",
+					"links": {
+						"comments": {
+							"linkage": [
+								{
+									"type": "comments",
+									"id": "2"
+								}
+							]
+						}
+					}
+				}
+			}
+			`, "/v1/posts/1", "PATCH")
+				Expect(target.Comments[0].GetID()).To(Equal("2"))
+			})
+
+			It("Patch can delete to-many relationships", func() {
+				target := source.posts["1"]
+				doRequest(`{
+				"data": {
+					"type": "posts",
+					"id": "1",
+					"links": {
+						"comments": {
+							"linkage": []
+						}
+					}
+				}
+			}
+			`, "/v1/posts/1", "PATCH")
+				Expect(target.Comments).To(HaveLen(0))
+			})
 		})
 	})
 
