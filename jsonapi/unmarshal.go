@@ -24,6 +24,56 @@ type UnmarshalToManyRelations interface {
 	SetToManyReferenceIDs(name string, IDs []string) error
 }
 
+// The EditToManyRelations interface can be optionally implemented to add and delete to-many
+// relationships on a already unmarshalled struct. These methods are used by our API for the to-many
+// relationship update routes.
+/*
+There are 3 HTTP Methods to edit to-many relations:
+
+	PATCH /v1/posts/1/comments
+	Content-Type: application/vnd.api+json
+	Accept: application/vnd.api+json
+
+	{
+	  "data": [
+		{ "type": "comments", "id": "2" },
+		{ "type": "comments", "id": "3" }
+	  ]
+	}
+
+this replaces all of the comments that belong to post with ID 1 and the SetToManyReferenceIDs method
+will be called
+
+	POST /v1/posts/1/comments
+	Content-Type: application/vnd.api+json
+	Accept: application/vnd.api+json
+
+	{
+	  "data": [
+		{ "type": "comments", "id": "123" }
+	  ]
+	}
+
+adds a new comment to the post with ID 1. The AddToManyIDs methid will be called.
+
+	DELETE /v1/posts/1/comments
+	Content-Type: application/vnd.api+json
+	Accept: application/vnd.api+json
+
+	{
+	  "data": [
+		{ "type": "comments", "id": "12" },
+		{ "type": "comments", "id": "13" }
+	  ]
+	}
+
+deletes comments that belong to post with ID 1. The DeleteToManyIDs method will be called.
+*/
+type EditToManyRelations interface {
+	AddToManyIDs(name, IDs []string) error
+	DeleteToManyIDs(name, IDs []string) error
+}
+
 // Unmarshal reads a JSONAPI map to a model struct
 // target must at least implement the `UnmarshalIdentifier` interface.
 func Unmarshal(input map[string]interface{}, target interface{}) error {

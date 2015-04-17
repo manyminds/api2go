@@ -1,22 +1,30 @@
-// examples.go show how to implement a basic crud for one data structure with the api2go server functionality
-// to play with this example server you can for example run some of the following curl requests
+/*
+examples.go shows how to implement a basic CRUD for two data structures with the api2go server functionality.
+To play with this example server you can run some of the following curl requests
 
-// Create a new user:
-// `curl -X POST http://localhost:31415/v0/users -d '{"data" : [{"type" : "users" , "user-name" : "marvin"}]}'`
-// List users:
-// `curl -X GET http://localhost:31415/v0/users`
-// List paginated users:
-// `curl -X GET http://localhost:31415/v0/users?page[offset]=0&page[limit]=2`
-// OR
-// `curl -X GET http://localhost:31415/v0/users?page[number]=1&page[size]=2`
-// Update:
-// `curl -vX PATCH http://localhost:31415/v0/users/1 -d '{ "data" : {"type" : "users", "user-name" : "better marvin", "id" : "1"}}'`
-// Delete:
-// `curl -vX DELETE http://localhost:31415/v0/users/2`
-// Create a chocolate with the name sweet
-// `curl -X POST http://localhost:31415/v0/chocolates -d '{"data" : [{"type" : "chocolates" , "name" : "Ritter Sport", "taste": "Very Good"}]}'`
-// Link the sweet
-// `curl -X POST http://localhost:31415/v0/users -d '{"data" : [{"type" : "users" , "user-name" : "marvin", "links": {"sweets": {"linkage": {"type": "chocolates", "id": "1"}}}}]}'`
+Create a new user:
+	curl -X POST http://localhost:31415/v0/users -d '{"data" : [{"type" : "users" , "user-name" : "marvin"}]}'
+
+List users:
+	curl -X GET http://localhost:31415/v0/users
+
+List paginated users:
+	curl -X GET http://localhost:31415/v0/users?page[offset]=0&page[limit]=2
+OR
+	curl -X GET http://localhost:31415/v0/users?page[number]=1&page[size]=2
+
+Update:
+	curl -vX PATCH http://localhost:31415/v0/users/1 -d '{ "data" : {"type" : "users", "user-name" : "better marvin", "id" : "1"}}'
+
+Delete:
+	curl -vX DELETE http://localhost:31415/v0/users/2
+
+Create a chocolate with the name sweet
+	curl -X POST http://localhost:31415/v0/chocolates -d '{"data" : [{"type" : "chocolates" , "name" : "Ritter Sport", "taste": "Very Good"}]}'
+
+Link the sweet
+	curl -X POST http://localhost:31415/v0/users -d '{"data" : [{"type" : "users" , "user-name" : "marvin", "links": {"sweets": {"linkage": {"type": "chocolates", "id": "1"}}}}]}'
+*/
 package main
 
 import (
