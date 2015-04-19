@@ -244,11 +244,15 @@ type resource struct {
 	name         string
 }
 
-func (api *API) addResource(prototype interface{}, source CRUD) *resource {
+func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD) *resource {
 	resourceType := reflect.TypeOf(prototype)
 	if resourceType.Kind() != reflect.Struct {
 		panic("pass an empty resource struct to AddResource!")
 	}
+	// slice reflection trick to make oldObj addressable, because the Unmarshal Methods need a pointer...
+	updatingObjs := reflect.MakeSlice(reflect.SliceOf(reflect.TypeOf(prototype)), 1, 1)
+	updatingObjs.Index(0).Set(reflect.ValueOf(prototype))
+	ptrPrototype := updatingObjs.Index(0).Addr().Interface()
 
 	name := jsonapi.Jsonify(jsonapi.Pluralize(resourceType.Name()))
 	res := resource{
@@ -301,6 +305,36 @@ func (api *API) addResource(prototype interface{}, source CRUD) *resource {
 					}
 				}
 			}(relation))
+
+			api.router.PATCH(api.prefix+name+"/:id/links/"+relation.Name, func(relation jsonapi.Reference) httprouter.Handle {
+				return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+					err := res.handleReplaceRelation(w, r, ps, relation)
+					if err != nil {
+						handleError(err, w)
+					}
+				}
+			}(relation))
+
+			if _, ok := ptrPrototype.(jsonapi.EditToManyRelations); ok && relation.Name == jsonapi.Pluralize(relation.Name) {
+				// generate additional routes to manipulate to-many relationships
+				api.router.POST(api.prefix+name+"/:id/links/:name", func(relation jsonapi.Reference) httprouter.Handle {
+					return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+						err := res.handleAddToManyRelation(w, r, ps, relation)
+						if err != nil {
+							handleError(err, w)
+						}
+					}
+				}(relation))
+
+				api.router.DELETE(api.prefix+name+"/:id/links/:name", func(relation jsonapi.Reference) httprouter.Handle {
+					return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+						err := res.handleDeleteToManyRelation(w, r, ps, relation)
+						if err != nil {
+							handleError(err, w)
+						}
+					}
+				}(relation))
+			}
 		}
 	}
 
@@ -333,7 +367,7 @@ func (api *API) addResource(prototype interface{}, source CRUD) *resource {
 // AddResource registers a data source for the given resource
 // At least the CRUD interface must be implemented, all the other interfaces are optional.
 // `resource` should by an empty struct instance such as `Post{}`. The same type will be used for constructing new elements.
-func (api *API) AddResource(prototype interface{}, source CRUD) {
+func (api *API) AddResource(prototype jsonapi.MarshalIdentifier, source CRUD) {
 	api.addResource(prototype, source)
 }
 
@@ -607,6 +641,153 @@ func (res *resource) handleUpdate(w http.ResponseWriter, r *http.Request, ps htt
 	}
 	w.WriteHeader(http.StatusNoContent)
 	return nil
+}
+
+func (res *resource) handleReplaceRelation(w http.ResponseWriter, r *http.Request, ps httprouter.Params, relation jsonapi.Reference) error {
+	oldObj, err := res.source.FindOne(ps.ByName("id"), buildRequest(r))
+	if err != nil {
+		return err
+	}
+
+	inc, err := unmarshalJSONRequest(r)
+	if err != nil {
+		return err
+	}
+
+	data, ok := inc["data"]
+	if !ok {
+		return errors.New("Invalid object. Need a \"data\" object")
+	}
+
+	// slice reflection trick to make oldObj addressable, because the Unmarshal Methods need a pointer...
+	updatingObjs := reflect.MakeSlice(reflect.SliceOf(res.resourceType), 1, 1)
+	updatingObjs.Index(0).Set(reflect.ValueOf(oldObj))
+	ptrOldObj := updatingObjs.Index(0).Addr().Interface()
+
+	err = jsonapi.UnmarshalLinkage(ptrOldObj, relation.Name, data)
+	if err != nil {
+		return err
+	}
+
+	if err := res.source.Update(updatingObjs.Index(0).Interface(), buildRequest(r)); err != nil {
+		return err
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+	return nil
+}
+
+func (res *resource) handleAddToManyRelation(w http.ResponseWriter, r *http.Request, ps httprouter.Params, relation jsonapi.Reference) error {
+	oldObj, err := res.source.FindOne(ps.ByName("id"), buildRequest(r))
+	if err != nil {
+		return err
+	}
+
+	inc, err := unmarshalJSONRequest(r)
+	if err != nil {
+		return err
+	}
+
+	data, ok := inc["data"]
+	if !ok {
+		return errors.New("Invalid object. Need a \"data\" object")
+	}
+
+	// slice reflection trick to make oldObj addressable, because the Unmarshal Methods need a pointer...
+	updatingObjs := reflect.MakeSlice(reflect.SliceOf(res.resourceType), 1, 1)
+	updatingObjs.Index(0).Set(reflect.ValueOf(oldObj))
+	ptrOldObj := updatingObjs.Index(0).Addr().Interface()
+
+	newRels, ok := data.([]interface{})
+	if !ok {
+		return fmt.Errorf("Data must be an array with \"id\" and \"type\" field to add new to-many relationships")
+	}
+
+	newIDs := []string{}
+
+	for _, newRel := range newRels {
+		casted, ok := newRel.(map[string]interface{})
+		if !ok {
+			return errors.New("entry in data object invalid")
+		}
+		newID, ok := casted["id"].(string)
+		if !ok {
+			return errors.New("no id field found inside data object")
+		}
+
+		newIDs = append(newIDs, newID)
+	}
+
+	targetObj, ok := ptrOldObj.(jsonapi.EditToManyRelations)
+	if !ok {
+		return errors.New("target struct must implement jsonapi.EditToManyRelations")
+	}
+	targetObj.AddToManyIDs(relation.Name, newIDs)
+
+	if err := res.source.Update(updatingObjs.Index(0).Interface(), buildRequest(r)); err != nil {
+		return err
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+
+	return nil
+}
+
+func (res *resource) handleDeleteToManyRelation(w http.ResponseWriter, r *http.Request, ps httprouter.Params, relation jsonapi.Reference) error {
+	oldObj, err := res.source.FindOne(ps.ByName("id"), buildRequest(r))
+	if err != nil {
+		return err
+	}
+
+	inc, err := unmarshalJSONRequest(r)
+	if err != nil {
+		return err
+	}
+
+	data, ok := inc["data"]
+	if !ok {
+		return errors.New("Invalid object. Need a \"data\" object")
+	}
+
+	// slice reflection trick to make oldObj addressable, because the Unmarshal Methods need a pointer...
+	updatingObjs := reflect.MakeSlice(reflect.SliceOf(res.resourceType), 1, 1)
+	updatingObjs.Index(0).Set(reflect.ValueOf(oldObj))
+	ptrOldObj := updatingObjs.Index(0).Addr().Interface()
+
+	newRels, ok := data.([]interface{})
+	if !ok {
+		return fmt.Errorf("Data must be an array with \"id\" and \"type\" field to add new to-many relationships")
+	}
+
+	obsoleteIDs := []string{}
+
+	for _, newRel := range newRels {
+		casted, ok := newRel.(map[string]interface{})
+		if !ok {
+			return errors.New("entry in data object invalid")
+		}
+		obsoleteID, ok := casted["id"].(string)
+		if !ok {
+			return errors.New("no id field found inside data object")
+		}
+
+		obsoleteIDs = append(obsoleteIDs, obsoleteID)
+	}
+
+	targetObj, ok := ptrOldObj.(jsonapi.EditToManyRelations)
+	if !ok {
+		return errors.New("target struct must implement jsonapi.EditToManyRelations")
+	}
+	targetObj.DeleteToManyIDs(relation.Name, obsoleteIDs)
+
+	if err := res.source.Update(updatingObjs.Index(0).Interface(), buildRequest(r)); err != nil {
+		return err
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+
+	return nil
+
 }
 
 func (res *resource) handleDelete(w http.ResponseWriter, r *http.Request, ps httprouter.Params) error {

@@ -81,7 +81,32 @@ func (p *Post) SetToManyReferenceIDs(name string, IDs []string) error {
 		p.Comments = comments
 	}
 
-	return errors.New("There is no to-one relationship with the name " + name)
+	return errors.New("There is no to-many relationship with the name " + name)
+}
+
+func (p *Post) AddToManyIDs(name string, IDs []string) error {
+	if name == "comments" {
+		for _, ID := range IDs {
+			p.Comments = append(p.Comments, Comment{ID: ID})
+		}
+	}
+
+	return errors.New("There is no to-manyrelationship with the name " + name)
+}
+
+func (p *Post) DeleteToManyIDs(name string, IDs []string) error {
+	if name == "comments" {
+		for _, ID := range IDs {
+			// find and delete the comment with ID
+			for pos, comment := range p.Comments {
+				if comment.GetID() == ID {
+					p.Comments = append(p.Comments[:pos], p.Comments[pos+1:]...)
+				}
+			}
+		}
+	}
+
+	return errors.New("There is no to-manyrelationship with the name " + name)
 }
 
 func (p Post) GetReferencedStructs() []jsonapi.MarshalIdentifier {
@@ -659,6 +684,51 @@ var _ = Describe("RestHandler", func() {
 				}
 			}
 			`, "/v1/posts/1", "PATCH")
+				Expect(target.Comments).To(HaveLen(0))
+			})
+
+			It("Relationship PATCH route updates to-one", func() {
+				doRequest(`{
+				"data": {
+					"type": "users",
+					"id": "2"
+				}
+			}`, "/v1/posts/1/links/author", "PATCH")
+				target := source.posts["1"]
+				Expect(target.Author.GetID()).To(Equal("2"))
+			})
+
+			It("Relationship PATCH route updates to-many", func() {
+				doRequest(`{
+				"data": [{
+					"type": "comments",
+					"id": "2"
+				}]
+			}`, "/v1/posts/1/links/comments", "PATCH")
+				target := source.posts["1"]
+				Expect(target.Comments).To(HaveLen(1))
+				Expect(target.Comments[0].GetID()).To(Equal("2"))
+			})
+
+			It("Relationship POST route adds to-many elements", func() {
+				doRequest(`{
+				"data": [{
+					"type": "comments",
+					"id": "2"
+				}]
+			}`, "/v1/posts/1/links/comments", "POST")
+				target := source.posts["1"]
+				Expect(target.Comments).To(HaveLen(2))
+			})
+
+			It("Relationship DELETE route deletes to-many elements", func() {
+				doRequest(`{
+				"data": [{
+					"type": "comments",
+					"id": "1"
+				}]
+			}`, "/v1/posts/1/links/comments", "DELETE")
+				target := source.posts["1"]
 				Expect(target.Comments).To(HaveLen(0))
 			})
 		})
