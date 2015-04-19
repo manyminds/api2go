@@ -25,6 +25,7 @@ import (
 	"sort"
 	"strconv"
 
+	"github.com/julienschmidt/httprouter"
 	"github.com/univedo/api2go"
 	"github.com/univedo/api2go/jsonapi"
 )
@@ -387,5 +388,10 @@ func main() {
 	api.AddResource(Chocolate{}, &chocolateResource{storage: &chocStorage})
 
 	fmt.Println("Listening on :31415")
-	http.ListenAndServe(":31415", api.Handler())
+	handler := api.Handler().(*httprouter.Router)
+	// It is also possible to get the instance of julienschmidt/httprouter and add more custom routes!
+	handler.GET("/hello-world", func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+		fmt.Fprint(w, "Hello World!\n")
+	})
+	http.ListenAndServe(":31415", handler)
 }
