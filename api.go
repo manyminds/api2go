@@ -859,3 +859,8 @@ func handleError(err error, w http.ResponseWriter) {
 func (api *API) Handler() http.Handler {
 	return api.router
 }
+
+// Router can be used instead of Handler() to get the instance of julienschmidt httprouter.
+func (api *API) Router() *httprouter.Router {
+	return api.router
+}
