@@ -278,7 +278,25 @@ PATCH   /v1/posts/<id>
 DELETE  /v1/posts/<id>
 GET     /v1/posts/<id>/comments            // fetch referenced comments of a post
 GET     /v1/posts/<id>/links/comments      // fetch IDs of the referenced comments only
+PATCH   /v1/posts/<id>/links/comments      // replace all related comments
+
+// These 2 routes are only created for to-many relations that implement EditToManyRelations interface
+POST    /v1/posts/<id>/links/comments      // Add a new comment reference, only for to-many relations
+DELETE  /v1/posts/<id>/links/comments      // Delete a comment reference, only for to-many relations
 ```
+
+For the last two generated routes, it is necessary to implement the `jsonapi.EditToManyRelations` interface.
+
+```go
+type EditToManyRelations interface {
+	AddToManyIDs(name string, IDs []string) error
+	DeleteToManyIDs(name string, IDs []string) error
+}
+```
+
+All PATCH, POST and DELETE routes do a `FindOne` and update the values/relations in the previously found struct. This
+struct will then be passed on to the `Update` method of a resource struct. So you get all these routes "for free" and just
+have to implement the CRUD Update method.
 
 ### Query Params
 To support all the features mentioned in the `Fetching Resources` section of Jsonapi:
