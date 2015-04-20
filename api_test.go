@@ -58,8 +58,55 @@ func (p Post) GetReferencedIDs() []jsonapi.ReferenceID {
 	return result
 }
 
-func (p *Post) SetReferencedIDs(IDs []jsonapi.ReferenceID) error {
-	return nil
+func (p *Post) SetToOneReferenceID(name, ID string) error {
+	if name == "author" {
+		if ID == "" {
+			p.Author = nil
+		} else {
+			p.Author = &User{ID: ID}
+		}
+
+		return nil
+	}
+
+	return errors.New("There is no to-one relationship with the name " + name)
+}
+
+func (p *Post) SetToManyReferenceIDs(name string, IDs []string) error {
+	if name == "comments" {
+		comments := []Comment{}
+		for _, ID := range IDs {
+			comments = append(comments, Comment{ID: ID})
+		}
+		p.Comments = comments
+	}
+
+	return errors.New("There is no to-many relationship with the name " + name)
+}
+
+func (p *Post) AddToManyIDs(name string, IDs []string) error {
+	if name == "comments" {
+		for _, ID := range IDs {
+			p.Comments = append(p.Comments, Comment{ID: ID})
+		}
+	}
+
+	return errors.New("There is no to-manyrelationship with the name " + name)
+}
+
+func (p *Post) DeleteToManyIDs(name string, IDs []string) error {
+	if name == "comments" {
+		for _, ID := range IDs {
+			// find and delete the comment with ID
+			for pos, comment := range p.Comments {
+				if comment.GetID() == ID {
+					p.Comments = append(p.Comments[:pos], p.Comments[pos+1:]...)
+				}
+			}
+		}
+	}
+
+	return errors.New("There is no to-manyrelationship with the name " + name)
 }
 
 func (p Post) GetReferencedStructs() []jsonapi.MarshalIdentifier {
@@ -175,6 +222,8 @@ func (s *fixtureSource) Update(obj interface{}, req Request) error {
 	p := obj.(Post)
 	if oldP, ok := s.posts[p.ID]; ok {
 		oldP.Title = p.Title
+		oldP.Author = p.Author
+		oldP.Comments = p.Comments
 		return nil
 	}
 	return NewHTTPError(nil, "post not found", http.StatusNotFound)
@@ -543,17 +592,145 @@ var _ = Describe("RestHandler", func() {
 			Expect(string(rec.Body.Bytes())).To(MatchJSON(`{"errors":[{"status":"403","title":"missing mandatory id key."}]}`))
 		})
 
-		It("UPDATEs", func() {
-			target := source.posts["1"]
-			target.Value = null.FloatFrom(2)
-			reqBody := strings.NewReader(`{"data": {"id": "1", "title": "New Title", "type": "posts"}}`)
-			req, err := http.NewRequest("PATCH", "/v1/posts/1", reqBody)
-			Expect(err).To(BeNil())
-			api.Handler().ServeHTTP(rec, req)
-			Expect(rec.Code).To(Equal(http.StatusNoContent))
-			Expect(source.posts["1"].Title).To(Equal("New Title"))
-			Expect(target.Title).To(Equal("New Title"))
-			Expect(target.Value).To(Equal(null.FloatFrom(2)))
+		Context("Updating", func() {
+			doRequest := func(payload, url, method string) {
+				reqBody := strings.NewReader(payload)
+				req, err := http.NewRequest(method, url, reqBody)
+				Expect(err).To(BeNil())
+				api.Handler().ServeHTTP(rec, req)
+				Expect(rec.Body.String()).To(Equal(""))
+				Expect(rec.Code).To(Equal(http.StatusNoContent))
+			}
+
+			It("UPDATEs", func() {
+				target := source.posts["1"]
+				target.Value = null.FloatFrom(2)
+				doRequest(`{"data": {"id": "1", "title": "New Title", "type": "posts"}}`, "/v1/posts/1", "PATCH")
+				Expect(source.posts["1"].Title).To(Equal("New Title"))
+				Expect(target.Title).To(Equal("New Title"))
+				Expect(target.Value).To(Equal(null.FloatFrom(2)))
+			})
+
+			It("Patch updates to-one relationships", func() {
+				target := source.posts["1"]
+				doRequest(`{
+				"data": {
+					"type": "posts",
+					"id": "1",
+					"links": {
+						"author": {
+							"linkage": {
+								"type": "users",
+								"id": "2"
+							}
+						}
+					}
+				}
+			}
+			`, "/v1/posts/1", "PATCH")
+				Expect(target.Author.GetID()).To(Equal("2"))
+			})
+
+			It("Patch can delete to-one relationships", func() {
+				target := source.posts["1"]
+				doRequest(`{
+				"data": {
+					"type": "posts",
+					"id": "1",
+					"links": {
+						"author": {
+							"linkage": null
+						}
+					}
+				}
+			}
+			`, "/v1/posts/1", "PATCH")
+				Expect(target.Author).To(BeNil())
+			})
+
+			It("Patch updates to-many relationships", func() {
+				target := source.posts["1"]
+				doRequest(`{
+				"data": {
+					"type": "posts",
+					"id": "1",
+					"links": {
+						"comments": {
+							"linkage": [
+								{
+									"type": "comments",
+									"id": "2"
+								}
+							]
+						}
+					}
+				}
+			}
+			`, "/v1/posts/1", "PATCH")
+				Expect(target.Comments[0].GetID()).To(Equal("2"))
+			})
+
+			It("Patch can delete to-many relationships", func() {
+				target := source.posts["1"]
+				doRequest(`{
+				"data": {
+					"type": "posts",
+					"id": "1",
+					"links": {
+						"comments": {
+							"linkage": []
+						}
+					}
+				}
+			}
+			`, "/v1/posts/1", "PATCH")
+				Expect(target.Comments).To(HaveLen(0))
+			})
+
+			It("Relationship PATCH route updates to-one", func() {
+				doRequest(`{
+				"data": {
+					"type": "users",
+					"id": "2"
+				}
+			}`, "/v1/posts/1/links/author", "PATCH")
+				target := source.posts["1"]
+				Expect(target.Author.GetID()).To(Equal("2"))
+			})
+
+			It("Relationship PATCH route updates to-many", func() {
+				doRequest(`{
+				"data": [{
+					"type": "comments",
+					"id": "2"
+				}]
+			}`, "/v1/posts/1/links/comments", "PATCH")
+				target := source.posts["1"]
+				Expect(target.Comments).To(HaveLen(1))
+				Expect(target.Comments[0].GetID()).To(Equal("2"))
+			})
+
+			It("Relationship POST route adds to-many elements", func() {
+				doRequest(`{
+				"data": [{
+					"type": "comments",
+					"id": "2"
+				}]
+			}`, "/v1/posts/1/links/comments", "POST")
+				target := source.posts["1"]
+				Expect(target.Comments).To(HaveLen(2))
+			})
+
+			It("Relationship DELETE route deletes to-many elements", func() {
+				doRequest(`{
+				"data": [{
+					"type": "comments",
+					"id": "1"
+				}]
+			}`, "/v1/posts/1/links/comments", "DELETE")
+				target := source.posts["1"]
+				Expect(target.Comments).To(HaveLen(0))
+			})
 		})
 	})
 

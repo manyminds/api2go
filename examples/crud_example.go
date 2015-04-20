@@ -1,22 +1,39 @@
-// examples.go show how to implement a basic crud for one data structure with the api2go server functionality
-// to play with this example server you can for example run some of the following curl requests
+/*
+examples.go shows how to implement a basic CRUD for two data structures with the api2go server functionality.
+To play with this example server you can run some of the following curl requests
 
-// Create a new user:
-// `curl -X POST http://localhost:31415/v0/users -d '{"data" : [{"type" : "users" , "user-name" : "marvin"}]}'`
-// List users:
-// `curl -X GET http://localhost:31415/v0/users`
-// List paginated users:
-// `curl -X GET http://localhost:31415/v0/users?page[offset]=0&page[limit]=2`
-// OR
-// `curl -X GET http://localhost:31415/v0/users?page[number]=1&page[size]=2`
-// Update:
-// `curl -vX PATCH http://localhost:31415/v0/users/1 -d '{ "data" : {"type" : "users", "user-name" : "better marvin", "id" : "1"}}'`
-// Delete:
-// `curl -vX DELETE http://localhost:31415/v0/users/2`
-// Create a chocolate with the name sweet
-// `curl -X POST http://localhost:31415/v0/chocolates -d '{"data" : [{"type" : "chocolates" , "name" : "Ritter Sport", "taste": "Very Good"}]}'`
-// Link the sweet
-// `curl -X POST http://localhost:31415/v0/users -d '{"data" : [{"type" : "users" , "user-name" : "marvin", "links": {"sweets": {"linkage": {"type": "chocolates", "id": "1"}}}}]}'`
+Create a new user:
+	curl -X POST http://localhost:31415/v0/users -d '{"data" : [{"type" : "users" , "user-name" : "marvin"}]}'
+
+List users:
+	curl -X GET http://localhost:31415/v0/users
+
+List paginated users:
+	curl -X GET http://localhost:31415/v0/users?page[offset]=0&page[limit]=2
+OR
+	curl -X GET http://localhost:31415/v0/users?page[number]=1&page[size]=2
+
+Update:
+	curl -vX PATCH http://localhost:31415/v0/users/1 -d '{ "data" : {"type" : "users", "user-name" : "better marvin", "id" : "1"}}'
+
+Delete:
+	curl -vX DELETE http://localhost:31415/v0/users/2
+
+Create a chocolate with the name sweet
+	curl -X POST http://localhost:31415/v0/chocolates -d '{"data" : [{"type" : "chocolates" , "name" : "Ritter Sport", "taste": "Very Good"}]}'
+
+Create a user with a sweet
+	curl -X POST http://localhost:31415/v0/users -d '{"data" : [{"type" : "users" , "user-name" : "marvin", "links": {"sweets": {"linkage": [{"type": "chocolates", "id": "1"}]}}}]}'
+
+Replace a users sweets
+	curl -X PATCH http://localhost:31415/v0/users/1/links/sweets -d '{"data" : [{"type": "chocolates", "id": "2"}]}'
+
+Add a sweet
+	curl -X POST http://localhost:31415/v0/users/1/links/sweets -d '{"data" : [{"type": "chocolates", "id": "2"}]}'
+
+Remove a sweet
+	curl -X DELETE http://localhost:31415/v0/users/1/links/sweets -d '{"data" : [{"type": "chocolates", "id": "2"}]}'
+*/
 package main
 
 import (
@@ -88,15 +105,38 @@ func (u User) GetReferencedStructs() []jsonapi.MarshalIdentifier {
 	return result
 }
 
-// SetReferencedIDs to satisfy the jsonapi.UnmarshalLinkedRelations interface
-func (u *User) SetReferencedIDs(references []jsonapi.ReferenceID) error {
-	for _, reference := range references {
-		if reference.Name == "sweets" {
-			u.ChocolatesIDs = append(u.ChocolatesIDs, reference.ID)
+// SetToManyReferenceIDs sets the sweets reference IDs and satisfies the jsonapi.UnmarshalToManyRelations interface
+func (u *User) SetToManyReferenceIDs(name string, IDs []string) error {
+	if name == "sweets" {
+		u.ChocolatesIDs = IDs
+	}
+
+	return errors.New("There is no to-many relationship with the name " + name)
+}
+
+// AddToManyIDs adds some new sweets that a users loves so much
+func (u *User) AddToManyIDs(name string, IDs []string) error {
+	if name == "sweets" {
+		u.ChocolatesIDs = append(u.ChocolatesIDs, IDs...)
+	}
+
+	return errors.New("There is no to-many relationship with the name " + name)
+}
+
+// DeleteToManyIDs removes some sweets from a users because they made him very sick
+func (u *User) DeleteToManyIDs(name string, IDs []string) error {
+	if name == "sweets" {
+		for _, ID := range IDs {
+			for pos, oldID := range u.ChocolatesIDs {
+				if ID == oldID {
+					// match, this ID must be removed
+					u.ChocolatesIDs = append(u.ChocolatesIDs[:pos], u.ChocolatesIDs[pos+1:]...)
+				}
+			}
 		}
 	}
 
-	return nil
+	return errors.New("There is no to-many relationship with the name " + name)
 }
 
 // Chocolate is the chocolate that a user consumes in order to get fat and happy
@@ -331,7 +371,8 @@ func (s *userResource) Update(obj interface{}, r api2go.Request) error {
 		return api2go.NewHTTPError(errors.New("Invalid instance given"), "Invalid instance given", http.StatusBadRequest)
 	}
 
-	// check references and get embedded objects
+	// check references and get embedded objects, in real world, you would make database queries and check all your references
+	user.Chocolates = []Chocolate{}
 	for _, chocID := range user.ChocolatesIDs {
 		choc, err := s.chocStorage.GetOne(chocID)
 		if err != nil {

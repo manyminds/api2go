@@ -14,9 +14,64 @@ type UnmarshalIdentifier interface {
 	SetID(string) error
 }
 
-// UnmarshalLinkedRelations same as MarshalLinkedRelations for unmarshaling
-type UnmarshalLinkedRelations interface {
-	SetReferencedIDs([]ReferenceID) error
+// UnmarshalToOneRelations must be implemented to unmarshal to-one relations
+type UnmarshalToOneRelations interface {
+	SetToOneReferenceID(name, ID string) error
+}
+
+// UnmarshalToManyRelations must be implemented to unmarshal to-many relations
+type UnmarshalToManyRelations interface {
+	SetToManyReferenceIDs(name string, IDs []string) error
+}
+
+// The EditToManyRelations interface can be optionally implemented to add and delete to-many
+// relationships on a already unmarshalled struct. These methods are used by our API for the to-many
+// relationship update routes.
+/*
+There are 3 HTTP Methods to edit to-many relations:
+
+	PATCH /v1/posts/1/comments
+	Content-Type: application/vnd.api+json
+	Accept: application/vnd.api+json
+
+	{
+	  "data": [
+		{ "type": "comments", "id": "2" },
+		{ "type": "comments", "id": "3" }
+	  ]
+	}
+
+this replaces all of the comments that belong to post with ID 1 and the SetToManyReferenceIDs method
+will be called
+
+	POST /v1/posts/1/comments
+	Content-Type: application/vnd.api+json
+	Accept: application/vnd.api+json
+
+	{
+	  "data": [
+		{ "type": "comments", "id": "123" }
+	  ]
+	}
+
+adds a new comment to the post with ID 1. The AddToManyIDs methid will be called.
+
+	DELETE /v1/posts/1/comments
+	Content-Type: application/vnd.api+json
+	Accept: application/vnd.api+json
+
+	{
+	  "data": [
+		{ "type": "comments", "id": "12" },
+		{ "type": "comments", "id": "13" }
+	  ]
+	}
+
+deletes comments that belong to post with ID 1. The DeleteToManyIDs method will be called.
+*/
+type EditToManyRelations interface {
+	AddToManyIDs(name string, IDs []string) error
+	DeleteToManyIDs(name string, IDs []string) error
 }
 
 // Unmarshal reads a JSONAPI map to a model struct
@@ -233,9 +288,14 @@ func setFieldValue(field *reflect.Value, value reflect.Value) (err error) {
 	return nil
 }
 
-func unmarshalLinks(val reflect.Value, linksMap map[string]interface{}) error {
-	referenceIDs := []ReferenceID{}
+// UnmarshalLinkage is used by api2go.API to only unmarshal references inside a linkage object.
+// The target interface must implement UnmarshalToOneRelations or UnmarshalToManyRelations interface.
+// The linksMap is the content of the linkage object from the json
+func UnmarshalLinkage(target interface{}, name string, links interface{}) error {
+	return processLinkage(links, name, target)
+}
 
+func unmarshalLinks(val reflect.Value, linksMap map[string]interface{}) error {
 	for linkName, links := range linksMap {
 		links, ok := links.(map[string]interface{})
 		if !ok {
@@ -249,52 +309,69 @@ func unmarshalLinks(val reflect.Value, linksMap map[string]interface{}) error {
 			return fmt.Errorf("type field for %s links must be a string", linkName)
 		}
 
-		hasOne, ok := links["linkage"].(map[string]interface{})
-		if ok {
-			hasOneID, ok := hasOne["id"].(string)
-			if !ok {
-				return fmt.Errorf("linkage object must have a field id for %s", linkName)
-			}
-			hasOneType, ok := hasOne["type"].(string)
-			if !ok {
-				return fmt.Errorf("linkage object must have a field type for %s", linkName)
-			}
+		if val.CanAddr() {
+			val = val.Addr()
+		}
 
-			referenceIDs = append(referenceIDs, ReferenceID{ID: hasOneID, Name: linkName, Type: hasOneType})
-		} else {
-			hasMany, ok := links["linkage"].([]interface{})
-			if !ok {
-				fmt.Printf("%#v", links["linkage"])
-				return fmt.Errorf("invalid linkage object or array, must be an object with \"id\" and \"type\" field for %s", linkName)
-			}
-			for _, entry := range hasMany {
-				linkage, ok := entry.(map[string]interface{})
-				if !ok {
-					return fmt.Errorf("entry in linkage array must be an object for %s", linkName)
-				}
-				linkageID, ok := linkage["id"].(string)
-				if !ok {
-					return fmt.Errorf("all linkage objects must have a field id for %s", linkName)
-				}
-				linkageType, ok := linkage["type"].(string)
-				if !ok {
-					return fmt.Errorf("all linkage objects must have a field type for %s", linkName)
-				}
-
-				referenceIDs = append(referenceIDs, ReferenceID{ID: linkageID, Name: linkName, Type: linkageType})
-			}
+		err := processLinkage(links["linkage"], linkName, val.Interface())
+		if err != nil {
+			return err
 		}
 	}
 
-	if val.CanAddr() {
-		val = val.Addr()
-	}
+	return nil
+}
 
-	target, ok := val.Interface().(UnmarshalLinkedRelations)
-	if !ok {
-		return errors.New("target struct must implement interface UnmarshalLinkedRelations")
+func processLinkage(linkage interface{}, linkName string, target interface{}) error {
+	hasOne, ok := linkage.(map[string]interface{})
+	if ok {
+		hasOneID, ok := hasOne["id"].(string)
+		if !ok {
+			return fmt.Errorf("linkage object must have a field id for %s", linkName)
+		}
+
+		target, ok := target.(UnmarshalToOneRelations)
+		if !ok {
+			return errors.New("target struct must implement interface UnmarshalToOneRelations")
+		}
+
+		target.SetToOneReferenceID(linkName, hasOneID)
+	} else if linkage == nil {
+		// this means that a to-one relationship must be deleted
+		target, ok := target.(UnmarshalToOneRelations)
+		if !ok {
+			return errors.New("target struct must implement interface UnmarshalToOneRelations")
+		}
+
+		target.SetToOneReferenceID(linkName, "")
+	} else {
+		hasMany, ok := linkage.([]interface{})
+		if !ok {
+			return fmt.Errorf("invalid linkage object or array, must be an object with \"id\" and \"type\" field for %s", linkName)
+		}
+
+		target, ok := target.(UnmarshalToManyRelations)
+		if !ok {
+			return errors.New("target struct must implement interface UnmarshalToManyRelations")
+		}
+
+		hasManyIDs := []string{}
+
+		for _, entry := range hasMany {
+			linkage, ok := entry.(map[string]interface{})
+			if !ok {
+				return fmt.Errorf("entry in linkage array must be an object for %s", linkName)
+			}
+			linkageID, ok := linkage["id"].(string)
+			if !ok {
+				return fmt.Errorf("all linkage objects must have a field id for %s", linkName)
+			}
+
+			hasManyIDs = append(hasManyIDs, linkageID)
+		}
+
+		target.SetToManyReferenceIDs(linkName, hasManyIDs)
 	}
-	target.SetReferencedIDs(referenceIDs)
 
 	return nil
 }

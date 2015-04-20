@@ -2,6 +2,7 @@ package jsonapi
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"strconv"
 	"time"
@@ -115,6 +116,38 @@ func (c Post) GetReferences() []Reference {
 			Name: "author",
 		},
 	}
+}
+
+func (c *Post) SetToOneReferenceID(name, ID string) error {
+	if name == "author" {
+		intID, err := strconv.ParseInt(ID, 10, 64)
+		if err != nil {
+			return err
+		}
+		c.AuthorID = sql.NullInt64{Valid: true, Int64: intID}
+
+		return nil
+	}
+
+	return errors.New("There is no to-one relationship named " + name)
+}
+
+func (c *Post) SetToManyReferenceIDs(name string, IDs []string) error {
+	if name == "comments" {
+		commentsIDs := []int{}
+		for _, ID := range IDs {
+			intID, err := strconv.ParseInt(ID, 10, 64)
+			if err != nil {
+				return err
+			}
+			commentsIDs = append(commentsIDs, int(intID))
+		}
+		c.CommentsIDs = commentsIDs
+
+		return nil
+	}
+
+	return errors.New("There is no to-many relationship named " + name)
 }
 
 func (c *Post) SetReferencedIDs(ids []ReferenceID) error {
