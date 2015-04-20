@@ -285,18 +285,20 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD) *r
 		}
 	})
 
-	api.router.GET(api.prefix+name+"/:id/links/:name", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		err := res.handleReadRelation(w, r, ps, api.info)
-		if err != nil {
-			handleError(err, w)
-		}
-	})
-
 	// generate all routes for linked relations if there are relations
 	casted, ok := prototype.(jsonapi.MarshalReferences)
 	if ok {
 		relations := casted.GetReferences()
 		for _, relation := range relations {
+			api.router.GET(api.prefix+name+"/:id/links/"+relation.Name, func(relation jsonapi.Reference) httprouter.Handle {
+				return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+					err := res.handleReadRelation(w, r, ps, api.info, relation)
+					if err != nil {
+						handleError(err, w)
+					}
+				}
+			}(relation))
+
 			api.router.GET(api.prefix+name+"/:id/"+relation.Name, func(relation jsonapi.Reference) httprouter.Handle {
 				return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 					err := res.handleLinked(api, w, r, ps, relation, api.info)
@@ -428,9 +430,8 @@ func (res *resource) handleRead(w http.ResponseWriter, r *http.Request, ps httpr
 	return respondWith(obj, info, http.StatusOK, w)
 }
 
-func (res *resource) handleReadRelation(w http.ResponseWriter, r *http.Request, ps httprouter.Params, info information) error {
+func (res *resource) handleReadRelation(w http.ResponseWriter, r *http.Request, ps httprouter.Params, info information, relation jsonapi.Reference) error {
 	id := ps.ByName("id")
-	name := ps.ByName("name")
 
 	obj, err := res.source.FindOne(id, buildRequest(r))
 	if err != nil {
@@ -448,19 +449,20 @@ func (res *resource) handleReadRelation(w http.ResponseWriter, r *http.Request, 
 	if !ok {
 		return internalError
 	}
-	relation, ok := links.(map[string]map[string]interface{})[name]
+
+	rel, ok := links.(map[string]map[string]interface{})[relation.Name]
 	if !ok {
-		return NewHTTPError(nil, fmt.Sprintf("There is no relation with the name %s", name), http.StatusNotFound)
+		return NewHTTPError(nil, fmt.Sprintf("There is no relation with the name %s", relation.Name), http.StatusNotFound)
 	}
-	self, ok := relation["self"]
-	if !ok {
-		return internalError
-	}
-	related, ok := relation["related"]
+	self, ok := rel["self"]
 	if !ok {
 		return internalError
 	}
-	relationData, ok := relation["linkage"]
+	related, ok := rel["related"]
+	if !ok {
+		return internalError
+	}
+	relationData, ok := rel["linkage"]
 	if !ok {
 		return internalError
 	}
