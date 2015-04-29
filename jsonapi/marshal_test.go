@@ -650,4 +650,37 @@ var _ = Describe("Marshalling", func() {
 			Expect(len(actual)).To(Equal(len(expected)))
 		})
 	})
+
+	// In order to use the SQL Null-Types the Marshal/Unmarshal interfaces for these types must be implemented.
+	// The library "gopkg.in/guregu/null.v2/zero" can be used for that.
+	Context("SQL Null-Types", func() {
+		var nullPost SqlNullPost
+
+		BeforeEach(func() {
+			nullPost = SqlNullPost{
+				ID:     "theID",
+				Title:  zero.StringFrom("Test"),
+				Likes:  zero.IntFrom(666),
+				Rating: zero.FloatFrom(66.66),
+				IsCool: zero.BoolFrom(true),
+			}
+		})
+
+		It("correctly marshalls String, Int64, Float64 and Bool", func() {
+			result, err := MarshalToJSON(nullPost)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(MatchJSON(`
+				{
+					"data": {
+						"id": "theID",
+						"title": "Test",
+						"likes": 666,
+						"rating": 66.66,
+						"isCool": true,
+						"type": "sqlNullPosts"
+					}
+				}
+			`))
+		})
+	})
 })

@@ -325,6 +325,23 @@ func (n *NumberPost) SetID(ID string) error {
 	return nil
 }
 
+type SqlNullPost struct {
+	ID     string
+	Title  zero.String
+	Likes  zero.Int
+	Rating zero.Float
+	IsCool zero.Bool
+}
+
+func (s SqlNullPost) GetID() string {
+	return s.ID
+}
+
+func (s *SqlNullPost) SetID(ID string) error {
+	s.ID = ID
+	return nil
+}
+
 type CompleteServerInformation struct{}
 
 const completePrefix = "http://my.domain/v1"
