@@ -7,8 +7,6 @@ import (
 	"reflect"
 	"strings"
 	"time"
-
-	"gopkg.in/guregu/null.v2/zero"
 )
 
 // UnmarshalIdentifier interface to set ID when unmarshalling
@@ -284,16 +282,18 @@ func setFieldValue(field *reflect.Value, value reflect.Value) (err error) {
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		field.SetUint(uint64(value.Float()))
 	default:
-		// handle zero types from "gopkg.in/guregu/null.v2/zero"
-		switch field.Interface().(type) {
-		case zero.String:
-			field.Set(reflect.ValueOf(zero.StringFrom(value.Interface().(string))))
-		case zero.Float:
-			field.Set(reflect.ValueOf(zero.FloatFrom(value.Interface().(float64))))
-		case zero.Int:
-			field.Set(reflect.ValueOf(zero.IntFrom(int64(value.Interface().(float64)))))
-		case zero.Bool:
-			field.Set(reflect.ValueOf(zero.BoolFrom(value.Interface().(bool))))
+		// try to set it with json.Unmarshaler interface, if that does not work, set value directly
+		switch target := field.Addr().Interface().(type) {
+		case json.Unmarshaler:
+			marshaledValue, err := json.Marshal(value.Interface())
+			if err != nil {
+				return err
+			}
+
+			err = target.UnmarshalJSON(marshaledValue)
+			if err != nil {
+				return err
+			}
 		default:
 			field.Set(value)
 		}
