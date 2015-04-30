@@ -282,7 +282,21 @@ func setFieldValue(field *reflect.Value, value reflect.Value) (err error) {
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		field.SetUint(uint64(value.Float()))
 	default:
-		field.Set(value)
+		// try to set it with json.Unmarshaler interface, if that does not work, set value directly
+		switch target := field.Addr().Interface().(type) {
+		case json.Unmarshaler:
+			marshaledValue, err := json.Marshal(value.Interface())
+			if err != nil {
+				return err
+			}
+
+			err = target.UnmarshalJSON(marshaledValue)
+			if err != nil {
+				return err
+			}
+		default:
+			field.Set(value)
+		}
 	}
 
 	return nil

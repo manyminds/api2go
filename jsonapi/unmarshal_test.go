@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"time"
 
+	"gopkg.in/guregu/null.v2/zero"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -438,6 +440,38 @@ var _ = Describe("Unmarshal", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(len(numberPosts)).To(Equal(1))
 			Expect(numberPosts[0].UnsignedNumber).To(Equal(uint64(1337)))
+		})
+	})
+
+	Context("SQL Null-Types", func() {
+		var nullPosts []SqlNullPost
+
+		BeforeEach(func() {
+			nullPosts = []SqlNullPost{}
+		})
+
+		It("correctly unmarshal String, Int64 and Float64", func() {
+			err := UnmarshalFromJSON([]byte(`
+				{
+					"data": {
+						"id": "theID",
+						"title": "Test",
+						"likes": 666,
+						"rating": 66.66,
+						"isCool": true,
+						"type": "sqlNullPosts"
+					}
+				}
+			`), &nullPosts)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(nullPosts).To(HaveLen(1))
+			Expect(nullPosts[0]).To(Equal(SqlNullPost{
+				ID:     "theID",
+				Title:  zero.StringFrom("Test"),
+				Likes:  zero.IntFrom(666),
+				Rating: zero.FloatFrom(66.66),
+				IsCool: zero.BoolFrom(true),
+			}))
 		})
 	})
 })
