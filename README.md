@@ -27,6 +27,7 @@ go get github.com/univedo/api2go/jsonapi
   - [Unmarshalling with references to other structs](#unmarshalling-with-references-to-other-structs)
 - [Ignoring fields](#ignoring-fields)
 - [Manual marshaling / unmarshaling](#manual-marshaling--unmarshaling)
+- [SQL Null-Types](#sql-null-types)
 - [Building a REST API](#building-a-rest-api)
   - [Query Params](#query-params)
   - [Using Pagination](#using-pagination)
@@ -208,6 +209,20 @@ var posts []Post
 err := jsonapi.UnmarshalFromJSON(json, &posts)
 // posts[0] == Post{ID: 1, Title: "Foobar", CommentsIDs: []int{1, 2}}
 ```
+
+## SQL Null-Types
+When using a SQL Database it is most likely you want to use the special SQL-Types from the `database/sql` package. These are
+
+- sql.NullBool
+- sql.NullFloat64
+- sql.NullInt64
+- sql.NullString
+
+The Problem is, that they internally manage the `null` value behavior by using a custom struct. In order to Marshal und Unmarshal
+these values, it is required to implement the `json.Marshaller` and `json.Unmarshaller` interfaces of the go standard library.
+
+But you dont have to do this by yourself! There already is a library that did the work for you. We recommend that you use the types
+of this library: http://gopkg.in/guregu/null.v2/zero
 
 ## Building a REST API
 
