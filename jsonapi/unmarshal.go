@@ -77,19 +77,37 @@ type EditToManyRelations interface {
 // Unmarshal reads a JSONAPI map to a model struct
 // target must at least implement the `UnmarshalIdentifier` interface.
 func Unmarshal(input map[string]interface{}, target interface{}) error {
+	var (
+		structType reflect.Type
+		sliceVal   reflect.Value
+		isStruct   bool
+	)
+
+	typeError := errors.New("You must pass a pointer to a UnmarshalIdentifier or slice of it to Unmarshal()")
+
 	// Check that target is a *[]Model
 	ptrVal := reflect.ValueOf(target)
 	if ptrVal.Kind() != reflect.Ptr || ptrVal.IsNil() {
-		return errors.New("You must pass a pointer to a []UnmarshalIdentifier to Unmarshal()")
+		return typeError
 	}
-	sliceType := reflect.TypeOf(target).Elem()
-	sliceVal := ptrVal.Elem()
-	if sliceType.Kind() != reflect.Slice {
-		return errors.New("You must pass a pointer to a []UnmarshalIdentifier to Unmarshal()")
+	targetType := reflect.TypeOf(target).Elem()
+
+	if targetType.Kind() != reflect.Slice {
+		// check for a struct which is also allowed to unmarshal into
+		if targetType.Kind() == reflect.Struct {
+			structType = targetType
+			sliceVal = reflect.New(reflect.SliceOf(structType)).Elem()
+			isStruct = true
+		} else {
+			return typeError
+		}
+	} else {
+		sliceVal = ptrVal.Elem()
+		structType = targetType.Elem()
 	}
-	structType := sliceType.Elem()
+
 	if structType.Kind() != reflect.Struct {
-		return errors.New("You must pass a pointer to a []UnmarshalIdentifier to Unmarshal()")
+		return typeError
 	}
 
 	// Copy the value, then write into the new variable.
@@ -99,11 +117,18 @@ func Unmarshal(input map[string]interface{}, target interface{}) error {
 	if err != nil {
 		return err
 	}
-	sliceVal.Set(val)
+
+	// if target is a struct, the first unmarshalled entry of a slice of its type will be set into it
+	if isStruct {
+		ptrVal.Elem().Set(val.Index(0))
+	} else {
+		sliceVal.Set(val)
+	}
 	return nil
 }
 
 // UnmarshalFromJSON reads a JSONAPI compatible JSON document to a model struct
+// target must be a struct or a slice of it
 func UnmarshalFromJSON(data []byte, target interface{}) error {
 	var ctx map[string]interface{}
 	err := json.Unmarshal(data, &ctx)
