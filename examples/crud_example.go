@@ -43,8 +43,8 @@ import (
 	"strconv"
 
 	"github.com/julienschmidt/httprouter"
-	"github.com/univedo/api2go"
-	"github.com/univedo/api2go/jsonapi"
+	"github.com/manyminds/api2go"
+	"github.com/manyminds/api2go/jsonapi"
 )
 
 import "net/http"

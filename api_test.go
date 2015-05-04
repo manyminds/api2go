@@ -12,7 +12,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/univedo/api2go/jsonapi"
+	"github.com/manyminds/api2go/jsonapi"
 	"gopkg.in/guregu/null.v2"
 )
 
