@@ -44,11 +44,18 @@ var _ = Describe("Unmarshal", func() {
 			},
 		}
 
-		It("unmarshals single objects", func() {
+		It("unmarshals single objects into a slice", func() {
 			var posts []SimplePost
 			err := Unmarshal(singlePostMap, &posts)
 			Expect(err).To(BeNil())
 			Expect(posts).To(Equal([]SimplePost{firstPost}))
+		})
+
+		It("unmarshals single objects into a struct", func() {
+			var post SimplePost
+			err := Unmarshal(singlePostMap, &post)
+			Expect(err).To(BeNil())
+			Expect(post).To(Equal(firstPost))
 		})
 
 		It("unmarshals multiple objects", func() {
