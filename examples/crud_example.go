@@ -37,19 +37,17 @@ Remove a sweet
 package main
 
 import (
-	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"sort"
 	"strconv"
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/manyminds/api2go"
 	"github.com/manyminds/api2go/jsonapi"
-	"github.com/ugorji/go/codec"
 )
-
-import "net/http"
 
 //User is a generic database user
 type User struct {
@@ -423,24 +421,20 @@ func (c *chocolateResource) Update(obj interface{}, r api2go.Request) error {
 	return c.storage.Update(choc)
 }
 
-type CBORContentMarshaler struct {
-	handle *codec.CborHandle
+type PrettyJSONContentMarshaler struct {
 }
 
-func (m *CBORContentMarshaler) Marshal(i interface{}) ([]byte, error) {
-	var buf bytes.Buffer
-	err := codec.NewEncoder(&buf, m.handle).Encode(i)
-	return buf.Bytes(), err
+func (m PrettyJSONContentMarshaler) Marshal(i interface{}) ([]byte, error) {
+	return json.MarshalIndent(i, "", "    ")
 }
 
-func (m *CBORContentMarshaler) Unmarshal(data []byte, i interface{}) error {
-	return codec.NewDecoderBytes(data, m.handle).Decode(i)
+func (m PrettyJSONContentMarshaler) Unmarshal(data []byte, i interface{}) error {
+	return json.Unmarshal(data, i)
 }
 
 func main() {
 	marshalers := map[string]api2go.ContentMarshaler{
-		"application/vnd.api+json": api2go.JSONContentMarshaler{},
-		"application/vnd.api+cbor": &CBORContentMarshaler{handle:&codec.CborHandle{}},
+		"application/vnd.api+json": PrettyJSONContentMarshaler{},
 	}
 
 	api := api2go.NewAPIWithMarshalers("v0", "http://localhost:31415", marshalers)

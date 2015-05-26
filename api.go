@@ -12,7 +12,7 @@ import (
 	"strconv"
 	"strings"
 
-	"bitbucket.org/ww/goautoneg"
+	"github.com/golang/gddo/httputil"
 	"github.com/julienschmidt/httprouter"
 	"github.com/manyminds/api2go/jsonapi"
 )
@@ -896,13 +896,13 @@ func marshalResponse(resp interface{}, w http.ResponseWriter, status int, r *htt
 }
 
 func selectContentMarshaler(r *http.Request, marshalers map[string]ContentMarshaler) (marshaler ContentMarshaler, contentType string) {
-	if accept, found := r.Header["Accept"]; found {
+	if _, found := r.Header["Accept"]; found {
 		var contentTypes []string
 		for ct := range marshalers {
 			contentTypes = append(contentTypes, ct)
 		}
 
-		contentType = goautoneg.Negotiate(accept[0], contentTypes)
+		contentType = httputil.NegotiateContentType(r, contentTypes, "application/vnd.api+json")
 		marshaler = marshalers[contentType]
 	} else if contentTypes, found := r.Header["Content-Type"]; found {
 		contentType = contentTypes[0]
