@@ -37,6 +37,7 @@ Remove a sweet
 package main
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"sort"
@@ -45,6 +46,7 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"github.com/manyminds/api2go"
 	"github.com/manyminds/api2go/jsonapi"
+	"github.com/ugorji/go/codec"
 )
 
 import "net/http"
@@ -421,8 +423,27 @@ func (c *chocolateResource) Update(obj interface{}, r api2go.Request) error {
 	return c.storage.Update(choc)
 }
 
+type CBORContentMarshaler struct {
+	handle *codec.CborHandle
+}
+
+func (m *CBORContentMarshaler) Marshal(i interface{}) ([]byte, error) {
+	var buf bytes.Buffer
+	err := codec.NewEncoder(&buf, m.handle).Encode(i)
+	return buf.Bytes(), err
+}
+
+func (m *CBORContentMarshaler) Unmarshal(data []byte, i interface{}) error {
+	return codec.NewDecoderBytes(data, m.handle).Decode(i)
+}
+
 func main() {
-	api := api2go.NewAPIWithBaseURL("v0", "http://localhost:31415")
+	marshalers := map[string]api2go.ContentMarshaler{
+		"application/vnd.api+json": api2go.JSONContentMarshaler{},
+		"application/vnd.api+cbor": &CBORContentMarshaler{handle:&codec.CborHandle{}},
+	}
+
+	api := api2go.NewAPIWithMarshalers("v0", "http://localhost:31415", marshalers)
 	users := make(map[string]User)
 	chocStorage := ChocolateStorage{chocolates: make(map[string]Chocolate), idCount: 1}
 	api.AddResource(User{}, &userResource{users: users, chocStorage: &chocStorage})
