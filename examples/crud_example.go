@@ -37,8 +37,10 @@ Remove a sweet
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"sort"
 	"strconv"
 
@@ -46,8 +48,6 @@ import (
 	"github.com/manyminds/api2go"
 	"github.com/manyminds/api2go/jsonapi"
 )
-
-import "net/http"
 
 //User is a generic database user
 type User struct {
@@ -421,8 +421,23 @@ func (c *chocolateResource) Update(obj interface{}, r api2go.Request) error {
 	return c.storage.Update(choc)
 }
 
+type PrettyJSONContentMarshaler struct {
+}
+
+func (m PrettyJSONContentMarshaler) Marshal(i interface{}) ([]byte, error) {
+	return json.MarshalIndent(i, "", "    ")
+}
+
+func (m PrettyJSONContentMarshaler) Unmarshal(data []byte, i interface{}) error {
+	return json.Unmarshal(data, i)
+}
+
 func main() {
-	api := api2go.NewAPIWithBaseURL("v0", "http://localhost:31415")
+	marshalers := map[string]api2go.ContentMarshaler{
+		"application/vnd.api+json": PrettyJSONContentMarshaler{},
+	}
+
+	api := api2go.NewAPIWithMarshalers("v0", "http://localhost:31415", marshalers)
 	users := make(map[string]User)
 	chocStorage := ChocolateStorage{chocolates: make(map[string]Chocolate), idCount: 1}
 	api.AddResource(User{}, &userResource{users: users, chocStorage: &chocStorage})

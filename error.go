@@ -1,7 +1,6 @@
 package api2go
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"strconv"
@@ -35,24 +34,24 @@ func (e Error) GetID() string {
 }
 
 //marshalError marshals all error types
-func marshalError(err error) string {
+func marshalError(err error, marshaler ContentMarshaler) string {
 	httpErr, ok := err.(HTTPError)
 	if ok {
-		return marshalHTTPError(httpErr)
+		return marshalHTTPError(httpErr, marshaler)
 	}
 
 	httpErr = NewHTTPError(err, err.Error(), 500)
 
-	return marshalHTTPError(httpErr)
+	return marshalHTTPError(httpErr, marshaler)
 }
 
 //marshalHTTPError marshals an internal httpError
-func marshalHTTPError(input HTTPError) string {
+func marshalHTTPError(input HTTPError, marshaler ContentMarshaler) string {
 	if len(input.Errors) == 0 {
 		input.Errors = []Error{Error{Title: input.msg, Status: strconv.Itoa(input.status)}}
 	}
 
-	data, err := json.Marshal(input)
+	data, err := marshaler.Marshal(input)
 
 	if err != nil {
 		log.Println(err)

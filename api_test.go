@@ -290,6 +290,17 @@ func (s *commentSource) Update(obj interface{}, req Request) error {
 	return NewHTTPError(nil, "comment not found", http.StatusNotFound)
 }
 
+type prettyJSONContentMarshaler struct {
+}
+
+func (m prettyJSONContentMarshaler) Marshal(i interface{}) ([]byte, error) {
+	return json.MarshalIndent(i, "", "    ")
+}
+
+func (m prettyJSONContentMarshaler) Unmarshal(data []byte, i interface{}) error {
+	return json.Unmarshal(data, i)
+}
+
 var _ = Describe("RestHandler", func() {
 	Context("when handling requests", func() {
 
@@ -769,6 +780,108 @@ var _ = Describe("RestHandler", func() {
 			expected := `{"errors":[{"id":"SomeErrorID","path":"Title"}]}`
 			actual := strings.TrimSpace(string(rec.Body.Bytes()))
 			Expect(actual).To(Equal(expected))
+		})
+	})
+
+	Context("use content marshalers correctly", func() {
+		var (
+			source         *fixtureSource
+			api            *API
+			rec            *httptest.ResponseRecorder
+			jsonResponse   string
+			prettyResponse string
+		)
+
+		BeforeEach(func() {
+			source = &fixtureSource{map[string]*Post{
+				"1": &Post{ID: "1", Title: "Hello, World!"},
+			}}
+
+			jsonResponse = `{"data":{"id":"1","links":{"author":{"linkage":null,"related":"/posts/1/author","self":"/posts/1/links/author"},"comments":{"linkage":[],"related":"/posts/1/comments","self":"/posts/1/links/comments"}},"title":"Hello, World!","type":"posts","value":null}}`
+			prettyResponse = `{
+    "data": {
+        "id": "1",
+        "links": {
+            "author": {
+                "linkage": null,
+                "related": "/posts/1/author",
+                "self": "/posts/1/links/author"
+            },
+            "comments": {
+                "linkage": [],
+                "related": "/posts/1/comments",
+                "self": "/posts/1/links/comments"
+            }
+        },
+        "title": "Hello, World!",
+        "type": "posts",
+        "value": null
+    }
+}`
+
+			marshalers := map[string]ContentMarshaler{
+				`application/vnd.api+json`: JSONContentMarshaler{},
+				`application/vnd.api+prettyjson`: prettyJSONContentMarshaler{},
+			}
+
+			api = NewAPIWithMarshalers("", "", marshalers)
+			api.AddResource(Post{}, source)
+
+			rec = httptest.NewRecorder()
+		})
+
+		It("Selects the default content marshaler when no Content-Type or Accept request header is present", func() {
+			req, err := http.NewRequest("GET", "/posts/1", nil)
+			Expect(err).To(BeNil())
+			api.Handler().ServeHTTP(rec, req)
+			Expect(rec.Code).To(Equal(http.StatusOK))
+			Expect(rec.HeaderMap["Content-Type"][0]).To(Equal("application/vnd.api+json"))
+			actual := strings.TrimSpace(string(rec.Body.Bytes()))
+			Expect(actual).To(Equal(jsonResponse))
+		})
+
+		It("Selects the default content marshaler when Content-Type doesn't specify a known content type", func() {
+			req, err := http.NewRequest("GET", "/posts/1", nil)
+			Expect(err).To(BeNil())
+			req.Header.Set("Content-Type", "application/json")
+			api.Handler().ServeHTTP(rec, req)
+			Expect(rec.Code).To(Equal(http.StatusOK))
+			Expect(rec.HeaderMap["Content-Type"][0]).To(Equal("application/vnd.api+json"))
+			actual := strings.TrimSpace(string(rec.Body.Bytes()))
+			Expect(actual).To(Equal(jsonResponse))
+		})
+
+		It("Selects the default content marshaler when Accept doesn't specify a known content type", func() {
+			req, err := http.NewRequest("GET", "/posts/1", nil)
+			Expect(err).To(BeNil())
+			req.Header.Set("Accept", "text/html,application/xml;q=0.9")
+			api.Handler().ServeHTTP(rec, req)
+			Expect(rec.Code).To(Equal(http.StatusOK))
+			Expect(rec.HeaderMap["Content-Type"][0]).To(Equal("application/vnd.api+json"))
+			actual := strings.TrimSpace(string(rec.Body.Bytes()))
+			Expect(actual).To(Equal(jsonResponse))
+		})
+
+		It("Selects the correct content marshaler when Content-Type specifies a known content type", func() {
+			req, err := http.NewRequest("GET", "/posts/1", nil)
+			Expect(err).To(BeNil())
+			req.Header.Set("Content-Type", `application/vnd.api+prettyjson`)
+			api.Handler().ServeHTTP(rec, req)
+			Expect(rec.Code).To(Equal(http.StatusOK))
+			Expect(rec.HeaderMap["Content-Type"][0]).To(Equal(`application/vnd.api+prettyjson`))
+			actual := strings.TrimSpace(string(rec.Body.Bytes()))
+			Expect(actual).To(Equal(prettyResponse))
+		})
+
+		It("Selects the correct content marshaler when Accept specifies a known content type", func() {
+			req, err := http.NewRequest("GET", "/posts/1", nil)
+			Expect(err).To(BeNil())
+			req.Header.Set("Accept", `text/html,application/xml;q=0.9,application/vnd.api+prettyjson;q=0.5`)
+			api.Handler().ServeHTTP(rec, req)
+			Expect(rec.Code).To(Equal(http.StatusOK))
+			Expect(rec.HeaderMap["Content-Type"][0]).To(Equal(`application/vnd.api+prettyjson`))
+			actual := strings.TrimSpace(string(rec.Body.Bytes()))
+			Expect(actual).To(Equal(prettyResponse))
 		})
 	})
 

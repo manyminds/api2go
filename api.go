@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/golang/gddo/httputil"
 	"github.com/julienschmidt/httprouter"
 	"github.com/manyminds/api2go/jsonapi"
 )
@@ -175,9 +176,10 @@ func (p paginationQueryParams) getLinks(r *http.Request, count uint, info inform
 type API struct {
 	router *httprouter.Router
 	// Route prefix, including slashes
-	prefix    string
-	info      information
-	resources []resource
+	prefix     string
+	info       information
+	resources  []resource
+	marshalers map[string]ContentMarshaler
 }
 
 type information struct {
@@ -205,9 +207,10 @@ func NewAPI(prefix string) *API {
 	}
 
 	return &API{
-		router: httprouter.New(),
-		prefix: prefixSlashes,
-		info:   information{prefix: prefix},
+		router:     httprouter.New(),
+		prefix:     prefixSlashes,
+		info:       information{prefix: prefix},
+		marshalers: DefaultContentMarshalers,
 	}
 }
 
@@ -217,6 +220,54 @@ func NewAPI(prefix string) *API {
 func NewAPIWithBaseURL(prefix string, baseURL string) *API {
 	api := NewAPI(prefix)
 	api.info.baseURL = baseURL
+
+	return api
+}
+
+// ContentMarshaler controls how requests from clients are unmarshaled
+// and responses from the server are marshaled. The content marshaler
+// is in charge of encoding and decoding data to and from a particular
+// format (e.g. JSON). The encoding and decoding processes follow the
+// rules of the standard encoding/json package.
+type ContentMarshaler interface {
+	Marshal(i interface{}) ([]byte, error)
+	Unmarshal(data []byte, i interface{}) error
+}
+
+// JSONContentMarshaler uses the standard encoding/json package for
+// decoding requests and encoding responses in JSON format.
+type JSONContentMarshaler struct {
+}
+
+func (m JSONContentMarshaler) Marshal(i interface{}) ([]byte, error) {
+	return json.Marshal(i)
+}
+
+func (m JSONContentMarshaler) Unmarshal(data []byte, i interface{}) error {
+	return json.Unmarshal(data, i)
+}
+
+// DefaultContentMarshalers is the default set of content marshalers for an API.
+// Currently this means handling application/vnd.api+json content type bodies
+// using the standard encoding/json package.
+var DefaultContentMarshalers map[string]ContentMarshaler = map[string]ContentMarshaler{
+	"application/vnd.api+json": JSONContentMarshaler{},
+}
+
+// NewAPIWithMarshalers does the same as NewAPIWithBaseURL with the addition
+// of a set of marshalers that provide a way to interact with clients that
+// use a serialization format other than JSON. The marshalers map is indexed
+// by the MIME content type to use for a given request-response pair. If the
+// client provides an Accept header the server will respond using the client's
+// preferred content type, otherwise it will respond using whatever content
+// type the client provided in its Content-Type request header.
+func NewAPIWithMarshalers(prefix string, baseURL string, marshalers map[string]ContentMarshaler) *API {
+	if len(marshalers) == 0 {
+		panic("marshaler map must not be empty")
+	}
+
+	api := NewAPIWithBaseURL(prefix, baseURL)
+	api.marshalers = marshalers
 
 	return api
 }
@@ -242,9 +293,10 @@ type resource struct {
 	resourceType reflect.Type
 	source       CRUD
 	name         string
+	marshalers   map[string]ContentMarshaler
 }
 
-func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD) *resource {
+func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD, marshalers map[string]ContentMarshaler) *resource {
 	resourceType := reflect.TypeOf(prototype)
 	if resourceType.Kind() != reflect.Struct {
 		panic("pass an empty resource struct to AddResource!")
@@ -259,6 +311,7 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD) *r
 		resourceType: resourceType,
 		name:         name,
 		source:       source,
+		marshalers:   marshalers,
 	}
 
 	api.router.Handle("OPTIONS", api.prefix+name, func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
@@ -274,14 +327,14 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD) *r
 	api.router.GET(api.prefix+name, func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		err := res.handleIndex(w, r, api.info)
 		if err != nil {
-			handleError(err, w)
+			handleError(err, w, r, marshalers)
 		}
 	})
 
 	api.router.GET(api.prefix+name+"/:id", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		err := res.handleRead(w, r, ps, api.info)
 		if err != nil {
-			handleError(err, w)
+			handleError(err, w, r, marshalers)
 		}
 	})
 
@@ -294,7 +347,7 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD) *r
 				return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 					err := res.handleReadRelation(w, r, ps, api.info, relation)
 					if err != nil {
-						handleError(err, w)
+						handleError(err, w, r, marshalers)
 					}
 				}
 			}(relation))
@@ -303,7 +356,7 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD) *r
 				return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 					err := res.handleLinked(api, w, r, ps, relation, api.info)
 					if err != nil {
-						handleError(err, w)
+						handleError(err, w, r, marshalers)
 					}
 				}
 			}(relation))
@@ -312,7 +365,7 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD) *r
 				return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 					err := res.handleReplaceRelation(w, r, ps, relation)
 					if err != nil {
-						handleError(err, w)
+						handleError(err, w, r, marshalers)
 					}
 				}
 			}(relation))
@@ -323,7 +376,7 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD) *r
 					return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 						err := res.handleAddToManyRelation(w, r, ps, relation)
 						if err != nil {
-							handleError(err, w)
+							handleError(err, w, r, marshalers)
 						}
 					}
 				}(relation))
@@ -332,7 +385,7 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD) *r
 					return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 						err := res.handleDeleteToManyRelation(w, r, ps, relation)
 						if err != nil {
-							handleError(err, w)
+							handleError(err, w, r, marshalers)
 						}
 					}
 				}(relation))
@@ -343,21 +396,21 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD) *r
 	api.router.POST(api.prefix+name, func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		err := res.handleCreate(w, r, api.prefix, api.info)
 		if err != nil {
-			handleError(err, w)
+			handleError(err, w, r, marshalers)
 		}
 	})
 
 	api.router.DELETE(api.prefix+name+"/:id", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		err := res.handleDelete(w, r, ps)
 		if err != nil {
-			handleError(err, w)
+			handleError(err, w, r, marshalers)
 		}
 	})
 
 	api.router.PATCH(api.prefix+name+"/:id", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		err := res.handleUpdate(w, r, ps)
 		if err != nil {
-			handleError(err, w)
+			handleError(err, w, r, marshalers)
 		}
 	})
 
@@ -370,7 +423,7 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD) *r
 // At least the CRUD interface must be implemented, all the other interfaces are optional.
 // `resource` should by an empty struct instance such as `Post{}`. The same type will be used for constructing new elements.
 func (api *API) AddResource(prototype jsonapi.MarshalIdentifier, source CRUD) {
-	api.addResource(prototype, source)
+	api.addResource(prototype, source, api.marshalers)
 }
 
 func buildRequest(r *http.Request) Request {
@@ -403,7 +456,7 @@ func (res *resource) handleIndex(w http.ResponseWriter, r *http.Request, info in
 			return err
 		}
 
-		return respondWithPagination(objs, info, http.StatusOK, paginationLinks, w)
+		return respondWithPagination(objs, info, http.StatusOK, paginationLinks, w, r, res.marshalers)
 	}
 	source, ok := res.source.(FindAll)
 	if !ok {
@@ -415,7 +468,7 @@ func (res *resource) handleIndex(w http.ResponseWriter, r *http.Request, info in
 		return err
 	}
 
-	return respondWith(objs, info, http.StatusOK, w)
+	return respondWith(objs, info, http.StatusOK, w, r, res.marshalers)
 }
 
 func (res *resource) handleRead(w http.ResponseWriter, r *http.Request, ps httprouter.Params, info information) error {
@@ -427,7 +480,7 @@ func (res *resource) handleRead(w http.ResponseWriter, r *http.Request, ps httpr
 		return err
 	}
 
-	return respondWith(obj, info, http.StatusOK, w)
+	return respondWith(obj, info, http.StatusOK, w, r, res.marshalers)
 }
 
 func (res *resource) handleReadRelation(w http.ResponseWriter, r *http.Request, ps httprouter.Params, info information, relation jsonapi.Reference) error {
@@ -474,13 +527,7 @@ func (res *resource) handleReadRelation(w http.ResponseWriter, r *http.Request, 
 	}
 	result["data"] = relationData
 
-	json, err := json.Marshal(result)
-	if err != nil {
-		return err
-	}
-
-	writeResult(w, json, http.StatusOK)
-	return nil
+	return marshalResponse(result, w, http.StatusOK, r, res.marshalers)
 }
 
 // try to find the referenced resource and call the findAll Method with referencing resource id as param
@@ -510,7 +557,7 @@ func (res *resource) handleLinked(api *API, w http.ResponseWriter, r *http.Reque
 					return err
 				}
 
-				return respondWithPagination(objs, info, http.StatusOK, paginationLinks, w)
+				return respondWithPagination(objs, info, http.StatusOK, paginationLinks, w, r, res.marshalers)
 			}
 
 			source, ok := resource.source.(FindAll)
@@ -522,7 +569,7 @@ func (res *resource) handleLinked(api *API, w http.ResponseWriter, r *http.Reque
 			if err != nil {
 				return err
 			}
-			return respondWith(obj, info, http.StatusOK, w)
+			return respondWith(obj, info, http.StatusOK, w, r, res.marshalers)
 		}
 	}
 
@@ -531,11 +578,11 @@ func (res *resource) handleLinked(api *API, w http.ResponseWriter, r *http.Reque
 		Title:  "Not Found",
 		Detail: "No resource handler is registered to handle the linked resource " + linked.Name,
 	}
-	return respondWith(err, info, http.StatusNotFound, w)
+	return respondWith(err, info, http.StatusNotFound, w, r, res.marshalers)
 }
 
 func (res *resource) handleCreate(w http.ResponseWriter, r *http.Request, prefix string, info information) error {
-	ctx, err := unmarshalJSONRequest(r)
+	ctx, err := unmarshalRequest(r, res.marshalers)
 	if err != nil {
 		return err
 	}
@@ -561,7 +608,7 @@ func (res *resource) handleCreate(w http.ResponseWriter, r *http.Request, prefix
 				Detail: "Client generated IDs are not supported.",
 			}
 
-			return respondWith(err, info, http.StatusForbidden, w)
+			return respondWith(err, info, http.StatusForbidden, w, r, res.marshalers)
 		}
 	}
 
@@ -576,7 +623,7 @@ func (res *resource) handleCreate(w http.ResponseWriter, r *http.Request, prefix
 		return err
 	}
 
-	return respondWith(obj, info, http.StatusCreated, w)
+	return respondWith(obj, info, http.StatusCreated, w, r, res.marshalers)
 }
 
 func (res *resource) handleUpdate(w http.ResponseWriter, r *http.Request, ps httprouter.Params) error {
@@ -585,7 +632,7 @@ func (res *resource) handleUpdate(w http.ResponseWriter, r *http.Request, ps htt
 		return err
 	}
 
-	ctx, err := unmarshalJSONRequest(r)
+	ctx, err := unmarshalRequest(r, res.marshalers)
 	if err != nil {
 		return err
 	}
@@ -651,7 +698,7 @@ func (res *resource) handleReplaceRelation(w http.ResponseWriter, r *http.Reques
 		return err
 	}
 
-	inc, err := unmarshalJSONRequest(r)
+	inc, err := unmarshalRequest(r, res.marshalers)
 	if err != nil {
 		return err
 	}
@@ -684,7 +731,7 @@ func (res *resource) handleAddToManyRelation(w http.ResponseWriter, r *http.Requ
 		return err
 	}
 
-	inc, err := unmarshalJSONRequest(r)
+	inc, err := unmarshalRequest(r, res.marshalers)
 	if err != nil {
 		return err
 	}
@@ -739,7 +786,7 @@ func (res *resource) handleDeleteToManyRelation(w http.ResponseWriter, r *http.R
 		return err
 	}
 
-	inc, err := unmarshalJSONRequest(r)
+	inc, err := unmarshalRequest(r, res.marshalers)
 	if err != nil {
 		return err
 	}
@@ -798,61 +845,89 @@ func (res *resource) handleDelete(w http.ResponseWriter, r *http.Request, ps htt
 	return nil
 }
 
-func writeResult(w http.ResponseWriter, data []byte, status int) {
-	w.Header().Set("Content-Type", "application/vnd.api+json")
+func writeResult(w http.ResponseWriter, data []byte, status int, contentType string) {
+	w.Header().Set("Content-Type", contentType)
 	w.WriteHeader(status)
 	w.Write(data)
 }
 
-func respondWith(obj interface{}, info information, status int, w http.ResponseWriter) error {
-	data, err := jsonapi.MarshalToJSONWithURLs(obj, info)
+func respondWith(obj interface{}, info information, status int, w http.ResponseWriter, r *http.Request, marshalers map[string]ContentMarshaler) error {
+	data, err := jsonapi.MarshalWithURLs(obj, info)
 	if err != nil {
 		return err
 	}
 
-	writeResult(w, data, status)
-	return nil
+	return marshalResponse(data, w, status, r, marshalers)
 }
 
-func respondWithPagination(obj interface{}, info information, status int, links map[string]string, w http.ResponseWriter) error {
+func respondWithPagination(obj interface{}, info information, status int, links map[string]string, w http.ResponseWriter, r *http.Request, marshalers map[string]ContentMarshaler) error {
 	data, err := jsonapi.MarshalWithURLs(obj, info)
 	if err != nil {
 		return err
 	}
 
 	data["links"] = links
-	result, err := json.Marshal(data)
-	if err != nil {
-		return err
-	}
-
-	writeResult(w, result, status)
-	return nil
+	return marshalResponse(data, w, status, r, marshalers)
 }
 
-func unmarshalJSONRequest(r *http.Request) (map[string]interface{}, error) {
+func unmarshalRequest(r *http.Request, marshalers map[string]ContentMarshaler) (map[string]interface{}, error) {
 	defer r.Body.Close()
 	data, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		return nil, err
 	}
 	result := map[string]interface{}{}
-	err = json.Unmarshal(data, &result)
+	marshaler, _ := selectContentMarshaler(r, marshalers)
+	err = marshaler.Unmarshal(data, &result)
 	if err != nil {
 		return nil, err
 	}
 	return result, nil
 }
 
-func handleError(err error, w http.ResponseWriter) {
+func marshalResponse(resp interface{}, w http.ResponseWriter, status int, r *http.Request, marshalers map[string]ContentMarshaler) error {
+	marshaler, contentType := selectContentMarshaler(r, marshalers)
+	result, err := marshaler.Marshal(resp)
+	if err != nil {
+		return err
+	}
+	writeResult(w, result, status, contentType)
+	return nil
+}
+
+func selectContentMarshaler(r *http.Request, marshalers map[string]ContentMarshaler) (marshaler ContentMarshaler, contentType string) {
+	if _, found := r.Header["Accept"]; found {
+		var contentTypes []string
+		for ct := range marshalers {
+			contentTypes = append(contentTypes, ct)
+		}
+
+		contentType = httputil.NegotiateContentType(r, contentTypes, "application/vnd.api+json")
+		marshaler = marshalers[contentType]
+	} else if contentTypes, found := r.Header["Content-Type"]; found {
+		contentType = contentTypes[0]
+		marshaler = marshalers[contentType]
+	}
+
+	if marshaler == nil {
+		contentType = "application/vnd.api+json"
+		marshaler = JSONContentMarshaler{}
+	}
+
+	return
+}
+
+func handleError(err error, w http.ResponseWriter, r *http.Request, marshalers map[string]ContentMarshaler) {
+	marshaler, contentType := selectContentMarshaler(r, marshalers)
+
 	log.Println(err)
 	if e, ok := err.(HTTPError); ok {
-		writeResult(w, []byte(marshalError(e)), e.status)
+		writeResult(w, []byte(marshalError(e, marshaler)), e.status, contentType)
 		return
 
 	}
 
-	writeResult(w, []byte(marshalError(err)), http.StatusInternalServerError)
+	writeResult(w, []byte(marshalError(err, marshaler)), http.StatusInternalServerError, contentType)
 }
 
 // Handler returns the http.Handler instance for the API.

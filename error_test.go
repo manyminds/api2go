@@ -22,14 +22,14 @@ var _ = Describe("Errors test", func() {
 	Context("Marshalling", func() {
 		It("will be marshalled correctly with default error", func() {
 			httpErr := errors.New("Invalid use case done")
-			result := marshalError(httpErr)
+			result := marshalError(httpErr, JSONContentMarshaler{})
 			expected := `{"errors":[{"status":"500","title":"Invalid use case done"}]}`
 			Expect(result).To(Equal(expected))
 		})
 
 		It("will be marshalled correctly without child errors", func() {
 			httpErr := NewHTTPError(errors.New("Bad Request"), "Bad Request", 400)
-			result := marshalError(httpErr)
+			result := marshalError(httpErr, JSONContentMarshaler{})
 			expected := `{"errors":[{"status":"400","title":"Bad Request"}]}`
 			Expect(result).To(Equal(expected))
 		})
@@ -49,7 +49,7 @@ var _ = Describe("Errors test", func() {
 
 			httpErr.Errors = append(httpErr.Errors, errorOne)
 
-			result := marshalError(httpErr)
+			result := marshalError(httpErr, JSONContentMarshaler{})
 			expected := `{"errors":[{"id":"001","href":"http://bla/blub","status":"500","code":"001","title":"Title must not be empty","detail":"Never occures in real life","path":"#titleField"}]}`
 			Expect(result).To(Equal(expected))
 		})
