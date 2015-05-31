@@ -140,59 +140,97 @@ func (u User) GetID() string {
 }
 
 type fixtureSource struct {
-	posts map[string]*Post
+	posts    map[string]*Post
+	pointers bool
 }
 
 func (s *fixtureSource) FindAll(req Request) (interface{}, error) {
-	var (
-		postsSlice []Post
-	)
-
 	if limit, ok := req.QueryParams["limit"]; ok {
 		if l, err := strconv.ParseInt(limit[0], 10, 64); err == nil {
-			postsSlice = make([]Post, l)
-			length := len(s.posts)
-			for i := 0; i < length; i++ {
-				postsSlice[i] = *s.posts[strconv.Itoa(i+1)]
-				if i+1 >= int(l) {
-					break
+			if s.pointers {
+				postsSlice := make([]*Post, l)
+				length := len(s.posts)
+				for i := 0; i < length; i++ {
+					postsSlice[i] = s.posts[strconv.Itoa(i+1)]
+					if i+1 >= int(l) {
+						break
+					}
 				}
+				return postsSlice, nil
+			} else {
+				postsSlice := make([]Post, l)
+				length := len(s.posts)
+				for i := 0; i < length; i++ {
+					postsSlice[i] = *s.posts[strconv.Itoa(i+1)]
+					if i+1 >= int(l) {
+						break
+					}
+				}
+				return postsSlice, nil
 			}
 		} else {
 			fmt.Println("Error casting to int", err)
 			return nil, err
 		}
 	} else {
-		postsSlice = make([]Post, len(s.posts))
-		length := len(s.posts)
-		for i := 0; i < length; i++ {
-			postsSlice[i] = *s.posts[strconv.Itoa(i+1)]
+		if s.pointers {
+			postsSlice := make([]Post, len(s.posts))
+			length := len(s.posts)
+			for i := 0; i < length; i++ {
+				postsSlice[i] = *s.posts[strconv.Itoa(i+1)]
+			}
+			return postsSlice, nil
+		} else {
+			postsSlice := make([]*Post, len(s.posts))
+			length := len(s.posts)
+			for i := 0; i < length; i++ {
+				postsSlice[i] = s.posts[strconv.Itoa(i+1)]
+			}
+			return postsSlice, nil
 		}
 	}
-
-	return postsSlice, nil
 }
 
 // this does not read the query parameters, which you would do to limit the result in real world usage
 func (s *fixtureSource) PaginatedFindAll(req Request) (interface{}, uint, error) {
-	postsSlice := []Post{}
+	if s.pointers {
+		postsSlice := []*Post{}
 
-	for _, post := range s.posts {
-		postsSlice = append(postsSlice, *post)
+		for _, post := range s.posts {
+			postsSlice = append(postsSlice, post)
+		}
+
+		return postsSlice, uint(len(s.posts)), nil
+	} else {
+		postsSlice := []Post{}
+
+		for _, post := range s.posts {
+			postsSlice = append(postsSlice, *post)
+		}
+
+		return postsSlice, uint(len(s.posts)), nil
 	}
-
-	return postsSlice, uint(len(s.posts)), nil
 }
 
 func (s *fixtureSource) FindOne(id string, req Request) (interface{}, error) {
 	if p, ok := s.posts[id]; ok {
-		return *p, nil
+		if s.pointers {
+			return p, nil
+		} else {
+			return *p, nil
+		}
 	}
 	return nil, NewHTTPError(nil, "post not found", http.StatusNotFound)
 }
 
 func (s *fixtureSource) Create(obj interface{}, req Request) (string, error) {
-	p := obj.(Post)
+	var p *Post
+	if s.pointers {
+		p = obj.(*Post)
+	} else {
+		o := obj.(Post)
+		p = &o
+	}
 
 	if p.Title == "" {
 		err := NewHTTPError(errors.New("Bad request."), "Bad Request", http.StatusBadRequest)
@@ -209,7 +247,7 @@ func (s *fixtureSource) Create(obj interface{}, req Request) (string, error) {
 	}
 	newID := strconv.Itoa(maxID + 1)
 	p.ID = newID
-	s.posts[newID] = &p
+	s.posts[newID] = p
 	return newID, nil
 }
 
@@ -219,7 +257,13 @@ func (s *fixtureSource) Delete(id string, req Request) error {
 }
 
 func (s *fixtureSource) Update(obj interface{}, req Request) error {
-	p := obj.(Post)
+	var p *Post
+	if s.pointers {
+		p = obj.(*Post)
+	} else {
+		o := obj.(Post)
+		p = &o
+	}
 	if oldP, ok := s.posts[p.ID]; ok {
 		oldP.Title = p.Title
 		oldP.Author = p.Author
@@ -229,17 +273,29 @@ func (s *fixtureSource) Update(obj interface{}, req Request) error {
 	return NewHTTPError(nil, "post not found", http.StatusNotFound)
 }
 
-type userSource struct{}
+type userSource struct {
+	pointers bool
+}
 
 func (s *userSource) FindAll(req Request) (interface{}, error) {
 	postsIDs, ok := req.QueryParams["postsID"]
 	if ok {
 		if postsIDs[0] == "1" {
-			return User{ID: "1", Name: "Dieter"}, nil
+			u := User{ID: "1", Name: "Dieter"}
+
+			if s.pointers {
+				return &u, nil
+			} else {
+				return u, nil
+			}
 		}
 	}
 
-	return []User{}, errors.New("Did not receive query parameter")
+	if s.pointers {
+		return []User{}, errors.New("Did not receive query parameter")
+	} else {
+		return []*User{}, errors.New("Did not receive query parameter")
+	}
 }
 
 func (s *userSource) FindOne(id string, req Request) (interface{}, error) {
@@ -258,20 +314,32 @@ func (s *userSource) Update(obj interface{}, req Request) error {
 	return NewHTTPError(nil, "user not found", http.StatusNotFound)
 }
 
-type commentSource struct{}
+type commentSource struct {
+	pointers bool
+}
 
 func (s *commentSource) FindAll(req Request) (interface{}, error) {
 	postsIDs, ok := req.QueryParams["postsID"]
 	if ok {
 		if postsIDs[0] == "1" {
-			return []Comment{Comment{
+			c := Comment{
 				ID:    "1",
 				Value: "This is a stupid post!",
-			}}, nil
+			}
+
+			if s.pointers {
+				return []*Comment{&c}, nil
+			} else {
+				return []Comment{c}, nil
+			}
 		}
 	}
 
-	return []Comment{}, errors.New("Did not receive query parameter")
+	if s.pointers {
+		return []*Comment{}, errors.New("Did not receive query parameter")
+	} else {
+		return []Comment{}, errors.New("Did not receive query parameter")
+	}
 }
 
 func (s *commentSource) FindOne(id string, req Request) (interface{}, error) {
@@ -302,7 +370,10 @@ func (m prettyJSONContentMarshaler) Unmarshal(data []byte, i interface{}) error 
 }
 
 var _ = Describe("RestHandler", func() {
-	Context("when handling requests", func() {
+
+	var usePointerResources bool
+
+	requestHandlingTests := func() {
 
 		var (
 			source          *fixtureSource
@@ -331,7 +402,7 @@ var _ = Describe("RestHandler", func() {
 				},
 				"2": &Post{ID: "2", Title: "I am NR. 2"},
 				"3": &Post{ID: "3", Title: "I am NR. 3"},
-			}}
+			}, usePointerResources}
 
 			post1Json = map[string]interface{}{
 				"id":    "1",
@@ -412,9 +483,16 @@ var _ = Describe("RestHandler", func() {
 			}
 
 			api = NewAPI("v1")
-			api.AddResource(Post{}, source)
-			api.AddResource(User{}, &userSource{})
-			api.AddResource(Comment{}, &commentSource{})
+
+			if usePointerResources {
+				api.AddResource(&Post{}, source)
+				api.AddResource(&User{}, &userSource{true})
+				api.AddResource(&Comment{}, &commentSource{true})
+			} else {
+				api.AddResource(Post{}, source)
+				api.AddResource(User{}, &userSource{false})
+				api.AddResource(Comment{}, &commentSource{false})
+			}
 
 			rec = httptest.NewRecorder()
 		})
@@ -743,7 +821,13 @@ var _ = Describe("RestHandler", func() {
 				Expect(target.Comments).To(HaveLen(0))
 			})
 		})
-	})
+	}
+
+	usePointerResources = false
+	Context("when handling requests for non-pointer resources", requestHandlingTests)
+
+	usePointerResources = true
+	Context("when handling requests for pointer resources", requestHandlingTests)
 
 	Context("marshal errors correctly", func() {
 		var (
@@ -757,7 +841,7 @@ var _ = Describe("RestHandler", func() {
 		BeforeEach(func() {
 			source = &fixtureSource{map[string]*Post{
 				"1": &Post{ID: "1", Title: "Hello, World!"},
-			}}
+			}, false}
 
 			post1Json = map[string]interface{}{
 				"id":    "1",
@@ -795,7 +879,7 @@ var _ = Describe("RestHandler", func() {
 		BeforeEach(func() {
 			source = &fixtureSource{map[string]*Post{
 				"1": &Post{ID: "1", Title: "Hello, World!"},
-			}}
+			}, false}
 
 			jsonResponse = `{"data":{"id":"1","links":{"author":{"linkage":null,"related":"/posts/1/author","self":"/posts/1/links/author"},"comments":{"linkage":[],"related":"/posts/1/comments","self":"/posts/1/links/comments"}},"title":"Hello, World!","type":"posts","value":null}}`
 			prettyResponse = `{
@@ -899,7 +983,7 @@ var _ = Describe("RestHandler", func() {
 			source = &fixtureSource{map[string]*Post{
 				"1": &Post{ID: "1", Title: "Hello, World!"},
 				"2": &Post{ID: "2", Title: "Hello, from second Post!"},
-			}}
+			}, false}
 
 			post1JSON = map[string]interface{}{
 				"id":    "1",
@@ -995,7 +1079,7 @@ var _ = Describe("RestHandler", func() {
 				"5": &Post{ID: "5", Title: "Hello, World!"},
 				"6": &Post{ID: "6", Title: "Hello, World!"},
 				"7": &Post{ID: "7", Title: "Hello, World!"},
-			}}
+			}, false}
 
 			api = NewAPI("v1")
 			api.AddResource(Post{}, source)
