@@ -9,9 +9,9 @@ List users:
 	curl -X GET http://localhost:31415/v0/users
 
 List paginated users:
-	curl -X GET http://localhost:31415/v0/users?page[offset]=0&page[limit]=2
+	curl -X GET 'http://localhost:31415/v0/users?page\[offset\]=0&page\[limit\]=2'
 OR
-	curl -X GET http://localhost:31415/v0/users?page[number]=1&page[size]=2
+	curl -X GET 'http://localhost:31415/v0/users?page\[number\]=1&page\[size\]=2'
 
 Update:
 	curl -vX PATCH http://localhost:31415/v0/users/1 -d '{ "data" : {"type" : "users", "user-name" : "better marvin", "id" : "1"}}'
@@ -53,10 +53,10 @@ import (
 type User struct {
 	ID string
 	//rename the username field to user-name.
-	Username      string      `jsonapi:"name=user-name"`
-	PasswordHash  string      `json:"-"`
-	Chocolates    []Chocolate `json:"-"`
-	ChocolatesIDs []string    `json:"-"`
+	Username      string       `jsonapi:"name=user-name"`
+	PasswordHash  string       `json:"-"`
+	Chocolates    []*Chocolate `json:"-"`
+	ChocolatesIDs []string     `json:"-"`
 	exists        bool
 }
 
@@ -147,7 +147,7 @@ type Chocolate struct {
 }
 
 // GetID to satisfy jsonapi.MarshalIdentifier interface
-func (c Chocolate) GetID() string {
+func (c *Chocolate) GetID() string {
 	return c.ID
 }
 
@@ -160,13 +160,13 @@ func (c *Chocolate) SetID(id string) error {
 // ChocolateStorage stores all of the tasty chocolate, needs to be injected into
 // User and Chocolate Resource. In the real world, you would use a database for that.
 type ChocolateStorage struct {
-	chocolates map[string]Chocolate
+	chocolates map[string]*Chocolate
 	idCount    int
 }
 
 // GetAll of the chocolate
-func (s ChocolateStorage) GetAll() []Chocolate {
-	result := []Chocolate{}
+func (s ChocolateStorage) GetAll() []*Chocolate {
+	result := []*Chocolate{}
 	for key := range s.chocolates {
 		result = append(result, s.chocolates[key])
 	}
@@ -175,17 +175,17 @@ func (s ChocolateStorage) GetAll() []Chocolate {
 }
 
 // GetOne tasty chocolate
-func (s ChocolateStorage) GetOne(id string) (Chocolate, error) {
+func (s ChocolateStorage) GetOne(id string) (*Chocolate, error) {
 	choc, ok := s.chocolates[id]
 	if ok {
 		return choc, nil
 	}
 
-	return Chocolate{}, fmt.Errorf("Chocolate for id %s not found", id)
+	return nil, fmt.Errorf("Chocolate for id %s not found", id)
 }
 
 // Insert a fresh one
-func (s *ChocolateStorage) Insert(c Chocolate) string {
+func (s *ChocolateStorage) Insert(c *Chocolate) string {
 	id := fmt.Sprintf("%d", s.idCount)
 	c.ID = id
 	s.chocolates[id] = c
@@ -205,7 +205,7 @@ func (s *ChocolateStorage) Delete(id string) error {
 }
 
 // Update updates an existing chocolate
-func (s *ChocolateStorage) Update(c Chocolate) error {
+func (s *ChocolateStorage) Update(c *Chocolate) error {
 	_, exists := s.chocolates[c.ID]
 	if !exists {
 		return fmt.Errorf("Chocolate with id %s does not exist", c.ID)
@@ -372,7 +372,7 @@ func (s *userResource) Update(obj interface{}, r api2go.Request) error {
 	}
 
 	// check references and get embedded objects, in real world, you would make database queries and check all your references
-	user.Chocolates = []Chocolate{}
+	user.Chocolates = []*Chocolate{}
 	for _, chocID := range user.ChocolatesIDs {
 		choc, err := s.chocStorage.GetOne(chocID)
 		if err != nil {
@@ -400,7 +400,7 @@ func (c *chocolateResource) FindOne(ID string, r api2go.Request) (interface{}, e
 }
 
 func (c *chocolateResource) Create(obj interface{}, r api2go.Request) (string, error) {
-	choc, ok := obj.(Chocolate)
+	choc, ok := obj.(*Chocolate)
 	if !ok {
 		return "", api2go.NewHTTPError(errors.New("Invalid instance given"), "Invalid instance given", http.StatusBadRequest)
 	}
@@ -413,7 +413,7 @@ func (c *chocolateResource) Delete(id string, r api2go.Request) error {
 }
 
 func (c *chocolateResource) Update(obj interface{}, r api2go.Request) error {
-	choc, ok := obj.(Chocolate)
+	choc, ok := obj.(*Chocolate)
 	if !ok {
 		return api2go.NewHTTPError(errors.New("Invalid instance given"), "Invalid instance given", http.StatusBadRequest)
 	}
@@ -439,9 +439,9 @@ func main() {
 
 	api := api2go.NewAPIWithMarshalers("v0", "http://localhost:31415", marshalers)
 	users := make(map[string]User)
-	chocStorage := ChocolateStorage{chocolates: make(map[string]Chocolate), idCount: 1}
+	chocStorage := ChocolateStorage{chocolates: make(map[string]*Chocolate), idCount: 1}
 	api.AddResource(User{}, &userResource{users: users, chocStorage: &chocStorage})
-	api.AddResource(Chocolate{}, &chocolateResource{storage: &chocStorage})
+	api.AddResource(&Chocolate{}, &chocolateResource{storage: &chocStorage})
 
 	fmt.Println("Listening on :31415")
 	handler := api.Handler().(*httprouter.Router)

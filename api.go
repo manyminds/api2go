@@ -298,15 +298,23 @@ type resource struct {
 
 func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD, marshalers map[string]ContentMarshaler) *resource {
 	resourceType := reflect.TypeOf(prototype)
-	if resourceType.Kind() != reflect.Struct {
-		panic("pass an empty resource struct to AddResource!")
+	if resourceType.Kind() != reflect.Struct && resourceType.Kind() != reflect.Ptr {
+		panic("pass an empty resource struct or a struct pointer to AddResource!")
 	}
-	// slice reflection trick to make oldObj addressable, because the Unmarshal Methods need a pointer...
-	updatingObjs := reflect.MakeSlice(reflect.SliceOf(reflect.TypeOf(prototype)), 1, 1)
-	updatingObjs.Index(0).Set(reflect.ValueOf(prototype))
-	ptrPrototype := updatingObjs.Index(0).Addr().Interface()
 
-	name := jsonapi.Jsonify(jsonapi.Pluralize(resourceType.Name()))
+	var ptrPrototype interface{}
+	var name string
+
+	if resourceType.Kind() == reflect.Struct {
+		ptrPrototype = reflect.New(resourceType).Interface()
+		name = resourceType.Name()
+	} else {
+		ptrPrototype = reflect.ValueOf(prototype).Interface()
+		name = resourceType.Elem().Name()
+	}
+
+	name = jsonapi.Jsonify(jsonapi.Pluralize(name))
+
 	res := resource{
 		resourceType: resourceType,
 		name:         name,
@@ -421,7 +429,8 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD, ma
 
 // AddResource registers a data source for the given resource
 // At least the CRUD interface must be implemented, all the other interfaces are optional.
-// `resource` should by an empty struct instance such as `Post{}`. The same type will be used for constructing new elements.
+// `resource` should be either an empty struct instance such as `Post{}` or a pointer to
+// a struct such as `&Post{}`. The same type will be used for constructing new elements.
 func (api *API) AddResource(prototype jsonapi.MarshalIdentifier, source CRUD) {
 	api.addResource(prototype, source, api.marshalers)
 }
@@ -588,7 +597,12 @@ func (res *resource) handleCreate(w http.ResponseWriter, r *http.Request, prefix
 	}
 	newObjs := reflect.MakeSlice(reflect.SliceOf(res.resourceType), 0, 0)
 
-	err = jsonapi.UnmarshalInto(ctx, res.resourceType, &newObjs)
+	structType := res.resourceType
+	if structType.Kind() == reflect.Ptr {
+		structType = structType.Elem()
+	}
+
+	err = jsonapi.UnmarshalInto(ctx, structType, &newObjs)
 	if err != nil {
 		return err
 	}
@@ -675,7 +689,12 @@ func (res *resource) handleUpdate(w http.ResponseWriter, r *http.Request, ps htt
 	updatingObjs := reflect.MakeSlice(reflect.SliceOf(res.resourceType), 1, 1)
 	updatingObjs.Index(0).Set(reflect.ValueOf(obj))
 
-	err = jsonapi.UnmarshalInto(ctx, res.resourceType, &updatingObjs)
+	structType := res.resourceType
+	if structType.Kind() == reflect.Ptr {
+		structType = structType.Elem()
+	}
+
+	err = jsonapi.UnmarshalInto(ctx, structType, &updatingObjs)
 	if err != nil {
 		return err
 	}
@@ -708,16 +727,14 @@ func (res *resource) handleReplaceRelation(w http.ResponseWriter, r *http.Reques
 		return errors.New("Invalid object. Need a \"data\" object")
 	}
 
-	// we need the old struct as pointer to write into it
-	ref := reflect.Indirect(reflect.New(reflect.TypeOf(oldObj)))
-	ref.Set(reflect.ValueOf(oldObj))
+	editObj, updateObj := getRelationUpdateObjects(oldObj)
 
-	err = jsonapi.UnmarshalLinkage(ref.Addr().Interface(), relation.Name, data)
+	err = jsonapi.UnmarshalLinkage(editObj, relation.Name, data)
 	if err != nil {
 		return err
 	}
 
-	if err := res.source.Update(ref.Interface(), buildRequest(r)); err != nil {
+	if err := res.source.Update(updateObj, buildRequest(r)); err != nil {
 		return err
 	}
 
@@ -741,9 +758,7 @@ func (res *resource) handleAddToManyRelation(w http.ResponseWriter, r *http.Requ
 		return errors.New("Invalid object. Need a \"data\" object")
 	}
 
-	// we need the old struct as pointer to write into it
-	ref := reflect.Indirect(reflect.New(reflect.TypeOf(oldObj)))
-	ref.Set(reflect.ValueOf(oldObj))
+	editObj, updateObj := getRelationUpdateObjects(oldObj)
 
 	newRels, ok := data.([]interface{})
 	if !ok {
@@ -765,13 +780,13 @@ func (res *resource) handleAddToManyRelation(w http.ResponseWriter, r *http.Requ
 		newIDs = append(newIDs, newID)
 	}
 
-	targetObj, ok := ref.Addr().Interface().(jsonapi.EditToManyRelations)
+	targetObj, ok := editObj.(jsonapi.EditToManyRelations)
 	if !ok {
 		return errors.New("target struct must implement jsonapi.EditToManyRelations")
 	}
 	targetObj.AddToManyIDs(relation.Name, newIDs)
 
-	if err := res.source.Update(ref.Interface(), buildRequest(r)); err != nil {
+	if err := res.source.Update(updateObj, buildRequest(r)); err != nil {
 		return err
 	}
 
@@ -796,9 +811,7 @@ func (res *resource) handleDeleteToManyRelation(w http.ResponseWriter, r *http.R
 		return errors.New("Invalid object. Need a \"data\" object")
 	}
 
-	// we need the old struct as pointer to write into it
-	ref := reflect.Indirect(reflect.New(reflect.TypeOf(oldObj)))
-	ref.Set(reflect.ValueOf(oldObj))
+	editObj, updateObj := getRelationUpdateObjects(oldObj)
 
 	newRels, ok := data.([]interface{})
 	if !ok {
@@ -820,20 +833,41 @@ func (res *resource) handleDeleteToManyRelation(w http.ResponseWriter, r *http.R
 		obsoleteIDs = append(obsoleteIDs, obsoleteID)
 	}
 
-	targetObj, ok := ref.Addr().Interface().(jsonapi.EditToManyRelations)
+	targetObj, ok := editObj.(jsonapi.EditToManyRelations)
 	if !ok {
 		return errors.New("target struct must implement jsonapi.EditToManyRelations")
 	}
 	targetObj.DeleteToManyIDs(relation.Name, obsoleteIDs)
 
-	if err := res.source.Update(ref.Interface(), buildRequest(r)); err != nil {
+	if err := res.source.Update(updateObj, buildRequest(r)); err != nil {
 		return err
 	}
 
 	w.WriteHeader(http.StatusNoContent)
 
 	return nil
+}
 
+// makes a copy of oldObj and returns two references to it, one that can be used to edit relations on,
+// and one that can be used to call CRUD.Update with.
+func getRelationUpdateObjects(oldObj interface{}) (editObj interface{}, updateObj interface{}) {
+	if resType := reflect.TypeOf(oldObj); resType.Kind() == reflect.Struct {
+		ptr := reflect.New(resType)
+		ptr.Elem().Set(reflect.ValueOf(oldObj))
+
+		// for struct resources, we pass a pointer to edit and a struct to Update
+		editObj = ptr.Interface()
+		updateObj = ptr.Elem().Interface()
+	} else {
+		ptr := reflect.New(resType.Elem())
+		ptr.Elem().Set(reflect.ValueOf(oldObj).Elem())
+
+		// for pointer resources, we pass a pointer both to edit and Update
+		editObj = ptr.Interface()
+		updateObj = ptr.Interface()
+	}
+
+	return
 }
 
 func (res *resource) handleDelete(w http.ResponseWriter, r *http.Request, ps httprouter.Params) error {

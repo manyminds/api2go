@@ -93,17 +93,22 @@ func Unmarshal(input map[string]interface{}, target interface{}) error {
 	targetType := reflect.TypeOf(target).Elem()
 
 	if targetType.Kind() != reflect.Slice {
-		// check for a struct which is also allowed to unmarshal into
+		// check for a struct or pointer to struct which are also allowed to unmarshal into
 		if targetType.Kind() == reflect.Struct {
 			structType = targetType
-			sliceVal = reflect.New(reflect.SliceOf(structType)).Elem()
-			isStruct = true
+		} else if targetType.Kind() == reflect.Ptr {
+			structType = targetType.Elem()
 		} else {
 			return typeError
 		}
+		sliceVal = reflect.New(reflect.SliceOf(targetType)).Elem()
+		isStruct = true
 	} else {
 		sliceVal = ptrVal.Elem()
 		structType = targetType.Elem()
+		if structType.Kind() == reflect.Ptr {
+			structType = structType.Elem()
+		}
 	}
 
 	if structType.Kind() != reflect.Struct {
@@ -138,7 +143,8 @@ func UnmarshalFromJSON(data []byte, target interface{}) error {
 	return Unmarshal(ctx, target)
 }
 
-// UnmarshalInto reads input params for one struct from `input` and marshals it into `targetSliceVal`
+// UnmarshalInto reads input params for one struct from `input` and marshals it into `targetSliceVal`,
+// which may be a slice of targetStructType or a slice of pointers to targetStructType.
 func UnmarshalInto(input map[string]interface{}, targetStructType reflect.Type, targetSliceVal *reflect.Value) error {
 	// Read models slice
 	var modelsInterface interface{}
@@ -178,7 +184,11 @@ func UnmarshalInto(input map[string]interface{}, targetStructType reflect.Type, 
 				}
 				otherID := existingObj.GetID()
 				if otherID == id {
-					val = obj
+					if obj.Type().Kind() == reflect.Struct {
+						val = obj
+					} else {
+						val = obj.Elem()
+					}
 					isNew = false
 					break
 				}
@@ -283,7 +293,11 @@ func UnmarshalInto(input map[string]interface{}, targetStructType reflect.Type, 
 		}
 
 		if isNew {
-			*targetSliceVal = reflect.Append(*targetSliceVal, val)
+			if targetSliceVal.Type().Elem().Kind() == reflect.Struct {
+				*targetSliceVal = reflect.Append(*targetSliceVal, val)
+			} else {
+				*targetSliceVal = reflect.Append(*targetSliceVal, val.Addr())
+			}
 		}
 	}
 
@@ -304,7 +318,7 @@ func setFieldValue(field *reflect.Value, value reflect.Value) (err error) {
 	switch field.Type().Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		field.SetInt(int64(value.Float()))
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
 		field.SetUint(uint64(value.Float()))
 	default:
 		// try to set it with json.Unmarshaler interface, if that does not work, set value directly
