@@ -11,7 +11,7 @@ import (
 )
 
 type Magic struct {
-	ID MagicID
+	ID MagicID `json:"-"`
 }
 
 func (m Magic) GetID() string {
@@ -45,7 +45,7 @@ func (c *Comment) SetID(stringID string) error {
 }
 
 type User struct {
-	ID       int
+	ID       int `json:"-"`
 	Name     string
 	Password string `json:"-"`
 }
@@ -66,9 +66,10 @@ func (u *User) SetID(stringID string) error {
 }
 
 type SimplePost struct {
-	ID, Title, Text string
-	Size            int
-	Created         time.Time `jsonapi:"name=create-date"`
+	ID          string `json:"-"`
+	Title, Text string
+	Size        int
+	Created     time.Time `jsonapi:"name=create-date"`
 }
 
 func (s SimplePost) GetID() string {
@@ -82,7 +83,7 @@ func (s *SimplePost) SetID(ID string) error {
 }
 
 type Post struct {
-	ID          int
+	ID          int `json:"-"`
 	Title       string
 	Comments    []Comment     `json:"-"`
 	CommentsIDs []int         `json:"-"`
@@ -208,7 +209,7 @@ func (c *Post) SetReferencedStructs(references []UnmarshalIdentifier) error {
 }
 
 type AnotherPost struct {
-	ID       int
+	ID       int   `json:"-"`
 	AuthorID int   `json:"-"`
 	Author   *User `json:"-"`
 }
@@ -237,7 +238,7 @@ func (p AnotherPost) GetReferencedIDs() []ReferenceID {
 }
 
 type ZeroPost struct {
-	ID    string
+	ID    string `json:"-"`
 	Title string
 	Value zero.Float
 }
@@ -247,7 +248,7 @@ func (z ZeroPost) GetID() string {
 }
 
 type ZeroPostPointer struct {
-	ID    string
+	ID    string `json:"-"`
 	Title string
 	Value *zero.Float
 }
@@ -257,7 +258,7 @@ func (z ZeroPostPointer) GetID() string {
 }
 
 type Question struct {
-	ID                  string
+	ID                  string `json:"-"`
 	Text                string
 	InspiringQuestionID sql.NullString `json:"-"`
 	InspiringQuestion   *Question      `json:"-"`
@@ -295,7 +296,7 @@ func (q Question) GetReferencedStructs() []MarshalIdentifier {
 }
 
 type Identity struct {
-	ID     int64    `json:"user_id"`
+	ID     int64    `json:"-"`
 	Scopes []string `json:"scopes"`
 }
 
@@ -313,7 +314,7 @@ func (u Unicorn) GetID() string {
 }
 
 type NumberPost struct {
-	ID             string
+	ID             string `json"-"`
 	Title          string
 	Number         int64
 	UnsignedNumber uint64
@@ -326,7 +327,7 @@ func (n *NumberPost) SetID(ID string) error {
 }
 
 type SqlNullPost struct {
-	ID     string
+	ID     string `json:"-"`
 	Title  zero.String
 	Likes  zero.Int
 	Rating zero.Float

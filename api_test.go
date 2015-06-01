@@ -10,14 +10,14 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/manyminds/api2go/jsonapi"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/manyminds/api2go/jsonapi"
 	"gopkg.in/guregu/null.v2"
 )
 
 type Post struct {
-	ID       string
+	ID       string `json:"-"`
 	Title    string
 	Value    null.Float
 	Author   *User     `json:"-"`
@@ -122,7 +122,7 @@ func (p Post) GetReferencedStructs() []jsonapi.MarshalIdentifier {
 }
 
 type Comment struct {
-	ID    string
+	ID    string `json:"-"`
 	Value string
 }
 
@@ -131,7 +131,7 @@ func (c Comment) GetID() string {
 }
 
 type User struct {
-	ID   string
+	ID   string `json:"-"`
 	Name string
 }
 
@@ -145,6 +145,8 @@ type fixtureSource struct {
 }
 
 func (s *fixtureSource) FindAll(req Request) (interface{}, error) {
+	var err error
+
 	if limit, ok := req.QueryParams["limit"]; ok {
 		if l, err := strconv.ParseInt(limit[0], 10, 64); err == nil {
 			if s.pointers {
@@ -157,38 +159,39 @@ func (s *fixtureSource) FindAll(req Request) (interface{}, error) {
 					}
 				}
 				return postsSlice, nil
-			} else {
-				postsSlice := make([]Post, l)
-				length := len(s.posts)
-				for i := 0; i < length; i++ {
-					postsSlice[i] = *s.posts[strconv.Itoa(i+1)]
-					if i+1 >= int(l) {
-						break
-					}
-				}
-				return postsSlice, nil
 			}
-		} else {
-			fmt.Println("Error casting to int", err)
-			return nil, err
-		}
-	} else {
-		if s.pointers {
-			postsSlice := make([]Post, len(s.posts))
+
+			postsSlice := make([]Post, l)
 			length := len(s.posts)
 			for i := 0; i < length; i++ {
 				postsSlice[i] = *s.posts[strconv.Itoa(i+1)]
+				if i+1 >= int(l) {
+					break
+				}
 			}
 			return postsSlice, nil
-		} else {
-			postsSlice := make([]*Post, len(s.posts))
-			length := len(s.posts)
-			for i := 0; i < length; i++ {
-				postsSlice[i] = s.posts[strconv.Itoa(i+1)]
-			}
-			return postsSlice, nil
+
 		}
+
+		fmt.Println("Error casting to int", err)
+		return nil, err
 	}
+
+	if s.pointers {
+		postsSlice := make([]Post, len(s.posts))
+		length := len(s.posts)
+		for i := 0; i < length; i++ {
+			postsSlice[i] = *s.posts[strconv.Itoa(i+1)]
+		}
+		return postsSlice, nil
+	}
+
+	postsSlice := make([]*Post, len(s.posts))
+	length := len(s.posts)
+	for i := 0; i < length; i++ {
+		postsSlice[i] = s.posts[strconv.Itoa(i+1)]
+	}
+	return postsSlice, nil
 }
 
 // this does not read the query parameters, which you would do to limit the result in real world usage
@@ -201,24 +204,24 @@ func (s *fixtureSource) PaginatedFindAll(req Request) (interface{}, uint, error)
 		}
 
 		return postsSlice, uint(len(s.posts)), nil
-	} else {
-		postsSlice := []Post{}
-
-		for _, post := range s.posts {
-			postsSlice = append(postsSlice, *post)
-		}
-
-		return postsSlice, uint(len(s.posts)), nil
 	}
+
+	postsSlice := []Post{}
+
+	for _, post := range s.posts {
+		postsSlice = append(postsSlice, *post)
+	}
+
+	return postsSlice, uint(len(s.posts)), nil
 }
 
 func (s *fixtureSource) FindOne(id string, req Request) (interface{}, error) {
 	if p, ok := s.posts[id]; ok {
 		if s.pointers {
 			return p, nil
-		} else {
-			return *p, nil
 		}
+
+		return *p, nil
 	}
 	return nil, NewHTTPError(nil, "post not found", http.StatusNotFound)
 }
@@ -285,17 +288,17 @@ func (s *userSource) FindAll(req Request) (interface{}, error) {
 
 			if s.pointers {
 				return &u, nil
-			} else {
-				return u, nil
 			}
+
+			return u, nil
 		}
 	}
 
 	if s.pointers {
 		return []User{}, errors.New("Did not receive query parameter")
-	} else {
-		return []*User{}, errors.New("Did not receive query parameter")
 	}
+
+	return []*User{}, errors.New("Did not receive query parameter")
 }
 
 func (s *userSource) FindOne(id string, req Request) (interface{}, error) {
@@ -329,17 +332,17 @@ func (s *commentSource) FindAll(req Request) (interface{}, error) {
 
 			if s.pointers {
 				return []*Comment{&c}, nil
-			} else {
-				return []Comment{c}, nil
 			}
+
+			return []Comment{c}, nil
 		}
 	}
 
 	if s.pointers {
 		return []*Comment{}, errors.New("Did not receive query parameter")
-	} else {
-		return []Comment{}, errors.New("Did not receive query parameter")
 	}
+
+	return []Comment{}, errors.New("Did not receive query parameter")
 }
 
 func (s *commentSource) FindOne(id string, req Request) (interface{}, error) {
@@ -405,10 +408,12 @@ var _ = Describe("RestHandler", func() {
 			}, usePointerResources}
 
 			post1Json = map[string]interface{}{
-				"id":    "1",
-				"type":  "posts",
-				"title": "Hello, World!",
-				"value": nil,
+				"id":   "1",
+				"type": "posts",
+				"attributes": map[string]interface{}{
+					"title": "Hello, World!",
+					"value": nil,
+				},
 				"links": map[string]interface{}{
 					"author": map[string]interface{}{
 						"linkage": map[string]interface{}{
@@ -434,21 +439,27 @@ var _ = Describe("RestHandler", func() {
 			post1LinkedJSON = []map[string]interface{}{
 				map[string]interface{}{
 					"id":   "1",
-					"name": "Dieter",
 					"type": "users",
+					"attributes": map[string]interface{}{
+						"name": "Dieter",
+					},
 				},
 				map[string]interface{}{
-					"id":    "1",
-					"type":  "comments",
-					"value": "This is a stupid post!",
+					"id":   "1",
+					"type": "comments",
+					"attributes": map[string]interface{}{
+						"value": "This is a stupid post!",
+					},
 				},
 			}
 
 			post2Json = map[string]interface{}{
-				"id":    "2",
-				"type":  "posts",
-				"title": "I am NR. 2",
-				"value": nil,
+				"id":   "2",
+				"type": "posts",
+				"attributes": map[string]interface{}{
+					"title": "I am NR. 2",
+					"value": nil,
+				},
 				"links": map[string]interface{}{
 					"author": map[string]interface{}{
 						"linkage": nil,
@@ -464,10 +475,12 @@ var _ = Describe("RestHandler", func() {
 			}
 
 			post3Json = map[string]interface{}{
-				"id":    "3",
-				"type":  "posts",
-				"title": "I am NR. 3",
-				"value": nil,
+				"id":   "3",
+				"type": "posts",
+				"attributes": map[string]interface{}{
+					"title": "I am NR. 3",
+					"value": nil,
+				},
 				"links": map[string]interface{}{
 					"author": map[string]interface{}{
 						"linkage": nil,
@@ -528,7 +541,14 @@ var _ = Describe("RestHandler", func() {
 			Expect(err).ToNot(HaveOccurred())
 			api.Handler().ServeHTTP(rec, req)
 			Expect(rec.Code).To(Equal(http.StatusOK))
-			Expect(rec.Body.Bytes()).To(MatchJSON(`{"data": {"id": "1", "name": "Dieter", "type": "users"}}`))
+			Expect(rec.Body.Bytes()).To(MatchJSON(`
+				{"data": {
+					"id": "1", 
+					"type": "users",
+					"attributes": {
+						"name": "Dieter"
+					}
+				}}`))
 		})
 
 		It("GETs related structs from resource url", func() {
@@ -536,7 +556,14 @@ var _ = Describe("RestHandler", func() {
 			Expect(err).ToNot(HaveOccurred())
 			api.Handler().ServeHTTP(rec, req)
 			Expect(rec.Code).To(Equal(http.StatusOK))
-			Expect(rec.Body.Bytes()).To(MatchJSON(`{"data": [{"id": "1", "value": "This is a stupid post!", "type": "comments"}]}`))
+			Expect(rec.Body.Bytes()).To(MatchJSON(`
+				{"data": [{
+					"id": "1", 
+					"type": "comments",
+					"attributes": {
+						"value": "This is a stupid post!"
+					}
+				}]}`))
 		})
 
 		It("GETs relationship data from relationship url for to-many", func() {
@@ -573,7 +600,7 @@ var _ = Describe("RestHandler", func() {
 		})
 
 		It("POSTSs new objects", func() {
-			reqBody := strings.NewReader(`{"data": [{"title": "New Post", "type": "posts"}]}`)
+			reqBody := strings.NewReader(`{"data": [{"attributes":{"title": "New Post" }, "type": "posts"}]}`)
 			req, err := http.NewRequest("POST", "/v1/posts", reqBody)
 			Expect(err).To(BeNil())
 			api.Handler().ServeHTTP(rec, req)
@@ -583,10 +610,12 @@ var _ = Describe("RestHandler", func() {
 			Expect(json.Unmarshal(rec.Body.Bytes(), &result)).To(BeNil())
 			Expect(result).To(Equal(map[string]interface{}{
 				"data": map[string]interface{}{
-					"id":    "4",
-					"type":  "posts",
-					"title": "New Post",
-					"value": nil,
+					"id":   "4",
+					"type": "posts",
+					"attributes": map[string]interface{}{
+						"title": "New Post",
+						"value": nil,
+					},
 					"links": map[string]interface{}{
 						"author": map[string]interface{}{
 							"linkage": nil,
@@ -694,7 +723,7 @@ var _ = Describe("RestHandler", func() {
 			It("UPDATEs", func() {
 				target := source.posts["1"]
 				target.Value = null.FloatFrom(2)
-				doRequest(`{"data": {"id": "1", "title": "New Title", "type": "posts"}}`, "/v1/posts/1", "PATCH")
+				doRequest(`{"data": {"id": "1", "attributes": {"title": "New Title"}, "type": "posts"}}`, "/v1/posts/1", "PATCH")
 				Expect(source.posts["1"].Title).To(Equal("New Title"))
 				Expect(target.Title).To(Equal("New Title"))
 				Expect(target.Value).To(Equal(null.FloatFrom(2)))
@@ -881,9 +910,13 @@ var _ = Describe("RestHandler", func() {
 				"1": &Post{ID: "1", Title: "Hello, World!"},
 			}, false}
 
-			jsonResponse = `{"data":{"id":"1","links":{"author":{"linkage":null,"related":"/posts/1/author","self":"/posts/1/links/author"},"comments":{"linkage":[],"related":"/posts/1/comments","self":"/posts/1/links/comments"}},"title":"Hello, World!","type":"posts","value":null}}`
+			jsonResponse = `{"data":{"attributes":{"title":"Hello, World!","value":null},"id":"1","links":{"author":{"linkage":null,"related":"/posts/1/author","self":"/posts/1/links/author"},"comments":{"linkage":[],"related":"/posts/1/comments","self":"/posts/1/links/comments"}},"type":"posts"}}`
 			prettyResponse = `{
     "data": {
+        "attributes": {
+            "title": "Hello, World!",
+            "value": null
+        },
         "id": "1",
         "links": {
             "author": {
@@ -897,14 +930,12 @@ var _ = Describe("RestHandler", func() {
                 "self": "/posts/1/links/comments"
             }
         },
-        "title": "Hello, World!",
-        "type": "posts",
-        "value": null
+        "type": "posts"
     }
 }`
 
 			marshalers := map[string]ContentMarshaler{
-				`application/vnd.api+json`: JSONContentMarshaler{},
+				`application/vnd.api+json`:       JSONContentMarshaler{},
 				`application/vnd.api+prettyjson`: prettyJSONContentMarshaler{},
 			}
 
@@ -986,10 +1017,12 @@ var _ = Describe("RestHandler", func() {
 			}, false}
 
 			post1JSON = map[string]interface{}{
-				"id":    "1",
-				"type":  "posts",
-				"title": "Hello, World!",
-				"value": nil,
+				"id":   "1",
+				"type": "posts",
+				"attributes": map[string]interface{}{
+					"title": "Hello, World!",
+					"value": nil,
+				},
 				"links": map[string]interface{}{
 					"author": map[string]interface{}{
 						"linkage": nil,
@@ -1005,10 +1038,12 @@ var _ = Describe("RestHandler", func() {
 			}
 
 			post2JSON = map[string]interface{}{
-				"id":    "2",
-				"type":  "posts",
-				"title": "Hello, from second Post!",
-				"value": nil,
+				"id":   "2",
+				"type": "posts",
+				"attributes": map[string]interface{}{
+					"title": "Hello, from second Post!",
+					"value": nil,
+				},
 				"links": map[string]interface{}{
 					"author": map[string]interface{}{
 						"linkage": nil,

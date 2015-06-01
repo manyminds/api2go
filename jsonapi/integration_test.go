@@ -8,7 +8,7 @@ import (
 )
 
 type Book struct {
-	ID       string
+	ID       string      `json:"-"`
 	Author   *StupidUser `json:"-"`
 	AuthorID string      `json:"-"`
 	Pages    []Page      `json:"-"`
@@ -84,7 +84,7 @@ func (b Book) GetReferencedStructs() []MarshalIdentifier {
 }
 
 type StupidUser struct {
-	ID   string
+	ID   string `json:"-"`
 	Name string
 }
 
@@ -93,7 +93,7 @@ func (s StupidUser) GetID() string {
 }
 
 type Page struct {
-	ID      string
+	ID      string `json:"-"`
 	Content string
 }
 
@@ -123,6 +123,7 @@ var _ = Describe("Test for the public api of this package", func() {
 		{ "data" : 
 			{ 
 				"id" : "TheOneAndOnlyID",
+				"attributes": {},
 				"links" : 
 				{ 
 						"author" : 
@@ -154,19 +155,31 @@ var _ = Describe("Test for the public api of this package", func() {
 			},
 			"included" : 
 				[ 
-					{ "id" : "A Magical UserID",
-						"name" : "Terry Pratchett",
+					{ 
+						"id" : "A Magical UserID",
+						"attributes": {
+							"name" : "Terry Pratchett"
+						},
 						"type" : "stupidUsers"
 					},
-					{ "content" : "First Page",
+					{ 
+						"attributes": {
+							"content" : "First Page"
+						},
 						"id" : "Page 1",
 						"type" : "pages"
 					},
-					{ "content" : "Second Page",
+					{ 
+						"attributes": {
+							"content" : "Second Page"
+						},
 						"id" : "Page 2",
 						"type" : "pages"
 					},
-					{ "content" : "Final page",
+					{ 
+						"attributes": {
+							"content" : "Final page"
+						},
 						"id" : "Page 3",
 						"type" : "pages"
 					}

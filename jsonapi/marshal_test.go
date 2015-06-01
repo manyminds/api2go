@@ -22,28 +22,34 @@ var _ = Describe("Marshalling", func() {
 			created, _ = time.Parse(time.RFC3339, "2014-11-10T16:30:48.823Z")
 			firstPost = SimplePost{ID: "first", Title: "First Post", Text: "Lipsum", Created: created}
 			firstPostMap = map[string]interface{}{
-				"type":        "simplePosts",
-				"id":          "first",
-				"title":       firstPost.Title,
-				"text":        firstPost.Text,
-				"size":        0,
-				"create-date": created,
+				"type": "simplePosts",
+				"id":   "first",
+				"attributes": map[string]interface{}{
+					"title":       firstPost.Title,
+					"text":        firstPost.Text,
+					"size":        0,
+					"create-date": created,
+				},
 			}
 
 			secondPost = SimplePost{ID: "second", Title: "Second Post", Text: "Getting more advanced!", Created: created}
 			secondPostMap = map[string]interface{}{
-				"type":        "simplePosts",
-				"id":          "second",
-				"title":       secondPost.Title,
-				"text":        secondPost.Text,
-				"size":        0,
-				"create-date": created,
+				"type": "simplePosts",
+				"id":   "second",
+				"attributes": map[string]interface{}{
+					"title":       secondPost.Title,
+					"text":        secondPost.Text,
+					"size":        0,
+					"create-date": created,
+				},
 			}
 
 			firstUserMap = map[string]interface{}{
 				"type": "users",
 				"id":   "100",
-				"name": "Nino",
+				"attributes": map[string]interface{}{
+					"name": "Nino",
+				},
 			}
 		})
 
@@ -79,8 +85,9 @@ var _ = Describe("Marshalling", func() {
 
 			expected := map[string]interface{}{
 				"data": map[string]interface{}{
-					"type": "magics",
-					"id":   "This should be visible",
+					"type":       "magics",
+					"id":         "This should be visible",
+					"attributes": map[string]interface{}{},
 				},
 			}
 
@@ -132,8 +139,10 @@ var _ = Describe("Marshalling", func() {
 					secondPostMap,
 					map[string]interface{}{
 						"id":   "1337",
-						"name": "Nino",
 						"type": "users",
+						"attributes": map[string]interface{}{
+							"name": "Nino",
+						},
 					},
 				},
 			}))
@@ -186,8 +195,10 @@ var _ = Describe("Marshalling", func() {
 								},
 							},
 						},
-						"title": "Foobar",
-						"type":  "posts",
+						"type": "posts",
+						"attributes": map[string]interface{}{
+							"title": "Foobar",
+						},
 					},
 					map[string]interface{}{
 						"id": "2",
@@ -215,25 +226,33 @@ var _ = Describe("Marshalling", func() {
 								},
 							},
 						},
-						"title": "Foobarbarbar",
-						"type":  "posts",
+						"type": "posts",
+						"attributes": map[string]interface{}{
+							"title": "Foobarbarbar",
+						},
 					},
 				},
 				"included": []map[string]interface{}{
 					map[string]interface{}{
 						"id":   "1",
-						"name": "Test Author",
 						"type": "users",
+						"attributes": map[string]interface{}{
+							"name": "Test Author",
+						},
 					},
 					map[string]interface{}{
 						"id":   "1",
-						"text": "First!",
 						"type": "comments",
+						"attributes": map[string]interface{}{
+							"text": "First!",
+						},
 					},
 					map[string]interface{}{
 						"id":   "2",
-						"text": "Second!",
 						"type": "comments",
+						"attributes": map[string]interface{}{
+							"text": "Second!",
+						},
 					},
 				},
 			}
@@ -246,9 +265,11 @@ var _ = Describe("Marshalling", func() {
 			i, err := MarshalWithURLs(post, CompleteServerInformation{})
 			expected := map[string]interface{}{
 				"data": map[string]interface{}{
-					"id":    "1",
-					"type":  "posts",
-					"title": "",
+					"id":   "1",
+					"type": "posts",
+					"attributes": map[string]interface{}{
+						"title": "",
+					},
 					"links": map[string]map[string]interface{}{
 						"comments": map[string]interface{}{
 							"self":    completePrefix + "/posts/1/links/comments",
@@ -280,9 +301,11 @@ var _ = Describe("Marshalling", func() {
 			Expect(err).To(BeNil())
 			Expect(i).To(Equal(map[string]interface{}{
 				"data": map[string]interface{}{
-					"id":    "1",
-					"type":  "posts",
-					"title": "",
+					"id":   "1",
+					"type": "posts",
+					"attributes": map[string]interface{}{
+						"title": "",
+					},
 					"links": map[string]map[string]interface{}{
 						"comments": map[string]interface{}{
 							"linkage": []map[string]interface{}{
@@ -304,12 +327,16 @@ var _ = Describe("Marshalling", func() {
 					map[string]interface{}{
 						"id":   "1",
 						"type": "users",
-						"name": "Tester",
+						"attributes": map[string]interface{}{
+							"name": "Tester",
+						},
 					},
 					map[string]interface{}{
 						"id":   "1",
 						"type": "comments",
-						"text": "",
+						"attributes": map[string]interface{}{
+							"text": "",
+						},
 					},
 				},
 			}))
@@ -321,8 +348,9 @@ var _ = Describe("Marshalling", func() {
 			Expect(err).To(BeNil())
 			Expect(i).To(Equal(map[string]interface{}{
 				"data": map[string]interface{}{
-					"id":   "1",
-					"type": "anotherPosts",
+					"id":         "1",
+					"type":       "anotherPosts",
+					"attributes": map[string]interface{}{},
 					"links": map[string]map[string]interface{}{
 						"author": map[string]interface{}{
 							"linkage": map[string]interface{}{
@@ -344,10 +372,12 @@ var _ = Describe("Marshalling", func() {
 		It("correctly unmarshals driver values", func() {
 			postMap := map[string]interface{}{
 				"data": map[string]interface{}{
-					"id":    "1",
-					"type":  "zeroPosts",
-					"title": "test",
-					"value": theFloat,
+					"id":   "1",
+					"type": "zeroPosts",
+					"attributes": map[string]interface{}{
+						"title": "test",
+						"value": theFloat,
+					},
 				},
 			}
 
@@ -358,7 +388,16 @@ var _ = Describe("Marshalling", func() {
 		})
 
 		It("correctly unmarshals into json", func() {
-			expectedJSON := []byte(`{"data":{"id":"1","type":"zeroPosts","title":"test","value":2.3}}`)
+			expectedJSON := []byte(`
+				{"data":{
+					"id":"1",
+					"type":"zeroPosts",
+					"attributes": {
+						"title":"test",
+						"value":2.3
+					}
+				}}
+			`)
 
 			json, err := MarshalToJSON(post)
 			Expect(err).To(BeNil())
@@ -368,10 +407,12 @@ var _ = Describe("Marshalling", func() {
 		It("correctly unmarshals driver values with pointer", func() {
 			postMap := map[string]interface{}{
 				"data": map[string]interface{}{
-					"id":    "1",
-					"type":  "zeroPostPointers",
-					"title": "test",
-					"value": &theFloat,
+					"id":   "1",
+					"type": "zeroPostPointers",
+					"attributes": map[string]interface{}{
+						"title": "test",
+						"value": &theFloat,
+					},
 				},
 			}
 
@@ -382,7 +423,16 @@ var _ = Describe("Marshalling", func() {
 		})
 
 		It("correctly unmarshals with pointer into json", func() {
-			expectedJSON := []byte(`{"data":{"id":"1","type":"zeroPostPointers","title":"test","value":2.3}}`)
+			expectedJSON := []byte(`
+				{"data":{
+					"id":"1",
+					"type":"zeroPostPointers",
+					"attributes": {
+						"title":"test",
+						"value":2.3
+					}
+				}}
+			`)
 
 			json, err := MarshalToJSON(pointerPost)
 			Expect(err).To(BeNil())
@@ -401,7 +451,9 @@ var _ = Describe("Marshalling", func() {
 				"data": map[string]interface{}{
 					"id":   "2",
 					"type": "questions",
-					"text": "Will it ever work?",
+					"attributes": map[string]interface{}{
+						"text": "Will it ever work?",
+					},
 					"links": map[string]map[string]interface{}{
 						"inspiringQuestion": map[string]interface{}{
 							"linkage": map[string]interface{}{
@@ -415,7 +467,9 @@ var _ = Describe("Marshalling", func() {
 					map[string]interface{}{
 						"id":   "1",
 						"type": "questions",
-						"text": "Does this test work?",
+						"attributes": map[string]interface{}{
+							"text": "Does this test work?",
+						},
 						"links": map[string]map[string]interface{}{
 							"inspiringQuestion": map[string]interface{}{
 								"linkage": nil,
@@ -436,7 +490,9 @@ var _ = Describe("Marshalling", func() {
 					map[string]interface{}{
 						"id":   "3",
 						"type": "questions",
-						"text": "It works now",
+						"attributes": map[string]interface{}{
+							"text": "It works now",
+						},
 						"links": map[string]map[string]interface{}{
 							"inspiringQuestion": map[string]interface{}{
 								"linkage": map[string]interface{}{
@@ -449,7 +505,9 @@ var _ = Describe("Marshalling", func() {
 					map[string]interface{}{
 						"id":   "2",
 						"type": "questions",
-						"text": "Will it ever work?",
+						"attributes": map[string]interface{}{
+							"text": "Will it ever work?",
+						},
 						"links": map[string]map[string]interface{}{
 							"inspiringQuestion": map[string]interface{}{
 								"linkage": map[string]interface{}{
@@ -464,7 +522,9 @@ var _ = Describe("Marshalling", func() {
 					map[string]interface{}{
 						"id":   "1",
 						"type": "questions",
-						"text": "Does this test work?",
+						"attributes": map[string]interface{}{
+							"text": "Does this test work?",
+						},
 						"links": map[string]map[string]interface{}{
 							"inspiringQuestion": map[string]interface{}{
 								"linkage": nil,
@@ -486,8 +546,10 @@ var _ = Describe("Marshalling", func() {
 				"data": map[string]interface{}{
 					"id":   "1234",
 					"type": "identities",
-					"scopes": []string{
-						"user_global",
+					"attributes": map[string]interface{}{
+						"scopes": []string{
+							"user_global",
+						},
 					},
 				},
 			}
@@ -500,11 +562,13 @@ var _ = Describe("Marshalling", func() {
 		It("Marshalls correctly without an ID field", func() {
 			expected := map[string]interface{}{
 				"data": map[string]interface{}{
-					"id":        "magicalUnicorn",
-					"unicornID": int64(1234),
-					"type":      "unicorns",
-					"scopes": []string{
-						"user_global",
+					"id":   "magicalUnicorn",
+					"type": "unicorns",
+					"attributes": map[string]interface{}{
+						"scopes": []string{
+							"user_global",
+						},
+						"unicornID": int64(1234),
 					},
 				},
 			}
@@ -673,11 +737,13 @@ var _ = Describe("Marshalling", func() {
 				{
 					"data": {
 						"id": "theID",
-						"title": "Test",
-						"likes": 666,
-						"rating": 66.66,
-						"isCool": true,
-						"type": "sqlNullPosts"
+						"type": "sqlNullPosts",
+						"attributes": {
+							"title": "Test",
+							"likes": 666,
+							"rating": 66.66,
+							"isCool": true
+						}
 					}
 				}
 			`))

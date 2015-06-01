@@ -199,13 +199,14 @@ func marshalData(element MarshalIdentifier, information ServerInformation) (map[
 
 	id := element.GetID()
 	content := getStructFields(element)
+	result["attributes"] = make(map[string]interface{})
+	attributes := result["attributes"].(map[string]interface{})
+	// if there is a field name `id` that is not ignored by the json ignore flag, it gets into the
+	// attributes as well, this is a intended behavior.
 	for k, v := range content {
-		result[k] = v
+		attributes[k] = v
 	}
 
-	// its important that the id from the interface
-	// gets added afterwards, otherwise an ID field
-	// could conflict with the actual marshalling
 	result["id"] = id
 	result["type"] = getStructType(element)
 

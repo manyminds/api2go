@@ -239,10 +239,12 @@ type ContentMarshaler interface {
 type JSONContentMarshaler struct {
 }
 
+// Marshal marshals with default JSON
 func (m JSONContentMarshaler) Marshal(i interface{}) ([]byte, error) {
 	return json.Marshal(i)
 }
 
+// Unmarshal with default JSON
 func (m JSONContentMarshaler) Unmarshal(data []byte, i interface{}) error {
 	return json.Unmarshal(data, i)
 }
@@ -250,7 +252,7 @@ func (m JSONContentMarshaler) Unmarshal(data []byte, i interface{}) error {
 // DefaultContentMarshalers is the default set of content marshalers for an API.
 // Currently this means handling application/vnd.api+json content type bodies
 // using the standard encoding/json package.
-var DefaultContentMarshalers map[string]ContentMarshaler = map[string]ContentMarshaler{
+var DefaultContentMarshalers = map[string]ContentMarshaler{
 	"application/vnd.api+json": JSONContentMarshaler{},
 }
 
