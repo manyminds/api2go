@@ -13,33 +13,39 @@ import (
 var _ = Describe("Unmarshal", func() {
 	Context("When unmarshaling simple objects", func() {
 		t, _ := time.Parse(time.RFC3339, "2014-11-10T16:30:48.823Z")
-		singleJSON := []byte(`{"data":{"id": "1", "type": "simplePosts", "title":"First Post","text":"Lipsum", "Created": "2014-11-10T16:30:48.823Z"}}`)
+		singleJSON := []byte(`{"data":{"id": "1", "type": "simplePosts", "attributes": {"title":"First Post","text":"Lipsum", "Created": "2014-11-10T16:30:48.823Z"}}}`)
 		firstPost := SimplePost{ID: "1", Title: "First Post", Text: "Lipsum", Created: t}
 		secondPost := SimplePost{ID: "2", Title: "Second Post", Text: "Foobar!", Created: t}
 		singlePostMap := map[string]interface{}{
 			"data": map[string]interface{}{
-				"id":          "1",
-				"type":        "simplePosts",
-				"title":       firstPost.Title,
-				"text":        firstPost.Text,
-				"create-date": "2014-11-10T16:30:48.823Z",
+				"id":   "1",
+				"type": "simplePosts",
+				"attributes": map[string]interface{}{
+					"title":       firstPost.Title,
+					"text":        firstPost.Text,
+					"create-date": "2014-11-10T16:30:48.823Z",
+				},
 			},
 		}
 		multiplePostMap := map[string]interface{}{
 			"data": []interface{}{
 				map[string]interface{}{
-					"id":          "1",
-					"type":        "simplePosts",
-					"title":       firstPost.Title,
-					"text":        firstPost.Text,
-					"create-date": "2014-11-10T16:30:48.823Z",
+					"id":   "1",
+					"type": "simplePosts",
+					"attributes": map[string]interface{}{
+						"title":       firstPost.Title,
+						"text":        firstPost.Text,
+						"create-date": "2014-11-10T16:30:48.823Z",
+					},
 				},
 				map[string]interface{}{
-					"id":          "2",
-					"type":        "simplePosts",
-					"title":       secondPost.Title,
-					"text":        secondPost.Text,
-					"create-date": "2014-11-10T16:30:48.823Z",
+					"id":   "2",
+					"type": "simplePosts",
+					"attributes": map[string]interface{}{
+						"title":       secondPost.Title,
+						"text":        secondPost.Text,
+						"create-date": "2014-11-10T16:30:48.823Z",
+					},
 				},
 			},
 		}
@@ -47,7 +53,7 @@ var _ = Describe("Unmarshal", func() {
 		It("unmarshals single objects into a slice", func() {
 			var posts []SimplePost
 			err := Unmarshal(singlePostMap, &posts)
-			Expect(err).To(BeNil())
+			Expect(err).ToNot(HaveOccurred())
 			Expect(posts).To(Equal([]SimplePost{firstPost}))
 		})
 
@@ -110,20 +116,20 @@ var _ = Describe("Unmarshal", func() {
 		It("errors with wrong keys", func() {
 			var posts []SimplePost
 			err := Unmarshal(map[string]interface{}{
-				"data": []interface{}{
-					map[string]interface{}{
+				"data": map[string]interface{}{
+					"attributes": map[string]interface{}{
 						"foobar": 42,
 					},
 				},
 			}, &posts)
-			Expect(err).ToNot(BeNil())
+			Expect(err).To(HaveOccurred())
 		})
 
 		It("errors with wrong type, expected int, got a string", func() {
 			var posts []SimplePost
 			err := Unmarshal(map[string]interface{}{
-				"data": []interface{}{
-					map[string]interface{}{
+				"data": map[string]interface{}{
+					"attributes": map[string]interface{}{
 						"text": "Gopher",
 						"size": "blubb",
 					},
@@ -136,10 +142,10 @@ var _ = Describe("Unmarshal", func() {
 		It("errors with invalid time format", func() {
 			t, err := time.Parse(time.RFC3339, "2014-11-10T16:30:48.823Z")
 			faultyPostMap := map[string]interface{}{
-				"data": []interface{}{
-					map[string]interface{}{
-						"id":      "1",
-						"type":    "simplePosts",
+				"data": map[string]interface{}{
+					"id":   "1",
+					"type": "simplePosts",
+					"attributes": map[string]interface{}{
 						"title":   firstPost.Title,
 						"text":    firstPost.Text,
 						"created": t.Format(time.RFC1123Z),
@@ -235,9 +241,11 @@ var _ = Describe("Unmarshal", func() {
 			postMap := map[string]interface{}{
 				"data": []interface{}{
 					map[string]interface{}{
-						"id":    "1",
-						"type":  "posts",
-						"title": "Test",
+						"id":   "1",
+						"type": "posts",
+						"attributes": map[string]interface{}{
+							"title": "Test",
+						},
 						"links": map[string]interface{}{
 							"author": map[string]interface{}{
 								"linkage": map[string]interface{}{
@@ -260,9 +268,11 @@ var _ = Describe("Unmarshal", func() {
 			postMap := map[string]interface{}{
 				"data": []interface{}{
 					map[string]interface{}{
-						"id":    "3",
-						"type":  "posts",
-						"title": "Test",
+						"id":   "3",
+						"type": "posts",
+						"attributes": map[string]interface{}{
+							"title": "Test",
+						},
 						"links": map[string]interface{}{
 							"author": map[string]interface{}{
 								"linkage": map[string]interface{}{
@@ -297,9 +307,11 @@ var _ = Describe("Unmarshal", func() {
 			postMap := map[string]interface{}{
 				"data": []interface{}{
 					map[string]interface{}{
-						"id":    "1",
-						"type":  "posts",
-						"title": "Test",
+						"id":   "1",
+						"type": "posts",
+						"attributes": map[string]interface{}{
+							"title": "Test",
+						},
 					},
 				},
 			}
@@ -331,9 +343,11 @@ var _ = Describe("Unmarshal", func() {
 			postMap := map[string]interface{}{
 				"data": []interface{}{
 					map[string]interface{}{
-						"id":    "1",
-						"type":  "posts",
-						"title": "New Title",
+						"id":   "1",
+						"type": "posts",
+						"attributes": map[string]interface{}{
+							"title": "New Title",
+						},
 					},
 				},
 			}
@@ -350,10 +364,12 @@ var _ = Describe("Unmarshal", func() {
 			postMap := map[string]interface{}{
 				"data": []interface{}{
 					map[string]interface{}{
-						"id":    "1",
-						"type":  "simplePosts",
-						"title": "Nice Title",
-						"text":  nil,
+						"id":   "1",
+						"type": "simplePosts",
+						"attributes": map[string]interface{}{
+							"title": "Nice Title",
+							"text":  nil,
+						},
 					},
 				},
 			}
@@ -370,8 +386,10 @@ var _ = Describe("Unmarshal", func() {
 			postMap := map[string]interface{}{
 				"data": []interface{}{
 					map[string]interface{}{
-						"title": "Nice Title",
-						"type":  "simplePosts",
+						"type": "simplePosts",
+						"attributes": map[string]interface{}{
+							"title": "Nice Title",
+						},
 					},
 				},
 			}
@@ -389,9 +407,11 @@ var _ = Describe("Unmarshal", func() {
 					"data": [
 						{
 							"id": "test",
-							"title": "Blubb",
-							"number": 1337,
-							"type": "numberPosts"
+							"type": "numberPosts",
+							"attributes": {
+								"title": "Blubb",
+								"number": 1337
+							}
 						}
 					]
 				}
@@ -411,9 +431,11 @@ var _ = Describe("Unmarshal", func() {
 					"data": [
 						{
 							"id": "test",
-							"title": "Blubb",
-							"number": -1337,
-							"type": "numberPosts"
+							"type": "numberPosts",
+							"attributes": {
+								"title": "Blubb",
+								"number": -1337
+							}
 						}
 					]
 				}
@@ -433,9 +455,11 @@ var _ = Describe("Unmarshal", func() {
 					"data": [
 						{
 							"id": "test",
-							"title": "Blubb",
-							"unsignedNumber": 1337,
-							"type": "numberPosts"
+							"type": "numberPosts",
+							"attributes": {
+								"title": "Blubb",
+								"unsignedNumber": 1337
+							}
 						}
 					]
 				}
@@ -462,11 +486,13 @@ var _ = Describe("Unmarshal", func() {
 				{
 					"data": {
 						"id": "theID",
-						"title": "Test",
-						"likes": 666,
-						"rating": 66.66,
-						"isCool": true,
-						"type": "sqlNullPosts"
+						"type": "sqlNullPosts",
+						"attributes": {
+							"title": "Test",
+							"likes": 666,
+							"rating": 66.66,
+							"isCool": true
+						}
 					}
 				}
 			`), &nullPosts)

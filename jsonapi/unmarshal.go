@@ -160,7 +160,7 @@ func UnmarshalInto(input map[string]interface{}, targetStructType reflect.Type, 
 
 	// Read all the models
 	for _, m := range models {
-		attributes, ok := m.(map[string]interface{})
+		data, ok := m.(map[string]interface{})
 		if !ok {
 			return errors.New("expected an array of objects under key data")
 		}
@@ -169,7 +169,7 @@ func UnmarshalInto(input map[string]interface{}, targetStructType reflect.Type, 
 		isNew := true
 		id := ""
 
-		if v := attributes["id"]; v != nil {
+		if v := data["id"]; v != nil {
 			id, ok = v.(string)
 			if !ok {
 				return errors.New("id must be a string")
@@ -199,7 +199,7 @@ func UnmarshalInto(input map[string]interface{}, targetStructType reflect.Type, 
 			val = reflect.New(targetStructType).Elem()
 		}
 
-		for k, v := range attributes {
+		for k, v := range data {
 			switch k {
 			case "links":
 				linksMap, ok := v.(map[string]interface{})
@@ -240,54 +240,62 @@ func UnmarshalInto(input map[string]interface{}, targetStructType reflect.Type, 
 				}
 				// do not unmarshal the `type` field
 
-			default:
-				fieldName := Dejsonify(k)
-				field := val.FieldByName(fieldName)
-				if !field.IsValid() {
-					//check if there is any field tag with the given name available
-					for x := 0; x < val.NumField(); x++ {
-						tfield := val.Type().Field(x)
-						name := GetTagValueByName(tfield, "name")
-						if name == strings.ToLower(fieldName) {
-							field = val.Field(x)
-						}
-					}
-
-					if !field.IsValid() {
-						return errors.New("expected struct " + targetStructType.Name() + " to have field " + fieldName)
-					}
+			case "attributes":
+				attributes, ok := v.(map[string]interface{})
+				if !ok {
+					return errors.New("expected attributes to be an object")
 				}
 
-				value := reflect.ValueOf(v)
-
-				if value.IsValid() {
-					plainValue := reflect.ValueOf(v)
-
-					switch field.Interface().(type) {
-					case time.Time:
-						t, err := time.Parse(time.RFC3339, plainValue.String())
-						if err != nil {
-							return errors.New("expected RFC3339 time string, got '" + plainValue.String() + "'")
+				for key, attributeValue := range attributes {
+					fieldName := Dejsonify(key)
+					field := val.FieldByName(fieldName)
+					if !field.IsValid() {
+						//check if there is any field tag with the given name available
+						for x := 0; x < val.NumField(); x++ {
+							tfield := val.Type().Field(x)
+							name := GetTagValueByName(tfield, "name")
+							if name == strings.ToLower(fieldName) {
+								field = val.Field(x)
+							}
 						}
 
-						field.Set(reflect.ValueOf(t))
-					default:
-						if field.CanAddr() {
-							switch field.Addr().Interface().(type) {
-							default:
+						if !field.IsValid() {
+							return errors.New("expected struct " + targetStructType.Name() + " to have field " + fieldName)
+						}
+					}
+
+					value := reflect.ValueOf(attributeValue)
+
+					if value.IsValid() {
+						plainValue := reflect.ValueOf(attributeValue)
+
+						switch field.Interface().(type) {
+						case time.Time:
+							t, err := time.Parse(time.RFC3339, plainValue.String())
+							if err != nil {
+								return errors.New("expected RFC3339 time string, got '" + plainValue.String() + "'")
+							}
+
+							field.Set(reflect.ValueOf(t))
+						default:
+							if field.CanAddr() {
+								switch field.Addr().Interface().(type) {
+								default:
+									err := setFieldValue(&field, plainValue)
+									if err != nil {
+										return fmt.Errorf("Could not set field '%s'. %s", fieldName, err.Error())
+									}
+
+								}
+							} else {
 								err := setFieldValue(&field, plainValue)
 								if err != nil {
 									return fmt.Errorf("Could not set field '%s'. %s", fieldName, err.Error())
 								}
-
-							}
-						} else {
-							err := setFieldValue(&field, plainValue)
-							if err != nil {
-								return fmt.Errorf("Could not set field '%s'. %s", fieldName, err.Error())
 							}
 						}
 					}
+
 				}
 			}
 		}

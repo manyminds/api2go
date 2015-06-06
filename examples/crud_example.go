@@ -421,13 +421,15 @@ func (c *chocolateResource) Update(obj interface{}, r api2go.Request) error {
 	return c.storage.Update(choc)
 }
 
-type PrettyJSONContentMarshaler struct {
-}
+// PrettyJSONContentMarshaler for JSON in a human readable format
+type PrettyJSONContentMarshaler struct{}
 
+// Marshal marshals to pretty JSON
 func (m PrettyJSONContentMarshaler) Marshal(i interface{}) ([]byte, error) {
 	return json.MarshalIndent(i, "", "    ")
 }
 
+// Unmarshal the JSON
 func (m PrettyJSONContentMarshaler) Unmarshal(data []byte, i interface{}) error {
 	return json.Unmarshal(data, i)
 }
