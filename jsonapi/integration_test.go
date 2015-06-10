@@ -124,18 +124,18 @@ var _ = Describe("Test for the public api of this package", func() {
 			{ 
 				"id" : "TheOneAndOnlyID",
 				"attributes": {},
-				"links" : 
+				"relationships" : 
 				{ 
 						"author" : 
 						{
-							"linkage": {
+							"data": {
 								"id" : "A Magical UserID",
 								"type" : "stupidUsers"
 							}
 						},
 						"pages" : 
 						{ 
-							"linkage": [
+							"data": [
 								{
 									"id": "Page 1",
 									"type": "pages"
@@ -191,15 +191,15 @@ var _ = Describe("Test for the public api of this package", func() {
 		"data":{
 			"id":"TheOneAndOnlyID",
 			"type":"books",
-			"links":{
+			"relationships":{
 				"author":{
-					"linkage": {
+					"data": {
 						"id":"A Magical UserID",
 						"type":"users"
 					}
 				},
 				"pages":{
-					"linkage": [
+					"data": [
 						{
 							"id": "Page 1",
 							"type": "pages"

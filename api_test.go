@@ -414,24 +414,28 @@ var _ = Describe("RestHandler", func() {
 					"title": "Hello, World!",
 					"value": nil,
 				},
-				"links": map[string]interface{}{
+				"relationships": map[string]interface{}{
 					"author": map[string]interface{}{
-						"linkage": map[string]interface{}{
+						"data": map[string]interface{}{
 							"id":   "1",
 							"type": "users",
 						},
-						"self":    "/v1/posts/1/links/author",
-						"related": "/v1/posts/1/author",
+						"links": map[string]string{
+							"self":    "/v1/posts/1/relationships/author",
+							"related": "/v1/posts/1/author",
+						},
 					},
 					"comments": map[string]interface{}{
-						"linkage": []map[string]interface{}{
+						"data": []map[string]interface{}{
 							map[string]interface{}{
 								"id":   "1",
 								"type": "comments",
 							},
 						},
-						"self":    "/v1/posts/1/links/comments",
-						"related": "/v1/posts/1/comments",
+						"links": map[string]string{
+							"self":    "/v1/posts/1/relationships/comments",
+							"related": "/v1/posts/1/comments",
+						},
 					},
 				},
 			}
@@ -460,16 +464,20 @@ var _ = Describe("RestHandler", func() {
 					"title": "I am NR. 2",
 					"value": nil,
 				},
-				"links": map[string]interface{}{
+				"relationships": map[string]interface{}{
 					"author": map[string]interface{}{
-						"linkage": nil,
-						"self":    "/v1/posts/2/links/author",
-						"related": "/v1/posts/2/author",
+						"data": nil,
+						"links": map[string]string{
+							"self":    "/v1/posts/2/relationships/author",
+							"related": "/v1/posts/2/author",
+						},
 					},
 					"comments": map[string]interface{}{
-						"linkage": []interface{}{},
-						"self":    "/v1/posts/2/links/comments",
-						"related": "/v1/posts/2/comments",
+						"data": []interface{}{},
+						"links": map[string]string{
+							"self":    "/v1/posts/2/relationships/comments",
+							"related": "/v1/posts/2/comments",
+						},
 					},
 				},
 			}
@@ -481,16 +489,20 @@ var _ = Describe("RestHandler", func() {
 					"title": "I am NR. 3",
 					"value": nil,
 				},
-				"links": map[string]interface{}{
+				"relationships": map[string]interface{}{
 					"author": map[string]interface{}{
-						"linkage": nil,
-						"self":    "/v1/posts/3/links/author",
-						"related": "/v1/posts/3/author",
+						"data": nil,
+						"links": map[string]string{
+							"self":    "/v1/posts/3/relationships/author",
+							"related": "/v1/posts/3/author",
+						},
 					},
 					"comments": map[string]interface{}{
-						"linkage": []interface{}{},
-						"self":    "/v1/posts/3/links/comments",
-						"related": "/v1/posts/3/comments",
+						"data": []interface{}{},
+						"links": map[string]string{
+							"self":    "/v1/posts/3/relationships/comments",
+							"related": "/v1/posts/3/comments",
+						},
 					},
 				},
 			}
@@ -567,19 +579,19 @@ var _ = Describe("RestHandler", func() {
 		})
 
 		It("GETs relationship data from relationship url for to-many", func() {
-			req, err := http.NewRequest("GET", "/v1/posts/1/links/comments", nil)
+			req, err := http.NewRequest("GET", "/v1/posts/1/relationships/comments", nil)
 			Expect(err).ToNot(HaveOccurred())
 			api.Handler().ServeHTTP(rec, req)
 			Expect(rec.Code).To(Equal(http.StatusOK))
-			Expect(rec.Body.Bytes()).To(MatchJSON(`{"data": [{"id": "1", "type": "comments"}], "links": {"self": "/v1/posts/1/links/comments", "related": "/v1/posts/1/comments"}}`))
+			Expect(rec.Body.Bytes()).To(MatchJSON(`{"data": [{"id": "1", "type": "comments"}], "links": {"self": "/v1/posts/1/relationships/comments", "related": "/v1/posts/1/comments"}}`))
 		})
 
 		It("GETs relationship data from relationship url for to-one", func() {
-			req, err := http.NewRequest("GET", "/v1/posts/1/links/author", nil)
+			req, err := http.NewRequest("GET", "/v1/posts/1/relationships/author", nil)
 			Expect(err).ToNot(HaveOccurred())
 			api.Handler().ServeHTTP(rec, req)
 			Expect(rec.Code).To(Equal(http.StatusOK))
-			Expect(rec.Body.Bytes()).To(MatchJSON(`{"data": {"id": "1", "type": "users"}, "links": {"self": "/v1/posts/1/links/author", "related": "/v1/posts/1/author"}}`))
+			Expect(rec.Body.Bytes()).To(MatchJSON(`{"data": {"id": "1", "type": "users"}, "links": {"self": "/v1/posts/1/relationships/author", "related": "/v1/posts/1/author"}}`))
 		})
 
 		It("Gets 404 if a related struct was not found", func() {
@@ -616,16 +628,20 @@ var _ = Describe("RestHandler", func() {
 						"title": "New Post",
 						"value": nil,
 					},
-					"links": map[string]interface{}{
+					"relationships": map[string]interface{}{
 						"author": map[string]interface{}{
-							"linkage": nil,
-							"self":    "/v1/posts/4/links/author",
-							"related": "/v1/posts/4/author",
+							"data": nil,
+							"links": map[string]interface{}{
+								"self":    "/v1/posts/4/relationships/author",
+								"related": "/v1/posts/4/author",
+							},
 						},
 						"comments": map[string]interface{}{
-							"linkage": []interface{}{},
-							"self":    "/v1/posts/4/links/comments",
-							"related": "/v1/posts/4/comments",
+							"data": []interface{}{},
+							"links": map[string]interface{}{
+								"self":    "/v1/posts/4/relationships/comments",
+								"related": "/v1/posts/4/comments",
+							},
 						},
 					},
 				},
@@ -735,9 +751,9 @@ var _ = Describe("RestHandler", func() {
 				"data": {
 					"type": "posts",
 					"id": "1",
-					"links": {
+					"relationships": {
 						"author": {
-							"linkage": {
+							"data": {
 								"type": "users",
 								"id": "2"
 							}
@@ -755,9 +771,9 @@ var _ = Describe("RestHandler", func() {
 				"data": {
 					"type": "posts",
 					"id": "1",
-					"links": {
+					"relationships": {
 						"author": {
-							"linkage": null
+							"data": null
 						}
 					}
 				}
@@ -772,9 +788,9 @@ var _ = Describe("RestHandler", func() {
 				"data": {
 					"type": "posts",
 					"id": "1",
-					"links": {
+					"relationships": {
 						"comments": {
-							"linkage": [
+							"data": [
 								{
 									"type": "comments",
 									"id": "2"
@@ -794,9 +810,9 @@ var _ = Describe("RestHandler", func() {
 				"data": {
 					"type": "posts",
 					"id": "1",
-					"links": {
+					"relationships": {
 						"comments": {
-							"linkage": []
+							"data": []
 						}
 					}
 				}
@@ -811,7 +827,7 @@ var _ = Describe("RestHandler", func() {
 					"type": "users",
 					"id": "2"
 				}
-			}`, "/v1/posts/1/links/author", "PATCH")
+			}`, "/v1/posts/1/relationships/author", "PATCH")
 				target := source.posts["1"]
 				Expect(target.Author.GetID()).To(Equal("2"))
 			})
@@ -822,7 +838,7 @@ var _ = Describe("RestHandler", func() {
 					"type": "comments",
 					"id": "2"
 				}]
-			}`, "/v1/posts/1/links/comments", "PATCH")
+			}`, "/v1/posts/1/relationships/comments", "PATCH")
 				target := source.posts["1"]
 				Expect(target.Comments).To(HaveLen(1))
 				Expect(target.Comments[0].GetID()).To(Equal("2"))
@@ -834,7 +850,7 @@ var _ = Describe("RestHandler", func() {
 					"type": "comments",
 					"id": "2"
 				}]
-			}`, "/v1/posts/1/links/comments", "POST")
+			}`, "/v1/posts/1/relationships/comments", "POST")
 				target := source.posts["1"]
 				Expect(target.Comments).To(HaveLen(2))
 			})
@@ -845,7 +861,7 @@ var _ = Describe("RestHandler", func() {
 					"type": "comments",
 					"id": "1"
 				}]
-			}`, "/v1/posts/1/links/comments", "DELETE")
+			}`, "/v1/posts/1/relationships/comments", "DELETE")
 				target := source.posts["1"]
 				Expect(target.Comments).To(HaveLen(0))
 			})
@@ -910,7 +926,7 @@ var _ = Describe("RestHandler", func() {
 				"1": &Post{ID: "1", Title: "Hello, World!"},
 			}, false}
 
-			jsonResponse = `{"data":{"attributes":{"title":"Hello, World!","value":null},"id":"1","links":{"author":{"linkage":null,"related":"/posts/1/author","self":"/posts/1/links/author"},"comments":{"linkage":[],"related":"/posts/1/comments","self":"/posts/1/links/comments"}},"type":"posts"}}`
+			jsonResponse = `{"data":{"attributes":{"title":"Hello, World!","value":null},"id":"1","relationships":{"author":{"data":null,"links":{"related":"/posts/1/author","self":"/posts/1/relationships/author"}},"comments":{"data":[],"links":{"related":"/posts/1/comments","self":"/posts/1/relationships/comments"}}},"type":"posts"}}`
 			prettyResponse = `{
     "data": {
         "attributes": {
@@ -918,16 +934,20 @@ var _ = Describe("RestHandler", func() {
             "value": null
         },
         "id": "1",
-        "links": {
+        "relationships": {
             "author": {
-                "linkage": null,
-                "related": "/posts/1/author",
-                "self": "/posts/1/links/author"
+                "data": null,
+                "links": {
+                    "related": "/posts/1/author",
+                    "self": "/posts/1/relationships/author"
+                }
             },
             "comments": {
-                "linkage": [],
-                "related": "/posts/1/comments",
-                "self": "/posts/1/links/comments"
+                "data": [],
+                "links": {
+                    "related": "/posts/1/comments",
+                    "self": "/posts/1/relationships/comments"
+                }
             }
         },
         "type": "posts"
@@ -1023,16 +1043,20 @@ var _ = Describe("RestHandler", func() {
 					"title": "Hello, World!",
 					"value": nil,
 				},
-				"links": map[string]interface{}{
+				"relationships": map[string]interface{}{
 					"author": map[string]interface{}{
-						"linkage": nil,
-						"self":    "http://localhost:1337/v0/posts/1/links/author",
-						"related": "http://localhost:1337/v0/posts/1/author",
+						"data": nil,
+						"links": map[string]interface{}{
+							"self":    "http://localhost:1337/v0/posts/1/relationships/author",
+							"related": "http://localhost:1337/v0/posts/1/author",
+						},
 					},
 					"comments": map[string]interface{}{
-						"linkage": []interface{}{},
-						"self":    "http://localhost:1337/v0/posts/1/links/comments",
-						"related": "http://localhost:1337/v0/posts/1/comments",
+						"data": []interface{}{},
+						"links": map[string]interface{}{
+							"self":    "http://localhost:1337/v0/posts/1/relationships/comments",
+							"related": "http://localhost:1337/v0/posts/1/comments",
+						},
 					},
 				},
 			}
@@ -1044,16 +1068,20 @@ var _ = Describe("RestHandler", func() {
 					"title": "Hello, from second Post!",
 					"value": nil,
 				},
-				"links": map[string]interface{}{
+				"relationships": map[string]interface{}{
 					"author": map[string]interface{}{
-						"linkage": nil,
-						"self":    "http://localhost:1337/v0/posts/2/links/author",
-						"related": "http://localhost:1337/v0/posts/2/author",
+						"data": nil,
+						"links": map[string]interface{}{
+							"self":    "http://localhost:1337/v0/posts/2/relationships/author",
+							"related": "http://localhost:1337/v0/posts/2/author",
+						},
 					},
 					"comments": map[string]interface{}{
-						"linkage": []interface{}{},
-						"self":    "http://localhost:1337/v0/posts/2/links/comments",
-						"related": "http://localhost:1337/v0/posts/2/comments",
+						"data": []interface{}{},
+						"links": map[string]interface{}{
+							"self":    "http://localhost:1337/v0/posts/2/relationships/comments",
+							"related": "http://localhost:1337/v0/posts/2/comments",
+						},
 					},
 				},
 			}

@@ -213,17 +213,17 @@ func marshalData(element MarshalIdentifier, information ServerInformation) (map[
 	// optional relationship interface for struct
 	references, ok := element.(MarshalLinkedRelations)
 	if ok {
-		result["links"] = getStructLinks(references, information)
+		result["relationships"] = getStructRelationships(references, information)
 	}
 
 	return result, nil
 }
 
-// getStructLinks returns the link struct with ids
-func getStructLinks(relationer MarshalLinkedRelations, information ServerInformation) map[string]map[string]interface{} {
+// getStructRelationships returns the relationships struct with ids
+func getStructRelationships(relationer MarshalLinkedRelations, information ServerInformation) map[string]map[string]interface{} {
 	referencedIDs := relationer.GetReferencedIDs()
 	sortedResults := make(map[string][]ReferenceID)
-	links := make(map[string]map[string]interface{})
+	relationships := make(map[string]map[string]interface{})
 
 	for _, referenceID := range referencedIDs {
 		sortedResults[referenceID.Type] = append(sortedResults[referenceID.Type], referenceID)
@@ -239,23 +239,23 @@ func getStructLinks(relationer MarshalLinkedRelations, information ServerInforma
 
 	for referenceType, referenceIDs := range sortedResults {
 		name := referenceIDs[0].Name
-		links[name] = map[string]interface{}{}
-		// if referenceType is plural, we need to use an array for linkage, otherwise it's just an object
+		relationships[name] = map[string]interface{}{}
+		// if referenceType is plural, we need to use an array for data, otherwise it's just an object
 		if Pluralize(name) == name {
 			// multiple elements in links
-			linkage := []map[string]interface{}{}
+			data := []map[string]interface{}{}
 
 			for _, referenceID := range referenceIDs {
-				linkage = append(linkage, map[string]interface{}{
+				data = append(data, map[string]interface{}{
 					"type": referenceType,
 					"id":   referenceID.ID,
 				})
 			}
 
-			links[name]["linkage"] = linkage
+			relationships[name]["data"] = data
 		} else {
-			links[name] = map[string]interface{}{
-				"linkage": map[string]interface{}{
+			relationships[name] = map[string]interface{}{
+				"data": map[string]interface{}{
 					"type": referenceType,
 					"id":   referenceIDs[0].ID,
 				},
@@ -263,8 +263,9 @@ func getStructLinks(relationer MarshalLinkedRelations, information ServerInforma
 		}
 
 		// set URLs if necessary
-		for key, value := range getLinksForServerInformation(relationer, name, information) {
-			links[name][key] = value
+		links := getLinksForServerInformation(relationer, name, information)
+		if len(links) > 0 {
+			relationships[name]["links"] = links
 		}
 
 		// this marks the reference as already included
@@ -273,19 +274,20 @@ func getStructLinks(relationer MarshalLinkedRelations, information ServerInforma
 
 	// check for empty references
 	for name := range notIncludedReferences {
-		links[name] = map[string]interface{}{}
+		relationships[name] = map[string]interface{}{}
 		// Plural empty relationships need an empty array and empty to-one need a null in the json
 		if Pluralize(name) == name {
-			links[name]["linkage"] = []interface{}{}
+			relationships[name]["data"] = []interface{}{}
 		} else {
-			links[name]["linkage"] = nil
+			relationships[name]["data"] = nil
 		}
-		for key, value := range getLinksForServerInformation(relationer, name, information) {
-			links[name][key] = value
+		links := getLinksForServerInformation(relationer, name, information)
+		if len(links) > 0 {
+			relationships[name]["links"] = links
 		}
 	}
 
-	return links
+	return relationships
 }
 
 // helper method to generate URL fields for `links`
@@ -304,10 +306,10 @@ func getLinksForServerInformation(relationer MarshalLinkedRelations, name string
 		}
 
 		if prefix != "" {
-			links["self"] = fmt.Sprintf("%s/%s/%s/links/%s", prefix, getStructType(relationer), relationer.GetID(), name)
+			links["self"] = fmt.Sprintf("%s/%s/%s/relationships/%s", prefix, getStructType(relationer), relationer.GetID(), name)
 			links["related"] = fmt.Sprintf("%s/%s/%s/%s", prefix, getStructType(relationer), relationer.GetID(), name)
 		} else {
-			links["self"] = fmt.Sprintf("/%s/%s/links/%s", getStructType(relationer), relationer.GetID(), name)
+			links["self"] = fmt.Sprintf("/%s/%s/relationships/%s", getStructType(relationer), relationer.GetID(), name)
 			links["related"] = fmt.Sprintf("/%s/%s/%s", getStructType(relationer), relationer.GetID(), name)
 		}
 	}

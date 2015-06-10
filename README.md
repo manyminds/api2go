@@ -168,9 +168,9 @@ will yield
     {
       "id": "1",
       "type": "posts",
-      "links": {
+      "relationships": {
         "comments": {
-          "linkage": [
+          "data": [
             {
               "id": "1",
               "type": "comments"
@@ -461,11 +461,13 @@ specified on jsonapi.org. Post example:
       "id": "1",
       "type": "posts",
       "title": "Foobar",
-      "links": {
+      "relationships": {
         "comments": {
-          "related": "/v1/posts/1/comments",
-          "self": "/v1/posts/1/links/comments",
-          "linkage": [
+          "links": {
+            "related": "/v1/posts/1/comments",
+            "self": "/v1/posts/1/links/comments"
+          },
+          "data": [
             {
               "id": "1",
               "type": "comments"

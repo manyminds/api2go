@@ -166,8 +166,8 @@ var _ = Describe("Unmarshal", func() {
 		})
 	})
 
-	Context("when unmarshaling objects with links", func() {
-		It("unmarshals into integer links", func() {
+	Context("when unmarshaling objects with relationships", func() {
+		It("unmarshals into integer relationships", func() {
 			post := Post{ID: 1, CommentsIDs: []int{1}}
 			postMap := map[string]interface{}{
 				"data": []interface{}{
@@ -175,9 +175,9 @@ var _ = Describe("Unmarshal", func() {
 						"id":    "1",
 						"type":  "posts",
 						"title": post.Title,
-						"links": map[string]interface{}{
+						"relationships": map[string]interface{}{
 							"comments": map[string]interface{}{
-								"linkage": []interface{}{
+								"data": []interface{}{
 									map[string]interface{}{
 										"id":   "1",
 										"type": "links",
@@ -194,7 +194,7 @@ var _ = Describe("Unmarshal", func() {
 			Expect(posts).To(Equal([]Post{post}))
 		})
 
-		It("unmarshals aliased links", func() {
+		It("unmarshals aliased relationships", func() {
 			post := Post{ID: 1, CommentsIDs: []int{1}}
 			postMap := map[string]interface{}{
 				"data": []interface{}{
@@ -202,9 +202,9 @@ var _ = Describe("Unmarshal", func() {
 						"id":    "1",
 						"type":  "posts",
 						"title": post.Title,
-						"links": map[string]interface{}{
+						"relationships": map[string]interface{}{
 							"comments": map[string]interface{}{
-								"linkage": []interface{}{
+								"data": []interface{}{
 									map[string]interface{}{
 										"id":   "1",
 										"type": "votes",
@@ -246,9 +246,9 @@ var _ = Describe("Unmarshal", func() {
 						"attributes": map[string]interface{}{
 							"title": "Test",
 						},
-						"links": map[string]interface{}{
+						"relationships": map[string]interface{}{
 							"author": map[string]interface{}{
-								"linkage": map[string]interface{}{
+								"data": map[string]interface{}{
 									"id":   "1",
 									"type": "users",
 								},
@@ -273,15 +273,15 @@ var _ = Describe("Unmarshal", func() {
 						"attributes": map[string]interface{}{
 							"title": "Test",
 						},
-						"links": map[string]interface{}{
+						"relationships": map[string]interface{}{
 							"author": map[string]interface{}{
-								"linkage": map[string]interface{}{
+								"data": map[string]interface{}{
 									"id":   "1",
 									"type": "users",
 								},
 							},
 							"comments": map[string]interface{}{
-								"linkage": []interface{}{
+								"data": []interface{}{
 									map[string]interface{}{
 										"id":   "1",
 										"type": "comments",
