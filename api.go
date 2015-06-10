@@ -353,7 +353,7 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD, ma
 	if ok {
 		relations := casted.GetReferences()
 		for _, relation := range relations {
-			api.router.GET(api.prefix+name+"/:id/links/"+relation.Name, func(relation jsonapi.Reference) httprouter.Handle {
+			api.router.GET(api.prefix+name+"/:id/relationships/"+relation.Name, func(relation jsonapi.Reference) httprouter.Handle {
 				return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 					err := res.handleReadRelation(w, r, ps, api.info, relation)
 					if err != nil {
@@ -371,7 +371,7 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD, ma
 				}
 			}(relation))
 
-			api.router.PATCH(api.prefix+name+"/:id/links/"+relation.Name, func(relation jsonapi.Reference) httprouter.Handle {
+			api.router.PATCH(api.prefix+name+"/:id/relationships/"+relation.Name, func(relation jsonapi.Reference) httprouter.Handle {
 				return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 					err := res.handleReplaceRelation(w, r, ps, relation)
 					if err != nil {
@@ -382,7 +382,7 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD, ma
 
 			if _, ok := ptrPrototype.(jsonapi.EditToManyRelations); ok && relation.Name == jsonapi.Pluralize(relation.Name) {
 				// generate additional routes to manipulate to-many relationships
-				api.router.POST(api.prefix+name+"/:id/links/:name", func(relation jsonapi.Reference) httprouter.Handle {
+				api.router.POST(api.prefix+name+"/:id/relationships/:name", func(relation jsonapi.Reference) httprouter.Handle {
 					return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 						err := res.handleAddToManyRelation(w, r, ps, relation)
 						if err != nil {
@@ -391,7 +391,7 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD, ma
 					}
 				}(relation))
 
-				api.router.DELETE(api.prefix+name+"/:id/links/:name", func(relation jsonapi.Reference) httprouter.Handle {
+				api.router.DELETE(api.prefix+name+"/:id/relationships/:name", func(relation jsonapi.Reference) httprouter.Handle {
 					return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 						err := res.handleDeleteToManyRelation(w, r, ps, relation)
 						if err != nil {
@@ -509,24 +509,28 @@ func (res *resource) handleReadRelation(w http.ResponseWriter, r *http.Request, 
 	if !ok {
 		return internalError
 	}
-	links, ok := data.(map[string]interface{})["links"]
+	relationships, ok := data.(map[string]interface{})["relationships"]
 	if !ok {
 		return internalError
 	}
 
-	rel, ok := links.(map[string]map[string]interface{})[relation.Name]
+	rel, ok := relationships.(map[string]map[string]interface{})[relation.Name]
 	if !ok {
 		return NewHTTPError(nil, fmt.Sprintf("There is no relation with the name %s", relation.Name), http.StatusNotFound)
 	}
-	self, ok := rel["self"]
+	links, ok := rel["links"].(map[string]string)
 	if !ok {
 		return internalError
 	}
-	related, ok := rel["related"]
+	self, ok := links["self"]
 	if !ok {
 		return internalError
 	}
-	relationData, ok := rel["linkage"]
+	related, ok := links["related"]
+	if !ok {
+		return internalError
+	}
+	relationData, ok := rel["data"]
 	if !ok {
 		return internalError
 	}
@@ -731,7 +735,7 @@ func (res *resource) handleReplaceRelation(w http.ResponseWriter, r *http.Reques
 
 	editObj, updateObj := getRelationUpdateObjects(oldObj)
 
-	err = jsonapi.UnmarshalLinkage(editObj, relation.Name, data)
+	err = jsonapi.UnmarshalRelationshipsData(editObj, relation.Name, data)
 	if err != nil {
 		return err
 	}

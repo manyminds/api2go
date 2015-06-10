@@ -201,12 +201,12 @@ func UnmarshalInto(input map[string]interface{}, targetStructType reflect.Type, 
 
 		for k, v := range data {
 			switch k {
-			case "links":
-				linksMap, ok := v.(map[string]interface{})
+			case "relationships":
+				relationshipsMap, ok := v.(map[string]interface{})
 				if !ok {
-					return errors.New("expected links to be an object")
+					return errors.New("expected relationships to be an object")
 				}
-				if err := unmarshalLinks(val, linksMap); err != nil {
+				if err := unmarshalRelationships(val, relationshipsMap); err != nil {
 					return err
 				}
 
@@ -349,32 +349,29 @@ func setFieldValue(field *reflect.Value, value reflect.Value) (err error) {
 	return nil
 }
 
-// UnmarshalLinkage is used by api2go.API to only unmarshal references inside a linkage object.
+// UnmarshalRelationshipsData is used by api2go.API to only unmarshal references inside a data object.
 // The target interface must implement UnmarshalToOneRelations or UnmarshalToManyRelations interface.
-// The linksMap is the content of the linkage object from the json
-func UnmarshalLinkage(target interface{}, name string, links interface{}) error {
-	return processLinkage(links, name, target)
+// The linksMap is the content of the data object from the json
+func UnmarshalRelationshipsData(target interface{}, name string, links interface{}) error {
+	return processRelationshipsData(links, name, target)
 }
 
-func unmarshalLinks(val reflect.Value, linksMap map[string]interface{}) error {
-	for linkName, links := range linksMap {
-		links, ok := links.(map[string]interface{})
+func unmarshalRelationships(val reflect.Value, relationshipsMap map[string]interface{}) error {
+	for relationshipName, relationships := range relationshipsMap {
+		relationships, ok := relationships.(map[string]interface{})
 		if !ok {
-			return fmt.Errorf("link field for %s has invalid format, must be map[string]interface{}", linkName)
+			return fmt.Errorf("link field for %s has invalid format, must be map[string]interface{}", relationshipName)
 		}
-		_, ok = links["linkage"]
+		_, ok = relationships["data"]
 		if !ok {
-			return fmt.Errorf("Missing linkage field for %s", linkName)
-		}
-		if !ok {
-			return fmt.Errorf("type field for %s links must be a string", linkName)
+			return fmt.Errorf("Missing data field for %s", relationshipName)
 		}
 
 		if val.CanAddr() {
 			val = val.Addr()
 		}
 
-		err := processLinkage(links["linkage"], linkName, val.Interface())
+		err := processRelationshipsData(relationships["data"], relationshipName, val.Interface())
 		if err != nil {
 			return err
 		}
@@ -383,12 +380,12 @@ func unmarshalLinks(val reflect.Value, linksMap map[string]interface{}) error {
 	return nil
 }
 
-func processLinkage(linkage interface{}, linkName string, target interface{}) error {
-	hasOne, ok := linkage.(map[string]interface{})
+func processRelationshipsData(data interface{}, linkName string, target interface{}) error {
+	hasOne, ok := data.(map[string]interface{})
 	if ok {
 		hasOneID, ok := hasOne["id"].(string)
 		if !ok {
-			return fmt.Errorf("linkage object must have a field id for %s", linkName)
+			return fmt.Errorf("data object must have a field id for %s", linkName)
 		}
 
 		target, ok := target.(UnmarshalToOneRelations)
@@ -397,7 +394,7 @@ func processLinkage(linkage interface{}, linkName string, target interface{}) er
 		}
 
 		target.SetToOneReferenceID(linkName, hasOneID)
-	} else if linkage == nil {
+	} else if data == nil {
 		// this means that a to-one relationship must be deleted
 		target, ok := target.(UnmarshalToOneRelations)
 		if !ok {
@@ -406,9 +403,9 @@ func processLinkage(linkage interface{}, linkName string, target interface{}) er
 
 		target.SetToOneReferenceID(linkName, "")
 	} else {
-		hasMany, ok := linkage.([]interface{})
+		hasMany, ok := data.([]interface{})
 		if !ok {
-			return fmt.Errorf("invalid linkage object or array, must be an object with \"id\" and \"type\" field for %s", linkName)
+			return fmt.Errorf("invalid data object or array, must be an object with \"id\" and \"type\" field for %s", linkName)
 		}
 
 		target, ok := target.(UnmarshalToManyRelations)
@@ -419,16 +416,16 @@ func processLinkage(linkage interface{}, linkName string, target interface{}) er
 		hasManyIDs := []string{}
 
 		for _, entry := range hasMany {
-			linkage, ok := entry.(map[string]interface{})
+			data, ok := entry.(map[string]interface{})
 			if !ok {
-				return fmt.Errorf("entry in linkage array must be an object for %s", linkName)
+				return fmt.Errorf("entry in data array must be an object for %s", linkName)
 			}
-			linkageID, ok := linkage["id"].(string)
+			dataID, ok := data["id"].(string)
 			if !ok {
-				return fmt.Errorf("all linkage objects must have a field id for %s", linkName)
+				return fmt.Errorf("all data objects must have a field id for %s", linkName)
 			}
 
-			hasManyIDs = append(hasManyIDs, linkageID)
+			hasManyIDs = append(hasManyIDs, dataID)
 		}
 
 		target.SetToManyReferenceIDs(linkName, hasManyIDs)
