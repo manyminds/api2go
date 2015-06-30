@@ -382,7 +382,7 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD, ma
 
 			if _, ok := ptrPrototype.(jsonapi.EditToManyRelations); ok && relation.Name == jsonapi.Pluralize(relation.Name) {
 				// generate additional routes to manipulate to-many relationships
-				api.router.POST(api.prefix+name+"/:id/relationships/:name", func(relation jsonapi.Reference) httprouter.Handle {
+				api.router.POST(api.prefix+name+"/:id/relationships/"+relation.Name, func(relation jsonapi.Reference) httprouter.Handle {
 					return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 						err := res.handleAddToManyRelation(w, r, ps, relation)
 						if err != nil {
@@ -391,7 +391,7 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD, ma
 					}
 				}(relation))
 
-				api.router.DELETE(api.prefix+name+"/:id/relationships/:name", func(relation jsonapi.Reference) httprouter.Handle {
+				api.router.DELETE(api.prefix+name+"/:id/relationships/"+relation.Name, func(relation jsonapi.Reference) httprouter.Handle {
 					return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 						err := res.handleDeleteToManyRelation(w, r, ps, relation)
 						if err != nil {
