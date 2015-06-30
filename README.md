@@ -202,7 +202,7 @@ will yield
 
 You can also use `jsonapi.MarshalToJSONWithURLs` to automatically generate URLs for the rest endpoints that have a
 version and BaseURL prefix. This will generate the same routes that our API uses. This adds `self` and `related` fields
-for relations inside the `links` object.
+for relations inside the `relationships` object.
 
 Recover the structure from above using
 
@@ -336,12 +336,12 @@ GET     /v1/posts/<id>
 PATCH   /v1/posts/<id>
 DELETE  /v1/posts/<id>
 GET     /v1/posts/<id>/comments            // fetch referenced comments of a post
-GET     /v1/posts/<id>/links/comments      // fetch IDs of the referenced comments only
-PATCH   /v1/posts/<id>/links/comments      // replace all related comments
+GET     /v1/posts/<id>/relationships/comments      // fetch IDs of the referenced comments only
+PATCH   /v1/posts/<id>/relationships/comments      // replace all related comments
 
 // These 2 routes are only created for to-many relations that implement EditToManyRelations interface
-POST    /v1/posts/<id>/links/comments      // Add a new comment reference, only for to-many relations
-DELETE  /v1/posts/<id>/links/comments      // Delete a comment reference, only for to-many relations
+POST    /v1/posts/<id>/relationships/comments      // Add a new comment reference, only for to-many relations
+DELETE  /v1/posts/<id>/relationships/comments      // Delete a comment reference, only for to-many relations
 ```
 
 For the last two generated routes, it is necessary to implement the `jsonapi.EditToManyRelations` interface.
@@ -426,7 +426,7 @@ The IDs of a relationship can be fetched by following the `self` link of a relat
 of a result. For the posts and comments example you could use the following generated URL:
 
 ```
-GET /v1/posts/1/links/comments
+GET /v1/posts/1/relationships/comments
 ```
 
 This would return all comments that are currently referenced by post with ID 1. For example:
@@ -434,7 +434,7 @@ This would return all comments that are currently referenced by post with ID 1. 
 ```json
 {
   "links": {
-    "self": "/v1/posts/1/links/comments",
+    "self": "/v1/posts/1/relationships/comments",
     "related": "/v1/posts/1/comments"
   },
   "data": [
@@ -451,7 +451,7 @@ This would return all comments that are currently referenced by post with ID 1. 
 ```
 
 ### Fetching related resources
-Api2go always creates a `related` field for elements in the `links` object of the result. This is like it's
+Api2go always creates a `related` field for elements in the `relationships` object of the result. This is like it's
 specified on jsonapi.org. Post example:
 
 ```json
@@ -465,7 +465,7 @@ specified on jsonapi.org. Post example:
         "comments": {
           "links": {
             "related": "/v1/posts/1/comments",
-            "self": "/v1/posts/1/links/comments"
+            "self": "/v1/posts/1/relationships/comments"
           },
           "data": [
             {
