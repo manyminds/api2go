@@ -658,12 +658,11 @@ var _ = Describe("RestHandler", func() {
 		})
 
 		It("POSTSs with client id", func() {
-			reqBody := strings.NewReader(`{"data": [{"id" : "100", "title": "New Post", "type": "posts"}]}`)
+			reqBody := strings.NewReader(`{"data": [{"attributes": {"title": "New Post"}, "id": "100", "type": "posts"}]}`)
 			req, err := http.NewRequest("POST", "/v1/posts", reqBody)
 			Expect(err).To(BeNil())
 			api.Handler().ServeHTTP(rec, req)
-			Expect(rec.Code).To(Equal(http.StatusForbidden))
-			Expect(rec.Body).To(ContainSubstring("Client generated IDs are not supported."))
+			Expect(rec.Code).To(Equal(http.StatusCreated))
 		})
 
 		It("POSTSs new objects with trailing slash automatic redirect disabled", func() {

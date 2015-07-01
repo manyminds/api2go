@@ -619,19 +619,6 @@ func (res *resource) handleCreate(w http.ResponseWriter, r *http.Request, prefix
 	//TODO create multiple objects not only one.
 	newObj := newObjs.Index(0).Interface()
 
-	checkID, ok := newObj.(jsonapi.MarshalIdentifier)
-	if ok {
-		if checkID.GetID() != "" {
-			err := Error{
-				Status: string(http.StatusForbidden),
-				Title:  "Forbidden",
-				Detail: "Client generated IDs are not supported.",
-			}
-
-			return respondWith(err, info, http.StatusForbidden, w, r, res.marshalers)
-		}
-	}
-
 	id, err := res.source.Create(newObj, buildRequest(r))
 	if err != nil {
 		return err
