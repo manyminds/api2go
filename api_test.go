@@ -22,6 +22,7 @@ type Post struct {
 	Value    null.Float
 	Author   *User     `json:"-"`
 	Comments []Comment `json:"-"`
+	Bananas  []Banana  `json:"-"`
 }
 
 func (p Post) GetID() string {
@@ -43,6 +44,10 @@ func (p Post) GetReferences() []jsonapi.Reference {
 			Name: "comments",
 			Type: "comments",
 		},
+		{
+			Name: "bananas",
+			Type: "bananas",
+		},
 	}
 }
 
@@ -53,6 +58,9 @@ func (p Post) GetReferencedIDs() []jsonapi.ReferenceID {
 	}
 	for _, comment := range p.Comments {
 		result = append(result, jsonapi.ReferenceID{ID: comment.GetID(), Name: "comments", Type: "comments"})
+	}
+	for _, banana := range p.Bananas {
+		result = append(result, jsonapi.ReferenceID{ID: banana.GetID(), Name: "bananas", Type: "bananas"})
 	}
 
 	return result
@@ -81,6 +89,14 @@ func (p *Post) SetToManyReferenceIDs(name string, IDs []string) error {
 		p.Comments = comments
 	}
 
+	if name == "bananas" {
+		bananas := []Banana{}
+		for _, ID := range IDs {
+			bananas = append(bananas, Banana{ID: ID})
+		}
+		p.Bananas = bananas
+	}
+
 	return errors.New("There is no to-many relationship with the name " + name)
 }
 
@@ -88,6 +104,12 @@ func (p *Post) AddToManyIDs(name string, IDs []string) error {
 	if name == "comments" {
 		for _, ID := range IDs {
 			p.Comments = append(p.Comments, Comment{ID: ID})
+		}
+	}
+
+	if name == "bananas" {
+		for _, ID := range IDs {
+			p.Bananas = append(p.Bananas, Banana{ID: ID})
 		}
 	}
 
@@ -106,6 +128,16 @@ func (p *Post) DeleteToManyIDs(name string, IDs []string) error {
 		}
 	}
 
+	if name == "bananas" {
+		for _, ID := range IDs {
+			// find and delete the comment with ID
+			for pos, banana := range p.Bananas {
+				if banana.GetID() == ID {
+					p.Bananas = append(p.Bananas[:pos], p.Bananas[pos+1:]...)
+				}
+			}
+		}
+	}
 	return errors.New("There is no to-manyrelationship with the name " + name)
 }
 
@@ -116,6 +148,9 @@ func (p Post) GetReferencedStructs() []jsonapi.MarshalIdentifier {
 	}
 	for key := range p.Comments {
 		result = append(result, p.Comments[key])
+	}
+	for key := range p.Bananas {
+		result = append(result, p.Bananas[key])
 	}
 
 	return result
@@ -128,6 +163,15 @@ type Comment struct {
 
 func (c Comment) GetID() string {
 	return c.ID
+}
+
+type Banana struct {
+	ID   string `jnson:"-"`
+	Name string
+}
+
+func (b Banana) GetID() string {
+	return b.ID
 }
 
 type User struct {
@@ -437,6 +481,13 @@ var _ = Describe("RestHandler", func() {
 							"related": "/v1/posts/1/comments",
 						},
 					},
+					"bananas": map[string]interface{}{
+						"data": []map[string]interface{}{},
+						"links": map[string]string{
+							"self":    "/v1/posts/1/relationships/bananas",
+							"related": "/v1/posts/1/bananas",
+						},
+					},
 				},
 			}
 
@@ -479,6 +530,13 @@ var _ = Describe("RestHandler", func() {
 							"related": "/v1/posts/2/comments",
 						},
 					},
+					"bananas": map[string]interface{}{
+						"data": []map[string]interface{}{},
+						"links": map[string]string{
+							"self":    "/v1/posts/2/relationships/bananas",
+							"related": "/v1/posts/2/bananas",
+						},
+					},
 				},
 			}
 
@@ -502,6 +560,13 @@ var _ = Describe("RestHandler", func() {
 						"links": map[string]string{
 							"self":    "/v1/posts/3/relationships/comments",
 							"related": "/v1/posts/3/comments",
+						},
+					},
+					"bananas": map[string]interface{}{
+						"data": []map[string]interface{}{},
+						"links": map[string]string{
+							"self":    "/v1/posts/3/relationships/bananas",
+							"related": "/v1/posts/3/bananas",
 						},
 					},
 				},
@@ -641,6 +706,13 @@ var _ = Describe("RestHandler", func() {
 							"links": map[string]interface{}{
 								"self":    "/v1/posts/4/relationships/comments",
 								"related": "/v1/posts/4/comments",
+							},
+						},
+						"bananas": map[string]interface{}{
+							"data": []interface{}{},
+							"links": map[string]interface{}{
+								"self":    "/v1/posts/4/relationships/bananas",
+								"related": "/v1/posts/4/bananas",
 							},
 						},
 					},
@@ -926,7 +998,7 @@ var _ = Describe("RestHandler", func() {
 				"1": &Post{ID: "1", Title: "Hello, World!"},
 			}, false}
 
-			jsonResponse = `{"data":{"attributes":{"title":"Hello, World!","value":null},"id":"1","relationships":{"author":{"data":null,"links":{"related":"/posts/1/author","self":"/posts/1/relationships/author"}},"comments":{"data":[],"links":{"related":"/posts/1/comments","self":"/posts/1/relationships/comments"}}},"type":"posts"}}`
+			jsonResponse = `{"data":{"attributes":{"title":"Hello, World!","value":null},"id":"1","relationships":{"author":{"data":null,"links":{"related":"/posts/1/author","self":"/posts/1/relationships/author"}},"bananas":{"data":[],"links":{"related":"/posts/1/bananas","self":"/posts/1/relationships/bananas"}},"comments":{"data":[],"links":{"related":"/posts/1/comments","self":"/posts/1/relationships/comments"}}},"type":"posts"}}`
 			prettyResponse = `{
     "data": {
         "attributes": {
@@ -940,6 +1012,13 @@ var _ = Describe("RestHandler", func() {
                 "links": {
                     "related": "/posts/1/author",
                     "self": "/posts/1/relationships/author"
+                }
+            },
+            "bananas": {
+                "data": [],
+                "links": {
+                    "related": "/posts/1/bananas",
+                    "self": "/posts/1/relationships/bananas"
                 }
             },
             "comments": {
@@ -1051,6 +1130,13 @@ var _ = Describe("RestHandler", func() {
 							"related": "http://localhost:1337/v0/posts/1/author",
 						},
 					},
+					"bananas": map[string]interface{}{
+						"data": []interface{}{},
+						"links": map[string]interface{}{
+							"self":    "http://localhost:1337/v0/posts/1/relationships/bananas",
+							"related": "http://localhost:1337/v0/posts/1/bananas",
+						},
+					},
 					"comments": map[string]interface{}{
 						"data": []interface{}{},
 						"links": map[string]interface{}{
@@ -1074,6 +1160,13 @@ var _ = Describe("RestHandler", func() {
 						"links": map[string]interface{}{
 							"self":    "http://localhost:1337/v0/posts/2/relationships/author",
 							"related": "http://localhost:1337/v0/posts/2/author",
+						},
+					},
+					"bananas": map[string]interface{}{
+						"data": []interface{}{},
+						"links": map[string]interface{}{
+							"self":    "http://localhost:1337/v0/posts/2/relationships/bananas",
+							"related": "http://localhost:1337/v0/posts/2/bananas",
 						},
 					},
 					"comments": map[string]interface{}{

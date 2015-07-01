@@ -23,16 +23,16 @@ Create a chocolate with the name sweet
 	curl -X POST http://localhost:31415/v0/chocolates -d '{"data" : [{"type" : "chocolates" , "name" : "Ritter Sport", "taste": "Very Good"}]}'
 
 Create a user with a sweet
-	curl -X POST http://localhost:31415/v0/users -d '{"data" : [{"type" : "users" , "user-name" : "marvin", "links": {"sweets": {"linkage": [{"type": "chocolates", "id": "1"}]}}}]}'
+	curl -X POST http://localhost:31415/v0/users -d '{"data" : [{"type" : "users" , "user-name" : "marvin", "relationships": {"sweets": {"linkage": [{"type": "chocolates", "id": "1"}]}}}]}'
 
 Replace a users sweets
-	curl -X PATCH http://localhost:31415/v0/users/1/links/sweets -d '{"data" : [{"type": "chocolates", "id": "2"}]}'
+	curl -X PATCH http://localhost:31415/v0/users/1/relationships/sweets -d '{"data" : [{"type": "chocolates", "id": "2"}]}'
 
 Add a sweet
-	curl -X POST http://localhost:31415/v0/users/1/links/sweets -d '{"data" : [{"type": "chocolates", "id": "2"}]}'
+	curl -X POST http://localhost:31415/v0/users/1/relationships/sweets -d '{"data" : [{"type": "chocolates", "id": "2"}]}'
 
 Remove a sweet
-	curl -X DELETE http://localhost:31415/v0/users/1/links/sweets -d '{"data" : [{"type": "chocolates", "id": "2"}]}'
+	curl -X DELETE http://localhost:31415/v0/users/1/relationships/sweets -d '{"data" : [{"type": "chocolates", "id": "2"}]}'
 */
 package main
 
