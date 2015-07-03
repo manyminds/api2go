@@ -226,7 +226,7 @@ func getStructRelationships(relationer MarshalLinkedRelations, information Serve
 	relationships := make(map[string]map[string]interface{})
 
 	for _, referenceID := range referencedIDs {
-		sortedResults[referenceID.Type] = append(sortedResults[referenceID.Type], referenceID)
+		sortedResults[referenceID.Name] = append(sortedResults[referenceID.Name], referenceID)
 	}
 
 	references := relationer.GetReferences()
@@ -237,8 +237,8 @@ func getStructRelationships(relationer MarshalLinkedRelations, information Serve
 		notIncludedReferences[reference.Name] = reference
 	}
 
-	for referenceType, referenceIDs := range sortedResults {
-		name := referenceIDs[0].Name
+	for name, referenceIDs := range sortedResults {
+		referenceType := referenceIDs[0].Type
 		relationships[name] = map[string]interface{}{}
 		// if referenceType is plural, we need to use an array for data, otherwise it's just an object
 		if Pluralize(name) == name {
