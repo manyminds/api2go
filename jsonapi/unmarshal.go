@@ -260,7 +260,7 @@ func UnmarshalInto(input map[string]interface{}, targetStructType reflect.Type, 
 						}
 
 						if !field.IsValid() {
-							return errors.New("expected struct " + targetStructType.Name() + " to have field " + fieldName)
+							return errors.New("did not expect struct " + targetStructType.Name() + " to have field " + fieldName)
 						}
 					}
 
