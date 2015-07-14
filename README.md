@@ -78,7 +78,7 @@ type EntityNamer interface {
 ```
 
 This is an interface which can be implemented optionally. Normally, the name of
-a struct will be automatically generated in it's plural form. For example if
+a struct will be automatically generated in its plural form. For example if
 your struct has the type `Post`, it's generated name is `posts`. And the url
 for the GET request for post with ID 1 would be `/posts/1`.
 
