@@ -229,12 +229,18 @@ func UnmarshalInto(input map[string]interface{}, targetStructType reflect.Type, 
 				targetStruct.SetID(id)
 
 			case "type":
+				var expectedType string
 				structType, ok := v.(string)
 				if !ok {
 					return errors.New("type must be string")
 				}
 
-				expectedType := Pluralize(Jsonify(targetStructType.Name()))
+				entityName, ok := val.Interface().(EntityNamer)
+				if ok {
+					expectedType = entityName.GetName()
+				} else {
+					expectedType = Pluralize(Jsonify(targetStructType.Name()))
+				}
 				if structType != expectedType {
 					return fmt.Errorf("type %s does not match expected type %s of target struct", structType, expectedType)
 				}
