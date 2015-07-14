@@ -23,6 +23,7 @@ go get github.com/manyminds/api2go/jsonapi
 ## TOC
 - [Examples](#examples)
 - [Interfaces to implement](#interfaces-to-implement)
+  - [EntityNamer](#entitynamer)
   - [MarshalIdentifier](#marshalidentifier)
   - [UnmarshalIdentifier](#unmarshalidentifier)
   - [Marshalling with References to other structs](#marshalling-with-references-to-other-structs)
@@ -68,6 +69,34 @@ json ignore tag. Api2go will use the `GetID` method that you implemented for you
 
 In order to use different internal names for elements, you can specify a jsonapi tag. The api will marshal results now with the name in the tag.
 Create/Update/Delete works accordingly, but will fallback to the internal value as well if possible.
+
+### EntityNamer
+```go
+type EntityNamer interface {
+	GetName() string
+}
+```
+
+This is an interface which can be implemented optionally. Normally, the name of
+a struct will be automatically generated in it's plural form. For example if
+your struct has the type `Post`, it's generated name is `posts`. And the url
+for the GET request for post with ID 1 would be `/posts/1`.
+
+If you implement the `GetName()` method and it returns `special-posts`, then
+this would be the name in the `type` field of the generated json and also the
+name for the generated routes.
+
+Currently, you must implement this interface, if you have a struct type that
+consists of multiple words and you want to use a **hyphenized** name. For example `UnicornPost`.
+Our default Jsonifier would then generate the name `unicornPosts`. But if you
+want the [recommended](http://jsonapi.org/recommendations/#naming) name, you
+have to implement `GetName`
+
+```go
+func (s UnicornPost) GetName() string {
+	return "unicorn-posts"
+}
+```
 
 ### MarshalIdentifier
 ```go

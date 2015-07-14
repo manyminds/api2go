@@ -343,6 +343,18 @@ func (s *SqlNullPost) SetID(ID string) error {
 	return nil
 }
 
+type RenamedComment struct {
+	Data string
+}
+
+func (r RenamedComment) GetID() string {
+	return "666"
+}
+
+func (r RenamedComment) GetName() string {
+	return "renamed-comments"
+}
+
 type CompleteServerInformation struct{}
 
 const completePrefix = "http://my.domain/v1"

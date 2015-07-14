@@ -358,6 +358,11 @@ func marshalStruct(data MarshalIdentifier, information ServerInformation) (map[s
 }
 
 func getStructType(data MarshalIdentifier) string {
+	entityName, ok := data.(EntityNamer)
+	if ok {
+		return entityName.GetName()
+	}
+
 	reflectType := reflect.TypeOf(data)
 	if reflectType.Kind() == reflect.Ptr {
 		return Pluralize(Jsonify(reflectType.Elem().Name()))

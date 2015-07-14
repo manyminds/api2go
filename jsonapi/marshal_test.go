@@ -602,6 +602,11 @@ var _ = Describe("Marshalling", func() {
 			result := getStructType(&comment)
 			Expect(result).To(Equal("comments"))
 		})
+
+		It("checks for EntityNamer interface", func() {
+			result := getStructType(RenamedComment{"something"})
+			Expect(result).To(Equal("renamed-comments"))
+		})
 	})
 
 	Context("test getStructFields method", func() {
