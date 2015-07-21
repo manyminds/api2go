@@ -11,9 +11,7 @@ A [JSON API](http://jsonapi.org) Implementation for Go, to be used e.g. as serve
 import "github.com/manyminds/api2go"
 ```
 
-**api2go works, but we're still working on some rough edges. Things might change. Open an issue and join in!**
-
-**we moved the project from the univedo organization to manyminds. If you upgrade, please fix your import paths**
+**we are currently working to get all jsonapi 1.0 features implemented. So far most of the stuff is in. If you like to get involved please open an issue and join in!**
 
 Note: if you only need the marshaling functionality, you can install the subpackage via
  ```go
