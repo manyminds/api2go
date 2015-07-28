@@ -281,7 +281,7 @@ func (s *fixtureSource) Create(obj interface{}, req Request) (string, error) {
 
 	if p.Title == "" {
 		err := NewHTTPError(errors.New("Bad request."), "Bad Request", http.StatusBadRequest)
-		err.Errors = append(err.Errors, Error{ID: "SomeErrorID", Path: "Title"})
+		err.Errors = append(err.Errors, Error{ID: "SomeErrorID", Source: &ErrorSource{Pointer: "Title"}})
 		return "", err
 	}
 
@@ -620,7 +620,7 @@ var _ = Describe("RestHandler", func() {
 			Expect(rec.Code).To(Equal(http.StatusOK))
 			Expect(rec.Body.Bytes()).To(MatchJSON(`
 				{"data": {
-					"id": "1", 
+					"id": "1",
 					"type": "users",
 					"attributes": {
 						"name": "Dieter"
@@ -635,7 +635,7 @@ var _ = Describe("RestHandler", func() {
 			Expect(rec.Code).To(Equal(http.StatusOK))
 			Expect(rec.Body.Bytes()).To(MatchJSON(`
 				{"data": [{
-					"id": "1", 
+					"id": "1",
 					"type": "comments",
 					"attributes": {
 						"value": "This is a stupid post!"
@@ -977,7 +977,7 @@ var _ = Describe("RestHandler", func() {
 			Expect(err).To(BeNil())
 			api.Handler().ServeHTTP(rec, req)
 			Expect(rec.Code).To(Equal(http.StatusBadRequest))
-			expected := `{"errors":[{"id":"SomeErrorID","path":"Title"}]}`
+			expected := `{"errors":[{"id":"SomeErrorID","source":{"pointer":"Title"}}]}`
 			actual := strings.TrimSpace(string(rec.Body.Bytes()))
 			Expect(actual).To(Equal(expected))
 		})
