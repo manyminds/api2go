@@ -4,6 +4,8 @@ go:
   - 1.4
   - tip
 
+sudo: false
+
 install: 
   - go get -t -d -v ./...
   - go get github.com/onsi/ginkgo/ginkgo
