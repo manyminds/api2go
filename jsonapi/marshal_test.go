@@ -376,6 +376,104 @@ var _ = Describe("Marshalling", func() {
 		})
 	})
 
+	Context("when marshalling with relations that were not loaded", func() {
+		It("skips data field for not loaded relations", func() {
+			post := Post{ID: 123, Title: "Test", CommentsEmpty: true, AuthorEmpty: true}
+
+			// this only makes sense with MarshalWithURLs. Otherwise, the jsonapi spec would be
+			// violated, because you at least need a data, links, or meta field
+			i, err := MarshalWithURLs(post, CompleteServerInformation{})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(i).To(Equal(map[string]interface{}{
+				"data": map[string]interface{}{
+					"id":   "123",
+					"type": "posts",
+					"attributes": map[string]interface{}{
+						"title": "Test",
+					},
+					"relationships": map[string]map[string]interface{}{
+						"author": map[string]interface{}{
+							"links": map[string]string{
+								"self":    "http://my.domain/v1/posts/123/relationships/author",
+								"related": "http://my.domain/v1/posts/123/author",
+							},
+						},
+						"comments": map[string]interface{}{
+							"links": map[string]string{
+								"self":    "http://my.domain/v1/posts/123/relationships/comments",
+								"related": "http://my.domain/v1/posts/123/comments",
+							},
+						},
+					},
+				},
+			}))
+		})
+		It("skips data field for not loaded author relation", func() {
+			post := Post{ID: 123, Title: "Test", AuthorEmpty: true}
+
+			// this only makes sense with MarshalWithURLs. Otherwise, the jsonapi spec would be
+			// violated, because you at least need a data, links, or meta field
+			i, err := MarshalWithURLs(post, CompleteServerInformation{})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(i).To(Equal(map[string]interface{}{
+				"data": map[string]interface{}{
+					"id":   "123",
+					"type": "posts",
+					"attributes": map[string]interface{}{
+						"title": "Test",
+					},
+					"relationships": map[string]map[string]interface{}{
+						"author": map[string]interface{}{
+							"links": map[string]string{
+								"self":    "http://my.domain/v1/posts/123/relationships/author",
+								"related": "http://my.domain/v1/posts/123/author",
+							},
+						},
+						"comments": map[string]interface{}{
+							"data": []interface{}{},
+							"links": map[string]string{
+								"self":    "http://my.domain/v1/posts/123/relationships/comments",
+								"related": "http://my.domain/v1/posts/123/comments",
+							},
+						},
+					},
+				},
+			}))
+		})
+		It("skips data field for not loaded comments", func() {
+			post := Post{ID: 123, Title: "Test", CommentsEmpty: true}
+
+			// this only makes sense with MarshalWithURLs. Otherwise, the jsonapi spec would be
+			// violated, because you at least need a data, links, or meta field
+			i, err := MarshalWithURLs(post, CompleteServerInformation{})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(i).To(Equal(map[string]interface{}{
+				"data": map[string]interface{}{
+					"id":   "123",
+					"type": "posts",
+					"attributes": map[string]interface{}{
+						"title": "Test",
+					},
+					"relationships": map[string]map[string]interface{}{
+						"author": map[string]interface{}{
+							"data": nil,
+							"links": map[string]string{
+								"self":    "http://my.domain/v1/posts/123/relationships/author",
+								"related": "http://my.domain/v1/posts/123/author",
+							},
+						},
+						"comments": map[string]interface{}{
+							"links": map[string]string{
+								"self":    "http://my.domain/v1/posts/123/relationships/comments",
+								"related": "http://my.domain/v1/posts/123/comments",
+							},
+						},
+					},
+				},
+			}))
+		})
+	})
+
 	Context("when marshalling zero value types", func() {
 		theFloat := zero.NewFloat(2.3, true)
 		post := ZeroPost{ID: "1", Title: "test", Value: theFloat}
