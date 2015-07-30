@@ -24,9 +24,14 @@ type ReferenceID struct {
 }
 
 // Reference information about possible references of a struct
+// If IsNotLoaded is set to true, the `data` field will be omitted and only the `links` object will be
+// generated. You should do this if there are some references, but you do not want to load them.
+// Otherwise, if IsNotLoaded is false and GetReferencedIDs() returns no IDs for this reference name, an
+// empty `data` field will be added which means that there are no references.
 type Reference struct {
-	Type string
-	Name string
+	Type        string
+	Name        string
+	IsNotLoaded bool
 }
 
 // MarshalReferences must be implemented if the struct to be serialized has relations. This must be done
@@ -273,13 +278,16 @@ func getStructRelationships(relationer MarshalLinkedRelations, information Serve
 	}
 
 	// check for empty references
-	for name := range notIncludedReferences {
+	for name, reference := range notIncludedReferences {
 		relationships[name] = map[string]interface{}{}
 		// Plural empty relationships need an empty array and empty to-one need a null in the json
-		if Pluralize(name) == name {
-			relationships[name]["data"] = []interface{}{}
-		} else {
-			relationships[name]["data"] = nil
+		if !reference.IsNotLoaded {
+			if Pluralize(name) == name {
+				relationships[name]["data"] = []interface{}{}
+			} else {
+				relationships[name]["data"] = nil
+			}
+
 		}
 		links := getLinksForServerInformation(relationer, name, information)
 		if len(links) > 0 {
