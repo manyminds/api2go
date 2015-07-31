@@ -195,6 +195,15 @@ func (i information) GetPrefix() string {
 	return i.prefix
 }
 
+type notAllowedHandler struct {
+}
+
+func (n notAllowedHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	err := NewHTTPError(nil, "Method Not Allowed", http.StatusMethodNotAllowed)
+	w.WriteHeader(http.StatusMethodNotAllowed)
+	w.Write([]byte(marshalHTTPError(err, JSONContentMarshaler{})))
+}
+
 // NewAPI returns an initialized API instance
 // `prefix` is added in front of all endpoints.
 func NewAPI(prefix string) *API {
@@ -206,8 +215,11 @@ func NewAPI(prefix string) *API {
 		prefixSlashes = "/"
 	}
 
+	router := httprouter.New()
+	router.MethodNotAllowed = notAllowedHandler{}
+
 	return &API{
-		router:     httprouter.New(),
+		router:     router,
 		prefix:     prefixSlashes,
 		info:       information{prefix: prefix},
 		marshalers: DefaultContentMarshalers,

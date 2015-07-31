@@ -1395,5 +1395,17 @@ var _ = Describe("RestHandler", func() {
 				Expect(links).To(HaveLen(0))
 			})
 		})
+
+		Context("error codes", func() {
+			It("Should return the correct header on method not allowed", func() {
+				reqBody := strings.NewReader("")
+				req, err := http.NewRequest("PATCH", "/v1/posts", reqBody)
+				Expect(err).To(BeNil())
+				api.Handler().ServeHTTP(rec, req)
+				expected := `{"errors":[{"status":"405","title":"Method Not Allowed"}]}`
+				Expect(rec.Body.String()).To(MatchJSON(expected))
+				Expect(rec.Code).To(Equal(http.StatusMethodNotAllowed))
+			})
+		})
 	})
 })
