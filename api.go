@@ -196,17 +196,27 @@ func (i information) GetPrefix() string {
 }
 
 type notAllowedHandler struct {
+	marshalers map[string]ContentMarshaler
 }
 
 func (n notAllowedHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	err := NewHTTPError(nil, "Method Not Allowed", http.StatusMethodNotAllowed)
 	w.WriteHeader(http.StatusMethodNotAllowed)
-	w.Write([]byte(marshalHTTPError(err, JSONContentMarshaler{})))
+	handleError(err, w, r, n.marshalers)
 }
 
-// NewAPI returns an initialized API instance
-// `prefix` is added in front of all endpoints.
-func NewAPI(prefix string) *API {
+// NewAPIWithMarshalers does the same as NewAPIWithBaseURL with the addition
+// of a set of marshalers that provide a way to interact with clients that
+// use a serialization format other than JSON. The marshalers map is indexed
+// by the MIME content type to use for a given request-response pair. If the
+// client provides an Accept header the server will respond using the client's
+// preferred content type, otherwise it will respond using whatever content
+// type the client provided in its Content-Type request header.
+func NewAPIWithMarshalers(prefix string, baseURL string, marshalers map[string]ContentMarshaler) *API {
+	if len(marshalers) == 0 {
+		panic("marshaler map must not be empty")
+	}
+
 	// Add initial and trailing slash to prefix
 	prefixSlashes := strings.Trim(prefix, "/")
 	if len(prefixSlashes) > 0 {
@@ -216,24 +226,29 @@ func NewAPI(prefix string) *API {
 	}
 
 	router := httprouter.New()
-	router.MethodNotAllowed = notAllowedHandler{}
+	router.MethodNotAllowed = notAllowedHandler{marshalers: marshalers}
+
+	info := information{prefix: prefix, baseURL: baseURL}
 
 	return &API{
 		router:     router,
 		prefix:     prefixSlashes,
-		info:       information{prefix: prefix},
-		marshalers: DefaultContentMarshalers,
+		info:       info,
+		marshalers: marshalers,
 	}
+}
+
+// NewAPI returns an initialized API instance
+// `prefix` is added in front of all endpoints.
+func NewAPI(prefix string) *API {
+	return NewAPIWithMarshalers(prefix, "", DefaultContentMarshalers)
 }
 
 // NewAPIWithBaseURL does the same as NewAPI with the addition of
 // a baseURL which get's added in front of all generated URLs.
 // For example http://localhost/v1/myResource/abc instead of /v1/myResource/abc
 func NewAPIWithBaseURL(prefix string, baseURL string) *API {
-	api := NewAPI(prefix)
-	api.info.baseURL = baseURL
-
-	return api
+	return NewAPIWithMarshalers(prefix, baseURL, DefaultContentMarshalers)
 }
 
 // ContentMarshaler controls how requests from clients are unmarshaled
@@ -266,24 +281,6 @@ func (m JSONContentMarshaler) Unmarshal(data []byte, i interface{}) error {
 // using the standard encoding/json package.
 var DefaultContentMarshalers = map[string]ContentMarshaler{
 	"application/vnd.api+json": JSONContentMarshaler{},
-}
-
-// NewAPIWithMarshalers does the same as NewAPIWithBaseURL with the addition
-// of a set of marshalers that provide a way to interact with clients that
-// use a serialization format other than JSON. The marshalers map is indexed
-// by the MIME content type to use for a given request-response pair. If the
-// client provides an Accept header the server will respond using the client's
-// preferred content type, otherwise it will respond using whatever content
-// type the client provided in its Content-Type request header.
-func NewAPIWithMarshalers(prefix string, baseURL string, marshalers map[string]ContentMarshaler) *API {
-	if len(marshalers) == 0 {
-		panic("marshaler map must not be empty")
-	}
-
-	api := NewAPIWithBaseURL(prefix, baseURL)
-	api.marshalers = marshalers
-
-	return api
 }
 
 //SetRedirectTrailingSlash enables 307 redirects on urls ending with /
