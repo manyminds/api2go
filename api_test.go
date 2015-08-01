@@ -1404,6 +1404,7 @@ var _ = Describe("RestHandler", func() {
 				api.Handler().ServeHTTP(rec, req)
 				expected := `{"errors":[{"status":"405","title":"Method Not Allowed"}]}`
 				Expect(rec.Body.String()).To(MatchJSON(expected))
+				Expect(rec.Header().Get("Content-Type")).To(Equal(defaultContentTypHeader))
 				Expect(rec.Code).To(Equal(http.StatusMethodNotAllowed))
 			})
 		})

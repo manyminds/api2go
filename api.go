@@ -17,6 +17,8 @@ import (
 	"github.com/manyminds/api2go/jsonapi"
 )
 
+const defaultContentTypHeader = "application/vnd.api+json"
+
 // The CRUD interface MUST be implemented in order to use the api2go api.
 type CRUD interface {
 	// FindOne returns an object by its ID
@@ -280,7 +282,7 @@ func (m JSONContentMarshaler) Unmarshal(data []byte, i interface{}) error {
 // Currently this means handling application/vnd.api+json content type bodies
 // using the standard encoding/json package.
 var DefaultContentMarshalers = map[string]ContentMarshaler{
-	"application/vnd.api+json": JSONContentMarshaler{},
+	defaultContentTypHeader: JSONContentMarshaler{},
 }
 
 //SetRedirectTrailingSlash enables 307 redirects on urls ending with /
@@ -965,7 +967,7 @@ func selectContentMarshaler(r *http.Request, marshalers map[string]ContentMarsha
 			contentTypes = append(contentTypes, ct)
 		}
 
-		contentType = httputil.NegotiateContentType(r, contentTypes, "application/vnd.api+json")
+		contentType = httputil.NegotiateContentType(r, contentTypes, defaultContentTypHeader)
 		marshaler = marshalers[contentType]
 	} else if contentTypes, found := r.Header["Content-Type"]; found {
 		contentType = contentTypes[0]
@@ -973,7 +975,7 @@ func selectContentMarshaler(r *http.Request, marshalers map[string]ContentMarsha
 	}
 
 	if marshaler == nil {
-		contentType = "application/vnd.api+json"
+		contentType = defaultContentTypHeader
 		marshaler = JSONContentMarshaler{}
 	}
 
