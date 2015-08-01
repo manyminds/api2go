@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/julienschmidt/httprouter"
-	"github.com/univedo/api2go/jsonapi"
+	"github.com/manyminds/api2go/jsonapi"
 )
 
 // API is a REST JSONAPI.
