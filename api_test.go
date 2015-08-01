@@ -416,6 +416,11 @@ func (m prettyJSONContentMarshaler) Unmarshal(data []byte, i interface{}) error 
 	return json.Unmarshal(data, i)
 }
 
+func (m prettyJSONContentMarshaler) MarshalError(err error) string {
+	jsonmarshaler := JSONContentMarshaler{}
+	return jsonmarshaler.MarshalError(err)
+}
+
 var _ = Describe("RestHandler", func() {
 
 	var usePointerResources bool

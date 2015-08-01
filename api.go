@@ -843,10 +843,10 @@ func handleError(err error, w http.ResponseWriter, r *http.Request, marshalers m
 
 	log.Println(err)
 	if e, ok := err.(HTTPError); ok {
-		writeResult(w, []byte(marshalError(e, marshaler)), e.status, contentType)
+		writeResult(w, []byte(marshaler.MarshalError(err)), e.status, contentType)
 		return
 
 	}
 
-	writeResult(w, []byte(marshalError(err, marshaler)), http.StatusInternalServerError, contentType)
+	writeResult(w, []byte(marshaler.MarshalError(err)), http.StatusInternalServerError, contentType)
 }

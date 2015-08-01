@@ -248,6 +248,7 @@ The `ContentMarshaler` interface declares two functions
 type ContentMarshaler interface {
   Marshal(i interface{}) ([]byte, error)
   Unmarshal(data []byte, i interface{}) error
+  MarshalError(err error) string
 }
 ```
 
