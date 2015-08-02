@@ -134,28 +134,30 @@ func (s UserResource) FindOne(ID string, r api2go.Request) (interface{}, error) 
 }
 
 // Create method to satisfy `api2go.DataSource` interface
-func (s UserResource) Create(obj interface{}, r api2go.Request) (string, error) {
+func (s UserResource) Create(obj interface{}, r api2go.Request) (string, int, error) {
 	user, ok := obj.(model.User)
 	if !ok {
-		return "", api2go.NewHTTPError(errors.New("Invalid instance given"), "Invalid instance given", http.StatusBadRequest)
+		return "", 0, api2go.NewHTTPError(errors.New("Invalid instance given"), "Invalid instance given", http.StatusBadRequest)
 	}
 
 	id := s.UserStorage.Insert(user)
 
-	return id, nil
+	return id, http.StatusCreated, nil
 }
 
 // Delete to satisfy `api2go.DataSource` interface
-func (s UserResource) Delete(id string, r api2go.Request) error {
-	return s.UserStorage.Delete(id)
+func (s UserResource) Delete(id string, r api2go.Request) (int, error) {
+	err := s.UserStorage.Delete(id)
+	return http.StatusNoContent, err
 }
 
 //Update stores all changes on the user
-func (s UserResource) Update(obj interface{}, r api2go.Request) error {
+func (s UserResource) Update(obj interface{}, r api2go.Request) (int, error) {
 	user, ok := obj.(model.User)
 	if !ok {
-		return api2go.NewHTTPError(errors.New("Invalid instance given"), "Invalid instance given", http.StatusBadRequest)
+		return 0, api2go.NewHTTPError(errors.New("Invalid instance given"), "Invalid instance given", http.StatusBadRequest)
 	}
 
-	return s.UserStorage.Update(user)
+	err := s.UserStorage.Update(user)
+	return http.StatusNoContent, err
 }

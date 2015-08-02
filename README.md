@@ -310,15 +310,15 @@ func (s *fixtureSource) FindOne(ID string, r api2go.Request) (interface{}, error
   // Return a single post by ID as Post
 }
 
-func (s *fixtureSource) Create(obj interface{}, r api2go.Request) (string, error) {
+func (s *fixtureSource) Create(obj interface{}, r api2go.Request) (ID string, status int, err error) {
   // Save the new Post in `obj` and return its ID.
 }
 
-func (s *fixtureSource) Delete(id string, r api2go.Request) error {
+func (s *fixtureSource) Delete(id string, r api2go.Request) (status int, err error) {
   // Delete a post
 }
 
-func (s *fixtureSource) Update(obj interface{}, r api2go.Request) error {
+func (s *fixtureSource) Update(obj interface{}, r api2go.Request) (status int, err error) {
   // Apply the new values in the Post in `obj`
 }
 ```

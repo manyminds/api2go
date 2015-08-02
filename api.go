@@ -493,18 +493,30 @@ func (res *resource) handleCreate(w http.ResponseWriter, r *http.Request, prefix
 	//TODO create multiple objects not only one.
 	newObj := newObjs.Index(0).Interface()
 
-	id, err := res.source.Create(newObj, buildRequest(r))
+	id, status, err := res.source.Create(newObj, buildRequest(r))
 	if err != nil {
 		return err
 	}
 	w.Header().Set("Location", prefix+res.name+"/"+id)
 
-	obj, err := res.source.FindOne(id, buildRequest(r))
-	if err != nil {
-		return err
-	}
+	// handle 200 status codes
+	switch status {
+	case http.StatusCreated:
+		obj, err := res.source.FindOne(id, buildRequest(r))
+		if err != nil {
+			return err
+		}
 
-	return respondWith(obj, info, http.StatusCreated, w, r, res.marshalers)
+		return respondWith(obj, info, http.StatusCreated, w, r, res.marshalers)
+	case http.StatusNoContent:
+		w.WriteHeader(status)
+		return nil
+	case http.StatusAccepted:
+		w.WriteHeader(status)
+		return nil
+	default:
+		return fmt.Errorf("invalid status code %d from resource %s for method Create", status, res.name)
+	}
 }
 
 func (res *resource) handleUpdate(w http.ResponseWriter, r *http.Request, ps httprouter.Params) error {
@@ -571,11 +583,29 @@ func (res *resource) handleUpdate(w http.ResponseWriter, r *http.Request, ps htt
 
 	updatingObj := updatingObjs.Index(0).Interface()
 
-	if err := res.source.Update(updatingObj, buildRequest(r)); err != nil {
+	status, err := res.source.Update(updatingObj, buildRequest(r))
+
+	if err != nil {
 		return err
 	}
-	w.WriteHeader(http.StatusNoContent)
-	return nil
+
+	switch status {
+	case http.StatusOK:
+		updated, err := res.source.FindOne(ps.ByName("id"), buildRequest(r))
+		if err != nil {
+			return err
+		}
+
+		return respondWith(updated, information{}, status, w, r, res.marshalers)
+	case http.StatusAccepted:
+		w.WriteHeader(status)
+		return nil
+	case http.StatusNoContent:
+		w.WriteHeader(status)
+		return nil
+	default:
+		return fmt.Errorf("invalid status code %d from resource %s for method Update", status, res.name)
+	}
 }
 
 func (res *resource) handleReplaceRelation(w http.ResponseWriter, r *http.Request, ps httprouter.Params, relation jsonapi.Reference) error {
@@ -612,9 +642,9 @@ func (res *resource) handleReplaceRelation(w http.ResponseWriter, r *http.Reques
 	}
 
 	if resType == reflect.Struct {
-		err = res.source.Update(reflect.ValueOf(editObj).Elem().Interface(), buildRequest(r))
+		_, err = res.source.Update(reflect.ValueOf(editObj).Elem().Interface(), buildRequest(r))
 	} else {
-		err = res.source.Update(editObj, buildRequest(r))
+		_, err = res.source.Update(editObj, buildRequest(r))
 	}
 
 	w.WriteHeader(http.StatusNoContent)
@@ -676,9 +706,9 @@ func (res *resource) handleAddToManyRelation(w http.ResponseWriter, r *http.Requ
 	targetObj.AddToManyIDs(relation.Name, newIDs)
 
 	if resType == reflect.Struct {
-		err = res.source.Update(reflect.ValueOf(targetObj).Elem().Interface(), buildRequest(r))
+		_, err = res.source.Update(reflect.ValueOf(targetObj).Elem().Interface(), buildRequest(r))
 	} else {
-		err = res.source.Update(targetObj, buildRequest(r))
+		_, err = res.source.Update(targetObj, buildRequest(r))
 	}
 
 	w.WriteHeader(http.StatusNoContent)
@@ -740,9 +770,9 @@ func (res *resource) handleDeleteToManyRelation(w http.ResponseWriter, r *http.R
 	targetObj.DeleteToManyIDs(relation.Name, obsoleteIDs)
 
 	if resType == reflect.Struct {
-		err = res.source.Update(reflect.ValueOf(targetObj).Elem().Interface(), buildRequest(r))
+		_, err = res.source.Update(reflect.ValueOf(targetObj).Elem().Interface(), buildRequest(r))
 	} else {
-		err = res.source.Update(targetObj, buildRequest(r))
+		_, err = res.source.Update(targetObj, buildRequest(r))
 	}
 
 	w.WriteHeader(http.StatusNoContent)
@@ -759,12 +789,24 @@ func getPointerToStruct(oldObj interface{}) interface{} {
 }
 
 func (res *resource) handleDelete(w http.ResponseWriter, r *http.Request, ps httprouter.Params) error {
-	err := res.source.Delete(ps.ByName("id"), buildRequest(r))
+	status, err := res.source.Delete(ps.ByName("id"), buildRequest(r))
 	if err != nil {
 		return err
 	}
-	w.WriteHeader(http.StatusNoContent)
-	return nil
+
+	switch status {
+	case http.StatusOK:
+		// TODO: implement this.. we need meta data as return value
+		return fmt.Errorf("status 200 OK is currently not implemented for Delete methods")
+	case http.StatusAccepted:
+		w.WriteHeader(status)
+		return nil
+	case http.StatusNoContent:
+		w.WriteHeader(status)
+		return nil
+	default:
+		return fmt.Errorf("invalid status code %d from resource %s for method Delete", status, res.name)
+	}
 }
 
 func writeResult(w http.ResponseWriter, data []byte, status int, contentType string) {

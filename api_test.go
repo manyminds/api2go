@@ -276,7 +276,7 @@ func (s *fixtureSource) FindOne(id string, req Request) (interface{}, error) {
 	return nil, NewHTTPError(nil, "post not found", http.StatusNotFound)
 }
 
-func (s *fixtureSource) Create(obj interface{}, req Request) (string, error) {
+func (s *fixtureSource) Create(obj interface{}, req Request) (string, int, error) {
 	var p *Post
 	if s.pointers {
 		p = obj.(*Post)
@@ -288,7 +288,7 @@ func (s *fixtureSource) Create(obj interface{}, req Request) (string, error) {
 	if p.Title == "" {
 		err := NewHTTPError(errors.New("Bad request."), "Bad Request", http.StatusBadRequest)
 		err.Errors = append(err.Errors, Error{ID: "SomeErrorID", Source: &ErrorSource{Pointer: "Title"}})
-		return "", err
+		return "", 0, err
 	}
 
 	maxID := 0
@@ -301,15 +301,15 @@ func (s *fixtureSource) Create(obj interface{}, req Request) (string, error) {
 	newID := strconv.Itoa(maxID + 1)
 	p.ID = newID
 	s.posts[newID] = p
-	return newID, nil
+	return newID, http.StatusCreated, nil
 }
 
-func (s *fixtureSource) Delete(id string, req Request) error {
+func (s *fixtureSource) Delete(id string, req Request) (int, error) {
 	delete(s.posts, id)
-	return nil
+	return http.StatusNoContent, nil
 }
 
-func (s *fixtureSource) Update(obj interface{}, req Request) error {
+func (s *fixtureSource) Update(obj interface{}, req Request) (int, error) {
 	var p *Post
 	if s.pointers {
 		p = obj.(*Post)
@@ -321,9 +321,9 @@ func (s *fixtureSource) Update(obj interface{}, req Request) error {
 		oldP.Title = p.Title
 		oldP.Author = p.Author
 		oldP.Comments = p.Comments
-		return nil
+		return http.StatusNoContent, nil
 	}
-	return NewHTTPError(nil, "post not found", http.StatusNotFound)
+	return 0, NewHTTPError(nil, "post not found", http.StatusNotFound)
 }
 
 type userSource struct {
@@ -355,16 +355,16 @@ func (s *userSource) FindOne(id string, req Request) (interface{}, error) {
 	return nil, nil
 }
 
-func (s *userSource) Create(obj interface{}, req Request) (string, error) {
-	return "", nil
+func (s *userSource) Create(obj interface{}, req Request) (string, int, error) {
+	return "", http.StatusCreated, nil
 }
 
-func (s *userSource) Delete(id string, req Request) error {
-	return nil
+func (s *userSource) Delete(id string, req Request) (int, error) {
+	return http.StatusNoContent, nil
 }
 
-func (s *userSource) Update(obj interface{}, req Request) error {
-	return NewHTTPError(nil, "user not found", http.StatusNotFound)
+func (s *userSource) Update(obj interface{}, req Request) (int, error) {
+	return 0, NewHTTPError(nil, "user not found", http.StatusNotFound)
 }
 
 type commentSource struct {
@@ -399,16 +399,16 @@ func (s *commentSource) FindOne(id string, req Request) (interface{}, error) {
 	return nil, nil
 }
 
-func (s *commentSource) Create(obj interface{}, req Request) (string, error) {
-	return "", nil
+func (s *commentSource) Create(obj interface{}, req Request) (string, int, error) {
+	return "", http.StatusCreated, nil
 }
 
-func (s *commentSource) Delete(id string, req Request) error {
-	return nil
+func (s *commentSource) Delete(id string, req Request) (int, error) {
+	return http.StatusNoContent, nil
 }
 
-func (s *commentSource) Update(obj interface{}, req Request) error {
-	return NewHTTPError(nil, "comment not found", http.StatusNotFound)
+func (s *commentSource) Update(obj interface{}, req Request) (int, error) {
+	return 0, NewHTTPError(nil, "comment not found", http.StatusNotFound)
 }
 
 type prettyJSONContentMarshaler struct {

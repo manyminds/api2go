@@ -6,13 +6,26 @@ type CRUD interface {
 	FindOne(ID string, req Request) (interface{}, error)
 
 	// Create a new object and return its ID
-	Create(obj interface{}, req Request) (string, error)
+	// status is one of these 200 success codes
+	// - 201 Created: Resource was created and needs to be returned
+	// - 202 Accepted: Processing is delayed, return nothing
+	// - 204 No Content: Resource created with a client generated ID, and no fields were modified by
+	//   the server
+	Create(obj interface{}, req Request) (id string, status int, err error)
 
 	// Delete an object
-	Delete(id string, req Request) error
+	// status is one of these 200 success codes
+	// - 200 OK: Update successful, however some field(s) were changed, returns updates source
+	// - 202 Accepted: Processing is delayed, return nothing
+	// - 204 No Content: Update was successful, no fields were changed by the server, return nothing
+	Delete(id string, req Request) (status int, err error)
 
 	// Update an object
-	Update(obj interface{}, req Request) error
+	// status is one of these 200 success codes
+	// - 200 OK: Deletion was a success, returns meta information, currently not implemented! Do not use this
+	// - 202 Accepted: Processing is delayed, return nothing
+	// - 204 No Content: Deletion was successful, return nothing
+	Update(obj interface{}, req Request) (status int, err error)
 }
 
 // ContentMarshaler controls how requests from clients are unmarshaled

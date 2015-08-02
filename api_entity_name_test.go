@@ -46,16 +46,16 @@ func (s BaguetteResource) FindAll(req Request) (interface{}, error) {
 	}, nil
 }
 
-func (s BaguetteResource) Create(obj interface{}, req Request) (string, error) {
-	return "newID", nil
+func (s BaguetteResource) Create(obj interface{}, req Request) (string, int, error) {
+	return "newID", http.StatusCreated, nil
 }
 
-func (s BaguetteResource) Delete(ID string, req Request) error {
-	return nil
+func (s BaguetteResource) Delete(ID string, req Request) (int, error) {
+	return http.StatusNoContent, nil
 }
 
-func (s BaguetteResource) Update(obj interface{}, req Request) error {
-	return nil
+func (s BaguetteResource) Update(obj interface{}, req Request) (int, error) {
+	return http.StatusNoContent, nil
 }
 
 var _ = Describe("Test route renaming with EntityNamer interface", func() {

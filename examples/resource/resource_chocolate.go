@@ -48,26 +48,29 @@ func (c ChocolateResource) FindOne(ID string, r api2go.Request) (interface{}, er
 }
 
 // Create a new choc
-func (c ChocolateResource) Create(obj interface{}, r api2go.Request) (string, error) {
+func (c ChocolateResource) Create(obj interface{}, r api2go.Request) (string, int, error) {
 	choc, ok := obj.(model.Chocolate)
 	if !ok {
-		return "", api2go.NewHTTPError(errors.New("Invalid instance given"), "Invalid instance given", http.StatusBadRequest)
+		return "", 0, api2go.NewHTTPError(errors.New("Invalid instance given"), "Invalid instance given", http.StatusBadRequest)
 	}
 
-	return c.ChocStorage.Insert(choc), nil
+	id := c.ChocStorage.Insert(choc)
+	return id, http.StatusCreated, nil
 }
 
 // Delete a choc :(
-func (c ChocolateResource) Delete(id string, r api2go.Request) error {
-	return c.ChocStorage.Delete(id)
+func (c ChocolateResource) Delete(id string, r api2go.Request) (int, error) {
+	err := c.ChocStorage.Delete(id)
+	return http.StatusNoContent, err
 }
 
 // Update a choc
-func (c ChocolateResource) Update(obj interface{}, r api2go.Request) error {
+func (c ChocolateResource) Update(obj interface{}, r api2go.Request) (int, error) {
 	choc, ok := obj.(model.Chocolate)
 	if !ok {
-		return api2go.NewHTTPError(errors.New("Invalid instance given"), "Invalid instance given", http.StatusBadRequest)
+		return 0, api2go.NewHTTPError(errors.New("Invalid instance given"), "Invalid instance given", http.StatusBadRequest)
 	}
 
-	return c.ChocStorage.Update(choc)
+	err := c.ChocStorage.Update(choc)
+	return http.StatusNoContent, err
 }
