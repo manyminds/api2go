@@ -64,6 +64,11 @@ func (m PrettyJSONContentMarshaler) Unmarshal(data []byte, i interface{}) error 
 	return json.Unmarshal(data, i)
 }
 
+func (m PrettyJSONContentMarshaler) MarshalError(err error) string {
+	jsonmarshaler := api2go.JSONContentMarshaler{}
+	return jsonmarshaler.MarshalError(err)
+}
+
 func main() {
 	marshalers := map[string]api2go.ContentMarshaler{
 		"application/vnd.api+json": PrettyJSONContentMarshaler{},

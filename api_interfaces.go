@@ -23,6 +23,7 @@ type CRUD interface {
 type ContentMarshaler interface {
 	Marshal(i interface{}) ([]byte, error)
 	Unmarshal(data []byte, i interface{}) error
+	MarshalError(error) string
 }
 
 // The PaginatedFindAll interface can be optionally implemented to fetch a subset of all records.

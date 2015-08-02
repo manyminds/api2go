@@ -54,16 +54,17 @@ type ErrorSource struct {
 	Parameter string `json:"parameter,omitempty"`
 }
 
-//marshalError marshals all error types
-func marshalError(err error, marshaler ContentMarshaler) string {
+//MarshalError marshals errors recursively in json format.
+//it can make use of the jsonapi.HTTPError struct
+func (j JSONContentMarshaler) MarshalError(err error) string {
 	httpErr, ok := err.(HTTPError)
 	if ok {
-		return marshalHTTPError(httpErr, marshaler)
+		return marshalHTTPError(httpErr, j)
 	}
 
 	httpErr = NewHTTPError(err, err.Error(), 500)
 
-	return marshalHTTPError(httpErr, marshaler)
+	return marshalHTTPError(httpErr, j)
 }
 
 //marshalHTTPError marshals an internal httpError
