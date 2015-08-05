@@ -329,8 +329,7 @@ func (res *resource) handleIndex(w http.ResponseWriter, r *http.Request, info in
 			return NewHTTPError(nil, "Resource does not implement the PaginatedFindAll interface", http.StatusNotFound)
 		}
 
-		var count uint
-		objs, count, err := source.PaginatedFindAll(buildRequest(r))
+		count, response, err := source.PaginatedFindAll(buildRequest(r))
 		if err != nil {
 			return err
 		}
@@ -340,31 +339,31 @@ func (res *resource) handleIndex(w http.ResponseWriter, r *http.Request, info in
 			return err
 		}
 
-		return respondWithPagination(objs, info, http.StatusOK, paginationLinks, w, r, res.marshalers)
+		return respondWithPagination(response.Result(), info, http.StatusOK, paginationLinks, w, r, res.marshalers)
 	}
 	source, ok := res.source.(FindAll)
 	if !ok {
 		return NewHTTPError(nil, "Resource does not implement the FindAll interface", http.StatusNotFound)
 	}
 
-	objs, err := source.FindAll(buildRequest(r))
+	response, err := source.FindAll(buildRequest(r))
 	if err != nil {
 		return err
 	}
 
-	return respondWith(objs, info, http.StatusOK, w, r, res.marshalers)
+	return respondWith(response.Result(), info, http.StatusOK, w, r, res.marshalers)
 }
 
 func (res *resource) handleRead(w http.ResponseWriter, r *http.Request, ps httprouter.Params, info information) error {
 	id := ps.ByName("id")
 
-	obj, err := res.source.FindOne(id, buildRequest(r))
+	response, err := res.source.FindOne(id, buildRequest(r))
 
 	if err != nil {
 		return err
 	}
 
-	return respondWith(obj, info, http.StatusOK, w, r, res.marshalers)
+	return respondWith(response.Result(), info, http.StatusOK, w, r, res.marshalers)
 }
 
 func (res *resource) handleReadRelation(w http.ResponseWriter, r *http.Request, ps httprouter.Params, info information, relation jsonapi.Reference) error {
@@ -377,7 +376,7 @@ func (res *resource) handleReadRelation(w http.ResponseWriter, r *http.Request, 
 
 	internalError := NewHTTPError(nil, "Internal server error, invalid object structure", http.StatusInternalServerError)
 
-	marshalled, err := jsonapi.MarshalWithURLs(obj, info)
+	marshalled, err := jsonapi.MarshalWithURLs(obj.Result(), info)
 	data, ok := marshalled["data"]
 	if !ok {
 		return internalError
@@ -427,7 +426,7 @@ func (res *resource) handleLinked(api *API, w http.ResponseWriter, r *http.Reque
 			request.QueryParams[res.name+"ID"] = []string{id}
 			request.QueryParams[res.name+"Name"] = []string{linked.Name}
 
-			// check for pagination, otherwise normal FindAll
+			// check for paginatioy, otherwise normal FindAll
 			pagination := newPaginationQueryParams(r)
 			if pagination.isValid() {
 				source, ok := resource.source.(PaginatedFindAll)
@@ -436,7 +435,7 @@ func (res *resource) handleLinked(api *API, w http.ResponseWriter, r *http.Reque
 				}
 
 				var count uint
-				objs, count, err := source.PaginatedFindAll(request)
+				count, response, err := source.PaginatedFindAll(request)
 				if err != nil {
 					return err
 				}
@@ -446,7 +445,7 @@ func (res *resource) handleLinked(api *API, w http.ResponseWriter, r *http.Reque
 					return err
 				}
 
-				return respondWithPagination(objs, info, http.StatusOK, paginationLinks, w, r, res.marshalers)
+				return respondWithPagination(response.Result(), info, http.StatusOK, paginationLinks, w, r, res.marshalers)
 			}
 
 			source, ok := resource.source.(FindAll)
@@ -458,7 +457,7 @@ func (res *resource) handleLinked(api *API, w http.ResponseWriter, r *http.Reque
 			if err != nil {
 				return err
 			}
-			return respondWith(obj, info, http.StatusOK, w, r, res.marshalers)
+			return respondWith(obj.Result(), info, http.StatusOK, w, r, res.marshalers)
 		}
 	}
 
@@ -493,29 +492,30 @@ func (res *resource) handleCreate(w http.ResponseWriter, r *http.Request, prefix
 	//TODO create multiple objects not only one.
 	newObj := newObjs.Index(0).Interface()
 
-	id, status, err := res.source.Create(newObj, buildRequest(r))
+	response, err := res.source.Create(newObj, buildRequest(r))
 	if err != nil {
 		return err
 	}
-	w.Header().Set("Location", prefix+res.name+"/"+id)
+
+	result, ok := response.Result().(jsonapi.MarshalIdentifier)
+
+	if !ok {
+		return fmt.Errorf("Expected one newly created object by resource %s", res.name)
+	}
+	w.Header().Set("Location", prefix+res.name+"/"+result.GetID())
 
 	// handle 200 status codes
-	switch status {
+	switch response.StatusCode() {
 	case http.StatusCreated:
-		obj, err := res.source.FindOne(id, buildRequest(r))
-		if err != nil {
-			return err
-		}
-
-		return respondWith(obj, info, http.StatusCreated, w, r, res.marshalers)
+		return respondWith(result, info, http.StatusCreated, w, r, res.marshalers)
 	case http.StatusNoContent:
-		w.WriteHeader(status)
+		w.WriteHeader(response.StatusCode())
 		return nil
 	case http.StatusAccepted:
-		w.WriteHeader(status)
+		w.WriteHeader(response.StatusCode())
 		return nil
 	default:
-		return fmt.Errorf("invalid status code %d from resource %s for method Create", status, res.name)
+		return fmt.Errorf("invalid status code %d from resource %s for method Create", response.StatusCode(), res.name)
 	}
 }
 
@@ -566,7 +566,7 @@ func (res *resource) handleUpdate(w http.ResponseWriter, r *http.Request, ps htt
 	}
 
 	updatingObjs := reflect.MakeSlice(reflect.SliceOf(res.resourceType), 1, 1)
-	updatingObjs.Index(0).Set(reflect.ValueOf(obj))
+	updatingObjs.Index(0).Set(reflect.ValueOf(obj.Result()))
 
 	structType := res.resourceType
 	if structType.Kind() == reflect.Ptr {
@@ -583,28 +583,35 @@ func (res *resource) handleUpdate(w http.ResponseWriter, r *http.Request, ps htt
 
 	updatingObj := updatingObjs.Index(0).Interface()
 
-	status, err := res.source.Update(updatingObj, buildRequest(r))
+	response, err := res.source.Update(updatingObj, buildRequest(r))
 
 	if err != nil {
 		return err
 	}
 
-	switch status {
+	switch response.StatusCode() {
 	case http.StatusOK:
-		updated, err := res.source.FindOne(ps.ByName("id"), buildRequest(r))
-		if err != nil {
-			return err
+		updated := response.Result()
+		if updated == nil {
+			response, err := res.source.FindOne(ps.ByName("id"), buildRequest(r))
+			if err != nil {
+				return err
+			}
+			updated = response.Result()
+			if updated == nil {
+				return fmt.Errorf("Expected FindOne to return one object of resource %s", res.name)
+			}
 		}
 
-		return respondWith(updated, information{}, status, w, r, res.marshalers)
+		return respondWith(updated, information{}, http.StatusOK, w, r, res.marshalers)
 	case http.StatusAccepted:
-		w.WriteHeader(status)
+		w.WriteHeader(http.StatusAccepted)
 		return nil
 	case http.StatusNoContent:
-		w.WriteHeader(status)
+		w.WriteHeader(http.StatusNoContent)
 		return nil
 	default:
-		return fmt.Errorf("invalid status code %d from resource %s for method Update", status, res.name)
+		return fmt.Errorf("invalid status code %d from resource %s for method Update", response.StatusCode(), res.name)
 	}
 }
 
@@ -614,7 +621,7 @@ func (res *resource) handleReplaceRelation(w http.ResponseWriter, r *http.Reques
 		editObj interface{}
 	)
 
-	oldObj, err := res.source.FindOne(ps.ByName("id"), buildRequest(r))
+	response, err := res.source.FindOne(ps.ByName("id"), buildRequest(r))
 	if err != nil {
 		return err
 	}
@@ -629,11 +636,11 @@ func (res *resource) handleReplaceRelation(w http.ResponseWriter, r *http.Reques
 		return errors.New("Invalid object. Need a \"data\" object")
 	}
 
-	resType := reflect.TypeOf(oldObj).Kind()
+	resType := reflect.TypeOf(response.Result()).Kind()
 	if resType == reflect.Struct {
-		editObj = getPointerToStruct(oldObj)
+		editObj = getPointerToStruct(response.Result())
 	} else {
-		editObj = oldObj
+		editObj = response.Result()
 	}
 
 	err = jsonapi.UnmarshalRelationshipsData(editObj, relation.Name, data)
@@ -657,7 +664,7 @@ func (res *resource) handleAddToManyRelation(w http.ResponseWriter, r *http.Requ
 		editObj interface{}
 	)
 
-	oldObj, err := res.source.FindOne(ps.ByName("id"), buildRequest(r))
+	response, err := res.source.FindOne(ps.ByName("id"), buildRequest(r))
 	if err != nil {
 		return err
 	}
@@ -692,11 +699,11 @@ func (res *resource) handleAddToManyRelation(w http.ResponseWriter, r *http.Requ
 		newIDs = append(newIDs, newID)
 	}
 
-	resType := reflect.TypeOf(oldObj).Kind()
+	resType := reflect.TypeOf(response.Result()).Kind()
 	if resType == reflect.Struct {
-		editObj = getPointerToStruct(oldObj)
+		editObj = getPointerToStruct(response.Result())
 	} else {
-		editObj = oldObj
+		editObj = response.Result()
 	}
 
 	targetObj, ok := editObj.(jsonapi.EditToManyRelations)
@@ -721,7 +728,7 @@ func (res *resource) handleDeleteToManyRelation(w http.ResponseWriter, r *http.R
 		err     error
 		editObj interface{}
 	)
-	oldObj, err := res.source.FindOne(ps.ByName("id"), buildRequest(r))
+	response, err := res.source.FindOne(ps.ByName("id"), buildRequest(r))
 	if err != nil {
 		return err
 	}
@@ -756,11 +763,11 @@ func (res *resource) handleDeleteToManyRelation(w http.ResponseWriter, r *http.R
 		obsoleteIDs = append(obsoleteIDs, obsoleteID)
 	}
 
-	resType := reflect.TypeOf(oldObj).Kind()
+	resType := reflect.TypeOf(response.Result()).Kind()
 	if resType == reflect.Struct {
-		editObj = getPointerToStruct(oldObj)
+		editObj = getPointerToStruct(response.Result())
 	} else {
-		editObj = oldObj
+		editObj = response.Result()
 	}
 
 	targetObj, ok := editObj.(jsonapi.EditToManyRelations)
@@ -789,23 +796,23 @@ func getPointerToStruct(oldObj interface{}) interface{} {
 }
 
 func (res *resource) handleDelete(w http.ResponseWriter, r *http.Request, ps httprouter.Params) error {
-	status, err := res.source.Delete(ps.ByName("id"), buildRequest(r))
+	response, err := res.source.Delete(ps.ByName("id"), buildRequest(r))
 	if err != nil {
 		return err
 	}
 
-	switch status {
+	switch response.StatusCode() {
 	case http.StatusOK:
 		// TODO: implement this.. we need meta data as return value
 		return fmt.Errorf("status 200 OK is currently not implemented for Delete methods")
 	case http.StatusAccepted:
-		w.WriteHeader(status)
+		w.WriteHeader(http.StatusAccepted)
 		return nil
 	case http.StatusNoContent:
-		w.WriteHeader(status)
+		w.WriteHeader(http.StatusNoContent)
 		return nil
 	default:
-		return fmt.Errorf("invalid status code %d from resource %s for method Delete", status, res.name)
+		return fmt.Errorf("invalid status code %d from resource %s for method Delete", response.StatusCode(), res.name)
 	}
 }
 

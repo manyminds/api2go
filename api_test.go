@@ -22,6 +22,24 @@ func (i invalid) GetID() string {
 	return "invalid"
 }
 
+type Response struct {
+	Meta map[string]interface{}
+	Res  interface{}
+	Code int
+}
+
+func (r *Response) MetaData() map[string]interface{} {
+	return r.Meta
+}
+
+func (r *Response) Result() interface{} {
+	return r.Res
+}
+
+func (r *Response) StatusCode() int {
+	return r.Code
+}
+
 type Post struct {
 	ID       string `json:"-"`
 	Title    string
@@ -194,7 +212,7 @@ type fixtureSource struct {
 	pointers bool
 }
 
-func (s *fixtureSource) FindAll(req Request) (interface{}, error) {
+func (s *fixtureSource) FindAll(req Request) (Responder, error) {
 	var err error
 
 	if limit, ok := req.QueryParams["limit"]; ok {
@@ -208,7 +226,7 @@ func (s *fixtureSource) FindAll(req Request) (interface{}, error) {
 						break
 					}
 				}
-				return postsSlice, nil
+				return &Response{Res: postsSlice}, nil
 			}
 
 			postsSlice := make([]Post, l)
@@ -219,12 +237,12 @@ func (s *fixtureSource) FindAll(req Request) (interface{}, error) {
 					break
 				}
 			}
-			return postsSlice, nil
+			return &Response{Res: postsSlice}, nil
 
 		}
 
 		fmt.Println("Error casting to int", err)
-		return nil, err
+		return &Response{}, err
 	}
 
 	if s.pointers {
@@ -233,7 +251,7 @@ func (s *fixtureSource) FindAll(req Request) (interface{}, error) {
 		for i := 0; i < length; i++ {
 			postsSlice[i] = *s.posts[strconv.Itoa(i+1)]
 		}
-		return postsSlice, nil
+		return &Response{Res: postsSlice}, nil
 	}
 
 	postsSlice := make([]*Post, len(s.posts))
@@ -241,11 +259,11 @@ func (s *fixtureSource) FindAll(req Request) (interface{}, error) {
 	for i := 0; i < length; i++ {
 		postsSlice[i] = s.posts[strconv.Itoa(i+1)]
 	}
-	return postsSlice, nil
+	return &Response{Res: postsSlice}, nil
 }
 
 // this does not read the query parameters, which you would do to limit the result in real world usage
-func (s *fixtureSource) PaginatedFindAll(req Request) (interface{}, uint, error) {
+func (s *fixtureSource) PaginatedFindAll(req Request) (uint, Responder, error) {
 	if s.pointers {
 		postsSlice := []*Post{}
 
@@ -253,7 +271,7 @@ func (s *fixtureSource) PaginatedFindAll(req Request) (interface{}, uint, error)
 			postsSlice = append(postsSlice, post)
 		}
 
-		return postsSlice, uint(len(s.posts)), nil
+		return uint(len(s.posts)), &Response{Res: postsSlice}, nil
 	}
 
 	postsSlice := []Post{}
@@ -262,21 +280,21 @@ func (s *fixtureSource) PaginatedFindAll(req Request) (interface{}, uint, error)
 		postsSlice = append(postsSlice, *post)
 	}
 
-	return postsSlice, uint(len(s.posts)), nil
+	return uint(len(s.posts)), &Response{Res: postsSlice}, nil
 }
 
-func (s *fixtureSource) FindOne(id string, req Request) (interface{}, error) {
+func (s *fixtureSource) FindOne(id string, req Request) (Responder, error) {
 	if p, ok := s.posts[id]; ok {
 		if s.pointers {
-			return p, nil
+			return &Response{Res: p}, nil
 		}
 
-		return *p, nil
+		return &Response{Res: *p}, nil
 	}
 	return nil, NewHTTPError(nil, "post not found", http.StatusNotFound)
 }
 
-func (s *fixtureSource) Create(obj interface{}, req Request) (string, int, error) {
+func (s *fixtureSource) Create(obj interface{}, req Request) (Responder, error) {
 	var p *Post
 	if s.pointers {
 		p = obj.(*Post)
@@ -288,7 +306,7 @@ func (s *fixtureSource) Create(obj interface{}, req Request) (string, int, error
 	if p.Title == "" {
 		err := NewHTTPError(errors.New("Bad request."), "Bad Request", http.StatusBadRequest)
 		err.Errors = append(err.Errors, Error{ID: "SomeErrorID", Source: &ErrorSource{Pointer: "Title"}})
-		return "", 0, err
+		return &Response{}, err
 	}
 
 	maxID := 0
@@ -301,15 +319,15 @@ func (s *fixtureSource) Create(obj interface{}, req Request) (string, int, error
 	newID := strconv.Itoa(maxID + 1)
 	p.ID = newID
 	s.posts[newID] = p
-	return newID, http.StatusCreated, nil
+	return &Response{Res: p, Code: http.StatusCreated}, nil
 }
 
-func (s *fixtureSource) Delete(id string, req Request) (int, error) {
+func (s *fixtureSource) Delete(id string, req Request) (Responder, error) {
 	delete(s.posts, id)
-	return http.StatusNoContent, nil
+	return &Response{Code: http.StatusNoContent}, nil
 }
 
-func (s *fixtureSource) Update(obj interface{}, req Request) (int, error) {
+func (s *fixtureSource) Update(obj interface{}, req Request) (Responder, error) {
 	var p *Post
 	if s.pointers {
 		p = obj.(*Post)
@@ -321,57 +339,57 @@ func (s *fixtureSource) Update(obj interface{}, req Request) (int, error) {
 		oldP.Title = p.Title
 		oldP.Author = p.Author
 		oldP.Comments = p.Comments
-		return http.StatusNoContent, nil
+		return &Response{Code: http.StatusNoContent}, nil
 	}
-	return 0, NewHTTPError(nil, "post not found", http.StatusNotFound)
+	return &Response{}, NewHTTPError(nil, "post not found", http.StatusNotFound)
 }
 
 type userSource struct {
 	pointers bool
 }
 
-func (s *userSource) FindAll(req Request) (interface{}, error) {
+func (s *userSource) FindAll(req Request) (Responder, error) {
 	postsIDs, ok := req.QueryParams["postsID"]
 	if ok {
 		if postsIDs[0] == "1" {
 			u := User{ID: "1", Name: "Dieter"}
 
 			if s.pointers {
-				return &u, nil
+				return &Response{Res: &u}, nil
 			}
 
-			return u, nil
+			return &Response{Res: u}, nil
 		}
 	}
 
 	if s.pointers {
-		return []User{}, errors.New("Did not receive query parameter")
+		return &Response{}, errors.New("Did not receive query parameter")
 	}
 
-	return []*User{}, errors.New("Did not receive query parameter")
+	return &Response{}, errors.New("Did not receive query parameter")
 }
 
-func (s *userSource) FindOne(id string, req Request) (interface{}, error) {
-	return nil, nil
+func (s *userSource) FindOne(id string, req Request) (Responder, error) {
+	return &Response{}, nil
 }
 
-func (s *userSource) Create(obj interface{}, req Request) (string, int, error) {
-	return "", http.StatusCreated, nil
+func (s *userSource) Create(obj interface{}, req Request) (Responder, error) {
+	return &Response{Res: obj, Code: http.StatusCreated}, nil
 }
 
-func (s *userSource) Delete(id string, req Request) (int, error) {
-	return http.StatusNoContent, nil
+func (s *userSource) Delete(id string, req Request) (Responder, error) {
+	return &Response{Code: http.StatusNoContent}, nil
 }
 
-func (s *userSource) Update(obj interface{}, req Request) (int, error) {
-	return 0, NewHTTPError(nil, "user not found", http.StatusNotFound)
+func (s *userSource) Update(obj interface{}, req Request) (Responder, error) {
+	return &Response{}, NewHTTPError(nil, "user not found", http.StatusNotFound)
 }
 
 type commentSource struct {
 	pointers bool
 }
 
-func (s *commentSource) FindAll(req Request) (interface{}, error) {
+func (s *commentSource) FindAll(req Request) (Responder, error) {
 	postsIDs, ok := req.QueryParams["postsID"]
 	if ok {
 		if postsIDs[0] == "1" {
@@ -381,34 +399,34 @@ func (s *commentSource) FindAll(req Request) (interface{}, error) {
 			}
 
 			if s.pointers {
-				return []*Comment{&c}, nil
+				return &Response{Res: []*Comment{&c}}, nil
 			}
 
-			return []Comment{c}, nil
+			return &Response{Res: []Comment{c}}, nil
 		}
 	}
 
 	if s.pointers {
-		return []*Comment{}, errors.New("Did not receive query parameter")
+		return &Response{Res: []*Comment{}}, errors.New("Did not receive query parameter")
 	}
 
-	return []Comment{}, errors.New("Did not receive query parameter")
+	return &Response{Res: []Comment{}}, errors.New("Did not receive query parameter")
 }
 
-func (s *commentSource) FindOne(id string, req Request) (interface{}, error) {
-	return nil, nil
+func (s *commentSource) FindOne(id string, req Request) (Responder, error) {
+	return &Response{}, nil
 }
 
-func (s *commentSource) Create(obj interface{}, req Request) (string, int, error) {
-	return "", http.StatusCreated, nil
+func (s *commentSource) Create(obj interface{}, req Request) (Responder, error) {
+	return &Response{Code: http.StatusCreated, Res: obj}, nil
 }
 
-func (s *commentSource) Delete(id string, req Request) (int, error) {
-	return http.StatusNoContent, nil
+func (s *commentSource) Delete(id string, req Request) (Responder, error) {
+	return &Response{Code: http.StatusNoContent}, nil
 }
 
-func (s *commentSource) Update(obj interface{}, req Request) (int, error) {
-	return 0, NewHTTPError(nil, "comment not found", http.StatusNotFound)
+func (s *commentSource) Update(obj interface{}, req Request) (Responder, error) {
+	return &Response{}, NewHTTPError(nil, "comment not found", http.StatusNotFound)
 }
 
 type prettyJSONContentMarshaler struct {

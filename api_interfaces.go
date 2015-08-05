@@ -3,29 +3,29 @@ package api2go
 // The CRUD interface MUST be implemented in order to use the api2go api.
 type CRUD interface {
 	// FindOne returns an object by its ID
-	FindOne(ID string, req Request) (interface{}, error)
+	FindOne(ID string, req Request) (Responder, error)
 
-	// Create a new object and return its ID
-	// status is one of these 200 success codes
+	// Create a new object. Newly created object/struct must be in Responder.
+	// Possible status codes are:
 	// - 201 Created: Resource was created and needs to be returned
 	// - 202 Accepted: Processing is delayed, return nothing
 	// - 204 No Content: Resource created with a client generated ID, and no fields were modified by
 	//   the server
-	Create(obj interface{}, req Request) (id string, status int, err error)
+	Create(obj interface{}, req Request) (Responder, error)
 
 	// Delete an object
-	// status is one of these 200 success codes
+	// Possible status codes are:
 	// - 200 OK: Update successful, however some field(s) were changed, returns updates source
 	// - 202 Accepted: Processing is delayed, return nothing
 	// - 204 No Content: Update was successful, no fields were changed by the server, return nothing
-	Delete(id string, req Request) (status int, err error)
+	Delete(id string, req Request) (Responder, error)
 
 	// Update an object
-	// status is one of these 200 success codes
+	// Possible status codes are:
 	// - 200 OK: Deletion was a success, returns meta information, currently not implemented! Do not use this
 	// - 202 Accepted: Processing is delayed, return nothing
 	// - 204 No Content: Deletion was successful, return nothing
-	Update(obj interface{}, req Request) (status int, err error)
+	Update(obj interface{}, req Request) (Responder, error)
 }
 
 // ContentMarshaler controls how requests from clients are unmarshaled
@@ -45,11 +45,21 @@ type ContentMarshaler interface {
 // page[number] AND page[size]
 // OR page[offset] AND page[limit]
 type PaginatedFindAll interface {
-	PaginatedFindAll(req Request) (obj interface{}, totalCount uint, err error)
+	PaginatedFindAll(req Request) (totalCount uint, response Responder, err error)
 }
 
 // The FindAll interface can be optionally implemented to fetch all records at once.
 type FindAll interface {
 	// FindAll returns all objects
-	FindAll(req Request) (interface{}, error)
+	FindAll(req Request) (Responder, error)
+}
+
+// The Responder interface is used by all Resource Methods as a container for the Response
+// Metadata is additional Metadata. You can put anything you like into it, see jsonapi spec.
+// Result returns the actual payload. For FindOne, put only one entry in it.
+// StatusCode sets the http status code.
+type Responder interface {
+	MetaData() map[string]interface{}
+	Result() interface{}
+	StatusCode() int
 }

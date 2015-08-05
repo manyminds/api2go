@@ -28,55 +28,55 @@ func (s *SomeData) SetID(ID string) error {
 
 type SomeResource struct{}
 
-func (s SomeResource) FindOne(ID string, req Request) (interface{}, error) {
-	return SomeData{ID: "12345", Data: "A Brezzn"}, nil
+func (s SomeResource) FindOne(ID string, req Request) (Responder, error) {
+	return &Response{Res: SomeData{ID: "12345", Data: "A Brezzn"}}, nil
 }
 
-func (s SomeResource) Create(obj interface{}, req Request) (string, int, error) {
+func (s SomeResource) Create(obj interface{}, req Request) (Responder, error) {
 	incoming := obj.(SomeData)
 	switch incoming.ID {
 	case "":
-		return "newID", http.StatusCreated, nil
+		return &Response{Res: SomeData{ID: "12345", Data: "A Brezzn"}, Code: http.StatusCreated}, nil
 	case "accept":
-		return "someID", http.StatusAccepted, nil
+		return &Response{Res: SomeData{ID: "someID"}, Code: http.StatusAccepted}, nil
 	case "forbidden":
-		return "", 0, NewHTTPError(nil, "Forbidden", http.StatusForbidden)
+		return &Response{}, NewHTTPError(nil, "Forbidden", http.StatusForbidden)
 	case "conflict":
-		return "", 0, NewHTTPError(nil, "Conflict", http.StatusConflict)
+		return &Response{}, NewHTTPError(nil, "Conflict", http.StatusConflict)
 	case "invalid":
-		return "", http.StatusTeapot, nil
+		return &Response{Res: SomeData{}, Code: http.StatusTeapot}, nil
 	default:
-		return incoming.ID, http.StatusNoContent, nil
+		return &Response{Res: SomeData{ID: incoming.ID}, Code: http.StatusNoContent}, nil
 	}
 }
 
-func (s SomeResource) Delete(ID string, req Request) (int, error) {
+func (s SomeResource) Delete(ID string, req Request) (Responder, error) {
 	switch ID {
 	case "200":
 		// TODO: needs to be implemented, function signature is likely to be changed to return meta data
-		return http.StatusOK, nil
+		return &Response{Code: http.StatusOK, Meta: map[string]interface{}{"some": "cool stuff"}}, nil
 	case "202":
-		return http.StatusAccepted, nil
+		return &Response{Code: http.StatusAccepted}, nil
 	default:
-		return http.StatusNoContent, nil
+		return &Response{Code: http.StatusNoContent}, nil
 	}
 }
 
-func (s SomeResource) Update(obj interface{}, req Request) (int, error) {
+func (s SomeResource) Update(obj interface{}, req Request) (Responder, error) {
 	incoming := obj.(SomeData)
 	switch incoming.Data {
 	case "override me":
-		return http.StatusOK, nil
+		return &Response{Code: http.StatusOK}, nil
 	case "delayed":
-		return http.StatusAccepted, nil
+		return &Response{Code: http.StatusAccepted}, nil
 	case "new value":
-		return http.StatusNoContent, nil
+		return &Response{Code: http.StatusNoContent}, nil
 	case "fail":
-		return 0, NewHTTPError(nil, "Fail", http.StatusForbidden)
+		return &Response{}, NewHTTPError(nil, "Fail", http.StatusForbidden)
 	case "invalid":
-		return http.StatusTeapot, nil
+		return &Response{Code: http.StatusTeapot}, nil
 	default:
-		return http.StatusNoContent, nil
+		return &Response{Code: http.StatusNoContent}, nil
 	}
 }
 
