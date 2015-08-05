@@ -13,7 +13,7 @@ install:
 
 script:
   - ginkgo -r --randomizeAllSpecs --randomizeSuites --failOnPending --trace --race --progress
-  - golint ./...
+  - bash scripts/fmtpolice
 
 notifications:
   webhooks:
