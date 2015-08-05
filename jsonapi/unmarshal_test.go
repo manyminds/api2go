@@ -475,10 +475,10 @@ var _ = Describe("Unmarshal", func() {
 	})
 
 	Context("SQL Null-Types", func() {
-		var nullPosts []SqlNullPost
+		var nullPosts []SQLNullPost
 
 		BeforeEach(func() {
-			nullPosts = []SqlNullPost{}
+			nullPosts = []SQLNullPost{}
 		})
 
 		It("correctly unmarshal String, Int64 and Float64", func() {
@@ -498,7 +498,7 @@ var _ = Describe("Unmarshal", func() {
 			`), &nullPosts)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(nullPosts).To(HaveLen(1))
-			Expect(nullPosts[0]).To(Equal(SqlNullPost{
+			Expect(nullPosts[0]).To(Equal(SQLNullPost{
 				ID:     "theID",
 				Title:  zero.StringFrom("Test"),
 				Likes:  zero.IntFrom(666),

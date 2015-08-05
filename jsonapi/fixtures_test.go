@@ -330,7 +330,7 @@ func (n *NumberPost) SetID(ID string) error {
 	return nil
 }
 
-type SqlNullPost struct {
+type SQLNullPost struct {
 	ID     string `json:"-"`
 	Title  zero.String
 	Likes  zero.Int
@@ -338,13 +338,17 @@ type SqlNullPost struct {
 	IsCool zero.Bool
 }
 
-func (s SqlNullPost) GetID() string {
+func (s SQLNullPost) GetID() string {
 	return s.ID
 }
 
-func (s *SqlNullPost) SetID(ID string) error {
+func (s *SQLNullPost) SetID(ID string) error {
 	s.ID = ID
 	return nil
+}
+
+func (s SQLNullPost) GetName() string {
+	return "sqlNullPosts"
 }
 
 type RenamedComment struct {
