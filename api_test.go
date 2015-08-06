@@ -1413,5 +1413,23 @@ var _ = Describe("RestHandler", func() {
 				Expect(rec.Code).To(Equal(http.StatusMethodNotAllowed))
 			})
 		})
+
+		Context("test utility function getPointerToStruct", func() {
+			type someStruct struct {
+				someEntry string
+			}
+
+			It("Should work as expected", func() {
+				testItem := someStruct{}
+				actual := getPointerToStruct(testItem)
+				Expect(&testItem).To(Equal(actual))
+			})
+
+			It("should not fail when using a pointer", func() {
+				testItem := &someStruct{}
+				actual := getPointerToStruct(testItem)
+				Expect(&testItem).To(Equal(actual))
+			})
+		})
 	})
 })
