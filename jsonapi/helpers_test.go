@@ -38,7 +38,7 @@ var _ = Describe("StringHelpers", func() {
 
 	Context("Reflect funcs", func() {
 		type Element struct {
-			Name string `jsonapi:"name=actress;body=hot;chest=awesome"`
+			Name string `jsonapi:"name=actress;body=hot;chest=awesome;character"`
 		}
 
 		It("tests for existance of settings", func() {
@@ -47,6 +47,7 @@ var _ = Describe("StringHelpers", func() {
 			Expect(GetTagValueByName(testField, "name")).To(Equal("actress"))
 			Expect(GetTagValueByName(testField, "body")).To(Equal("hot"))
 			Expect(GetTagValueByName(testField, "chest")).To(Equal("awesome"))
+			Expect(GetTagValueByName(testField, "character")).To(Equal("character"))
 		})
 
 		It("tests for non existing settings", func() {
