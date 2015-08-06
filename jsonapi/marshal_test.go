@@ -839,10 +839,10 @@ var _ = Describe("Marshalling", func() {
 	// In order to use the SQL Null-Types the Marshal/Unmarshal interfaces for these types must be implemented.
 	// The library "gopkg.in/guregu/null.v2/zero" can be used for that.
 	Context("SQL Null-Types", func() {
-		var nullPost SqlNullPost
+		var nullPost SQLNullPost
 
 		BeforeEach(func() {
-			nullPost = SqlNullPost{
+			nullPost = SQLNullPost{
 				ID:     "theID",
 				Title:  zero.StringFrom("Test"),
 				Likes:  zero.IntFrom(666),
