@@ -16,6 +16,12 @@ import (
 	"gopkg.in/guregu/null.v2"
 )
 
+type invalid string
+
+func (i invalid) GetID() string {
+	return "invalid"
+}
+
 type Post struct {
 	ID       string `json:"-"`
 	Title    string
@@ -1411,6 +1417,36 @@ var _ = Describe("RestHandler", func() {
 				Expect(rec.Body.String()).To(MatchJSON(expected))
 				Expect(rec.Header().Get("Content-Type")).To(Equal(defaultContentTypHeader))
 				Expect(rec.Code).To(Equal(http.StatusMethodNotAllowed))
+			})
+		})
+
+		Context("add resource panics with invalid resources", func() {
+			It("Should really panic", func() {
+				api := NewAPI("blub")
+				invalidDataStructure := new(invalid)
+				testFunc := func() {
+					api.AddResource(*invalidDataStructure, &userSource{})
+				}
+
+				Expect(testFunc).To(Panic())
+			})
+		})
+
+		Context("test utility function getPointerToStruct", func() {
+			type someStruct struct {
+				someEntry string
+			}
+
+			It("Should work as expected", func() {
+				testItem := someStruct{}
+				actual := getPointerToStruct(testItem)
+				Expect(&testItem).To(Equal(actual))
+			})
+
+			It("should not fail when using a pointer", func() {
+				testItem := &someStruct{}
+				actual := getPointerToStruct(testItem)
+				Expect(&testItem).To(Equal(actual))
 			})
 		})
 	})
