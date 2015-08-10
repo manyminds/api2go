@@ -18,6 +18,24 @@ import (
 
 const defaultContentTypHeader = "application/vnd.api+json"
 
+type response struct {
+	Meta   map[string]interface{}
+	Data   interface{}
+	Status int
+}
+
+func (r response) Metadata() map[string]interface{} {
+	return r.Meta
+}
+
+func (r response) Result() interface{} {
+	return r.Data
+}
+
+func (r response) StatusCode() int {
+	return r.Status
+}
+
 type information struct {
 	prefix  string
 	baseURL string
@@ -339,7 +357,7 @@ func (res *resource) handleIndex(w http.ResponseWriter, r *http.Request, info in
 			return err
 		}
 
-		return respondWithPagination(response.Result(), info, http.StatusOK, paginationLinks, w, r, res.marshalers)
+		return respondWithPagination(response, info, http.StatusOK, paginationLinks, w, r, res.marshalers)
 	}
 	source, ok := res.source.(FindAll)
 	if !ok {
@@ -351,7 +369,7 @@ func (res *resource) handleIndex(w http.ResponseWriter, r *http.Request, info in
 		return err
 	}
 
-	return respondWith(response.Result(), info, http.StatusOK, w, r, res.marshalers)
+	return respondWith(response, info, http.StatusOK, w, r, res.marshalers)
 }
 
 func (res *resource) handleRead(w http.ResponseWriter, r *http.Request, ps httprouter.Params, info information) error {
@@ -363,7 +381,7 @@ func (res *resource) handleRead(w http.ResponseWriter, r *http.Request, ps httpr
 		return err
 	}
 
-	return respondWith(response.Result(), info, http.StatusOK, w, r, res.marshalers)
+	return respondWith(response, info, http.StatusOK, w, r, res.marshalers)
 }
 
 func (res *resource) handleReadRelation(w http.ResponseWriter, r *http.Request, ps httprouter.Params, info information, relation jsonapi.Reference) error {
@@ -445,7 +463,7 @@ func (res *resource) handleLinked(api *API, w http.ResponseWriter, r *http.Reque
 					return err
 				}
 
-				return respondWithPagination(response.Result(), info, http.StatusOK, paginationLinks, w, r, res.marshalers)
+				return respondWithPagination(response, info, http.StatusOK, paginationLinks, w, r, res.marshalers)
 			}
 
 			source, ok := resource.source.(FindAll)
@@ -457,7 +475,7 @@ func (res *resource) handleLinked(api *API, w http.ResponseWriter, r *http.Reque
 			if err != nil {
 				return err
 			}
-			return respondWith(obj.Result(), info, http.StatusOK, w, r, res.marshalers)
+			return respondWith(obj, info, http.StatusOK, w, r, res.marshalers)
 		}
 	}
 
@@ -466,7 +484,11 @@ func (res *resource) handleLinked(api *API, w http.ResponseWriter, r *http.Reque
 		Title:  "Not Found",
 		Detail: "No resource handler is registered to handle the linked resource " + linked.Name,
 	}
-	return respondWith(err, info, http.StatusNotFound, w, r, res.marshalers)
+
+	answ := response{Data: err, Status: http.StatusNotFound}
+
+	return respondWith(answ, info, http.StatusNotFound, w, r, res.marshalers)
+
 }
 
 func (res *resource) handleCreate(w http.ResponseWriter, r *http.Request, prefix string, info information) error {
@@ -507,7 +529,7 @@ func (res *resource) handleCreate(w http.ResponseWriter, r *http.Request, prefix
 	// handle 200 status codes
 	switch response.StatusCode() {
 	case http.StatusCreated:
-		return respondWith(result, info, http.StatusCreated, w, r, res.marshalers)
+		return respondWith(response, info, http.StatusCreated, w, r, res.marshalers)
 	case http.StatusNoContent:
 		w.WriteHeader(response.StatusCode())
 		return nil
@@ -593,17 +615,19 @@ func (res *resource) handleUpdate(w http.ResponseWriter, r *http.Request, ps htt
 	case http.StatusOK:
 		updated := response.Result()
 		if updated == nil {
-			response, err := res.source.FindOne(ps.ByName("id"), buildRequest(r))
+			internalResponse, err := res.source.FindOne(ps.ByName("id"), buildRequest(r))
 			if err != nil {
 				return err
 			}
-			updated = response.Result()
+			updated = internalResponse.Result()
 			if updated == nil {
 				return fmt.Errorf("Expected FindOne to return one object of resource %s", res.name)
 			}
+
+			response = internalResponse
 		}
 
-		return respondWith(updated, information{}, http.StatusOK, w, r, res.marshalers)
+		return respondWith(response, information{}, http.StatusOK, w, r, res.marshalers)
 	case http.StatusAccepted:
 		w.WriteHeader(http.StatusAccepted)
 		return nil
@@ -822,8 +846,8 @@ func writeResult(w http.ResponseWriter, data []byte, status int, contentType str
 	w.Write(data)
 }
 
-func respondWith(obj interface{}, info information, status int, w http.ResponseWriter, r *http.Request, marshalers map[string]ContentMarshaler) error {
-	data, err := jsonapi.MarshalWithURLs(obj, info)
+func respondWith(obj Responder, info information, status int, w http.ResponseWriter, r *http.Request, marshalers map[string]ContentMarshaler) error {
+	data, err := jsonapi.MarshalWithURLs(obj.Result(), info)
 	if err != nil {
 		return err
 	}
@@ -831,8 +855,8 @@ func respondWith(obj interface{}, info information, status int, w http.ResponseW
 	return marshalResponse(data, w, status, r, marshalers)
 }
 
-func respondWithPagination(obj interface{}, info information, status int, links map[string]string, w http.ResponseWriter, r *http.Request, marshalers map[string]ContentMarshaler) error {
-	data, err := jsonapi.MarshalWithURLs(obj, info)
+func respondWithPagination(obj Responder, info information, status int, links map[string]string, w http.ResponseWriter, r *http.Request, marshalers map[string]ContentMarshaler) error {
+	data, err := jsonapi.MarshalWithURLs(obj.Result(), info)
 	if err != nil {
 		return err
 	}
