@@ -6,8 +6,8 @@ type Response struct {
 	Code int
 }
 
-// MetaData returns additional meta data
-func (r *Response) MetaData() map[string]interface{} {
+// Metadata returns additional meta data
+func (r Response) Metadata() map[string]interface{} {
 	return map[string]interface{}{
 		"author":      "The api2go examples crew",
 		"license":     "wtfpl",
@@ -16,11 +16,11 @@ func (r *Response) MetaData() map[string]interface{} {
 }
 
 // Result returns the actual payload
-func (r *Response) Result() interface{} {
+func (r Response) Result() interface{} {
 	return r.Res
 }
 
 // StatusCode sets the return status code
-func (r *Response) StatusCode() int {
+func (r Response) StatusCode() int {
 	return r.Code
 }

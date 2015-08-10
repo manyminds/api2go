@@ -59,7 +59,7 @@ type FindAll interface {
 // Result returns the actual payload. For FindOne, put only one entry in it.
 // StatusCode sets the http status code.
 type Responder interface {
-	MetaData() map[string]interface{}
+	Metadata() map[string]interface{}
 	Result() interface{}
 	StatusCode() int
 }

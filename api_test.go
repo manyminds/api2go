@@ -28,15 +28,15 @@ type Response struct {
 	Code int
 }
 
-func (r *Response) MetaData() map[string]interface{} {
+func (r Response) Metadata() map[string]interface{} {
 	return r.Meta
 }
 
-func (r *Response) Result() interface{} {
+func (r Response) Result() interface{} {
 	return r.Res
 }
 
-func (r *Response) StatusCode() int {
+func (r Response) StatusCode() int {
 	return r.Code
 }
 
