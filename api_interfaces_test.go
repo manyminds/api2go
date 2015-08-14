@@ -13,8 +13,9 @@ import (
 )
 
 type SomeData struct {
-	ID   string `json:"-"`
-	Data string
+	ID         string `json:"-"`
+	Data       string
+	CustomerID string `jsonapi:"name=customerId"`
 }
 
 func (s SomeData) GetID() string {
@@ -102,6 +103,14 @@ var _ = Describe("Test interface api type casting", func() {
 		Expect(err).ToNot(HaveOccurred())
 		api.Handler().ServeHTTP(rec, req)
 		Expect(rec.Code).To(Equal(http.StatusOK))
+	})
+
+	It("reproduce issue with lowercase renaming", func() {
+		reqBody := strings.NewReader(`{"data": [{"attributes":{"customerId": 2 }, "type": "someDatas"}]}`)
+		req, err := http.NewRequest("POST", "/v1/someDatas", reqBody)
+		Expect(err).To(BeNil())
+		api.Handler().ServeHTTP(rec, req)
+		Expect(rec.Code).To(Equal(http.StatusCreated))
 	})
 })
 
