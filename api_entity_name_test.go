@@ -29,12 +29,12 @@ func (s BaguetteTaste) GetName() string {
 
 type BaguetteResource struct{}
 
-func (s BaguetteResource) FindOne(ID string, req Request) (interface{}, error) {
-	return BaguetteTaste{ID: "blubb", Taste: "Very Bad"}, nil
+func (s BaguetteResource) FindOne(ID string, req Request) (Responder, error) {
+	return &Response{Res: BaguetteTaste{ID: "blubb", Taste: "Very Bad"}}, nil
 }
 
-func (s BaguetteResource) FindAll(req Request) (interface{}, error) {
-	return []BaguetteTaste{
+func (s BaguetteResource) FindAll(req Request) (Responder, error) {
+	return &Response{Res: []BaguetteTaste{
 		{
 			ID:    "1",
 			Taste: "Very Good",
@@ -43,19 +43,30 @@ func (s BaguetteResource) FindAll(req Request) (interface{}, error) {
 			ID:    "2",
 			Taste: "Very Bad",
 		},
+	}}, nil
+}
+
+func (s BaguetteResource) Create(obj interface{}, req Request) (Responder, error) {
+	e := obj.(BaguetteTaste)
+	e.ID = "newID"
+	return &Response{
+		Res:  e,
+		Code: http.StatusCreated,
 	}, nil
 }
 
-func (s BaguetteResource) Create(obj interface{}, req Request) (string, error) {
-	return "newID", nil
+func (s BaguetteResource) Delete(ID string, req Request) (Responder, error) {
+	return &Response{
+		Res:  BaguetteTaste{ID: ID},
+		Code: http.StatusNoContent,
+	}, nil
 }
 
-func (s BaguetteResource) Delete(ID string, req Request) error {
-	return nil
-}
-
-func (s BaguetteResource) Update(obj interface{}, req Request) error {
-	return nil
+func (s BaguetteResource) Update(obj interface{}, req Request) (Responder, error) {
+	return &Response{
+		Res:  obj,
+		Code: http.StatusNoContent,
+	}, nil
 }
 
 var _ = Describe("Test route renaming with EntityNamer interface", func() {
@@ -115,12 +126,12 @@ var _ = Describe("Test route renaming with EntityNamer interface", func() {
 		{
 			"data": {
 				"attributes": {
-					"taste":"Very Bad"
+					"taste": "smells awful"
 				},
-				"id":"blubb",
-				"type":"baguette-tastes"
-				}
+				"id": "newID",
+				"type": "baguette-tastes"
 			}
+		}
 		`))
 		Expect(rec.Code).To(Equal(http.StatusCreated))
 	})

@@ -16,7 +16,7 @@ type ChocolateResource struct {
 }
 
 // FindAll chocolates
-func (c ChocolateResource) FindAll(r api2go.Request) (interface{}, error) {
+func (c ChocolateResource) FindAll(r api2go.Request) (api2go.Responder, error) {
 	usersID, ok := r.QueryParams["usersID"]
 	sweets := c.ChocStorage.GetAll()
 	if ok {
@@ -27,47 +27,52 @@ func (c ChocolateResource) FindAll(r api2go.Request) (interface{}, error) {
 		filteredSweets := []model.Chocolate{}
 		user, err := c.UserStorage.GetOne(userID)
 		if err != nil {
-			return "", err
+			return &Response{}, err
 		}
 		for _, sweetID := range user.ChocolatesIDs {
 			sweet, err := c.ChocStorage.GetOne(sweetID)
 			if err != nil {
-				return "", err
+				return &Response{}, err
 			}
 			filteredSweets = append(filteredSweets, sweet)
 		}
 
-		return filteredSweets, nil
+		return &Response{Res: filteredSweets}, nil
 	}
-	return sweets, nil
+	return &Response{Res: sweets}, nil
 }
 
 // FindOne choc
-func (c ChocolateResource) FindOne(ID string, r api2go.Request) (interface{}, error) {
-	return c.ChocStorage.GetOne(ID)
+func (c ChocolateResource) FindOne(ID string, r api2go.Request) (api2go.Responder, error) {
+	res, err := c.ChocStorage.GetOne(ID)
+	return &Response{Res: res}, err
 }
 
 // Create a new choc
-func (c ChocolateResource) Create(obj interface{}, r api2go.Request) (string, error) {
+func (c ChocolateResource) Create(obj interface{}, r api2go.Request) (api2go.Responder, error) {
 	choc, ok := obj.(model.Chocolate)
 	if !ok {
-		return "", api2go.NewHTTPError(errors.New("Invalid instance given"), "Invalid instance given", http.StatusBadRequest)
+		return &Response{}, api2go.NewHTTPError(errors.New("Invalid instance given"), "Invalid instance given", http.StatusBadRequest)
 	}
 
-	return c.ChocStorage.Insert(choc), nil
+	id := c.ChocStorage.Insert(choc)
+	choc.ID = id
+	return &Response{Res: choc, Code: http.StatusCreated}, nil
 }
 
 // Delete a choc :(
-func (c ChocolateResource) Delete(id string, r api2go.Request) error {
-	return c.ChocStorage.Delete(id)
+func (c ChocolateResource) Delete(id string, r api2go.Request) (api2go.Responder, error) {
+	err := c.ChocStorage.Delete(id)
+	return &Response{Code: http.StatusOK}, err
 }
 
 // Update a choc
-func (c ChocolateResource) Update(obj interface{}, r api2go.Request) error {
+func (c ChocolateResource) Update(obj interface{}, r api2go.Request) (api2go.Responder, error) {
 	choc, ok := obj.(model.Chocolate)
 	if !ok {
-		return api2go.NewHTTPError(errors.New("Invalid instance given"), "Invalid instance given", http.StatusBadRequest)
+		return &Response{}, api2go.NewHTTPError(errors.New("Invalid instance given"), "Invalid instance given", http.StatusBadRequest)
 	}
 
-	return c.ChocStorage.Update(choc)
+	err := c.ChocStorage.Update(choc)
+	return &Response{Res: choc, Code: http.StatusNoContent}, err
 }

@@ -44,6 +44,11 @@ var _ = Describe("CrudExample", func() {
 		Expect(rec.Code).To(Equal(http.StatusCreated))
 		Expect(rec.Body.String()).To(MatchJSON(`
 		{
+			"meta": {
+				"author": "The api2go examples crew",
+				"license": "wtfpl",
+				"license-url": "http://www.wtfpl.net"
+			},
 			"data": {
 				"id": "1",
 				"type": "users",
@@ -87,6 +92,11 @@ var _ = Describe("CrudExample", func() {
 		Expect(rec.Code).To(Equal(http.StatusCreated))
 		Expect(rec.Body.String()).To(MatchJSON(`
 		{
+			"meta": {
+				"author": "The api2go examples crew",
+				"license": "wtfpl",
+				"license-url": "http://www.wtfpl.net"
+			},
 			"data": {
 				"id": "1",
 				"type": "chocolates",
@@ -127,6 +137,11 @@ var _ = Describe("CrudExample", func() {
 		Expect(err).ToNot(HaveOccurred())
 		Expect(rec.Body.String()).To(MatchJSON(`
 		{
+			"meta": {
+				"author": "The api2go examples crew",
+				"license": "wtfpl",
+				"license-url": "http://www.wtfpl.net"
+			},
 			"data": {
 				"attributes": {
 					"id": "1",
@@ -197,6 +212,11 @@ var _ = Describe("CrudExample", func() {
 		Expect(err).ToNot(HaveOccurred())
 		Expect(rec.Body.String()).To(MatchJSON(`
 		{
+			"meta": {
+				"author": "The api2go examples crew",
+				"license": "wtfpl",
+				"license-url": "http://www.wtfpl.net"
+			},
 			"data": {
 				"attributes": {
 					"id": "1",
@@ -245,6 +265,11 @@ var _ = Describe("CrudExample", func() {
 		Expect(err).ToNot(HaveOccurred())
 		Expect(rec.Body.String()).To(MatchJSON(`
 		{
+			"meta": {
+				"author": "The api2go examples crew",
+				"license": "wtfpl",
+				"license-url": "http://www.wtfpl.net"
+			},
 			"data": {
 				"attributes": {
 					"id": "1",
@@ -305,6 +330,11 @@ var _ = Describe("CrudExample", func() {
 			Expect(rec.Code).To(Equal(http.StatusCreated))
 			Expect(rec.Body.String()).To(MatchJSON(`
 			{
+				"meta": {
+					"author": "The api2go examples crew",
+					"license": "wtfpl",
+					"license-url": "http://www.wtfpl.net"
+				},
 				"data": {
 					"id": "2",
 					"type": "chocolates",
@@ -326,6 +356,11 @@ var _ = Describe("CrudExample", func() {
 			Expect(rec.Code).To(Equal(http.StatusOK))
 			Expect(rec.Body.String()).To(MatchJSON(`
 			{
+				"meta": {
+					"author": "The api2go examples crew",
+					"license": "wtfpl",
+					"license-url": "http://www.wtfpl.net"
+				},
 				"data": [
 					{
 						"attributes": {
@@ -355,6 +390,11 @@ var _ = Describe("CrudExample", func() {
 			Expect(rec.Code).To(Equal(http.StatusOK))
 			Expect(rec.Body.String()).To(MatchJSON(`
 			{
+				"meta": {
+					"author": "The api2go examples crew",
+					"license": "wtfpl",
+					"license-url": "http://www.wtfpl.net"
+				},
 				"data": {
 					"attributes": {
 						"id": "1",
@@ -398,6 +438,11 @@ var _ = Describe("CrudExample", func() {
 			Expect(rec.Code).To(Equal(http.StatusOK))
 			Expect(rec.Body.String()).To(MatchJSON(`
 			{
+				"meta": {
+					"author": "The api2go examples crew",
+					"license": "wtfpl",
+					"license-url": "http://www.wtfpl.net"
+				},
 				"data": [
 					{
 						"id": "1",
