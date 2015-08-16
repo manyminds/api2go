@@ -831,8 +831,11 @@ func (res *resource) handleDelete(w http.ResponseWriter, r *http.Request, ps htt
 
 	switch response.StatusCode() {
 	case http.StatusOK:
-		// TODO: implement this.. we need meta data as return value
-		return fmt.Errorf("status 200 OK is currently not implemented for Delete methods")
+		data := map[string]interface{}{
+			"meta": response.Metadata(),
+		}
+
+		return marshalResponse(data, w, http.StatusOK, r, res.marshalers)
 	case http.StatusAccepted:
 		w.WriteHeader(http.StatusAccepted)
 		return nil

@@ -53,7 +53,6 @@ func (s SomeResource) Create(obj interface{}, req Request) (Responder, error) {
 func (s SomeResource) Delete(ID string, req Request) (Responder, error) {
 	switch ID {
 	case "200":
-		// TODO: needs to be implemented, function signature is likely to be changed to return meta data
 		return &Response{Code: http.StatusOK, Meta: map[string]interface{}{"some": "cool stuff"}}, nil
 	case "202":
 		return &Response{Code: http.StatusAccepted}, nil
@@ -239,12 +238,14 @@ var _ = Describe("Test return code behavior", func() {
 
 		It("returns 200 ok if there is some meta data", func() {
 			delete("200")
-			Expect(rec.Code).To(Equal(http.StatusInternalServerError))
-			var err HTTPError
-			json.Unmarshal(rec.Body.Bytes(), &err)
-			Expect(err.Errors[0]).To(Equal(Error{
-				Title:  "status 200 OK is currently not implemented for Delete methods",
-				Status: strconv.Itoa(http.StatusInternalServerError)}))
+			Expect(rec.Code).To(Equal(http.StatusOK))
+			var response map[string]interface{}
+			json.Unmarshal(rec.Body.Bytes(), &response)
+			Expect(response).To(Equal(map[string]interface{}{
+				"meta": map[string]interface{}{
+					"some": "cool stuff",
+				},
+			}))
 		})
 
 		It("returns 202 accepted if deletion is delayed", func() {
