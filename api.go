@@ -431,6 +431,10 @@ func (res *resource) handleReadRelation(w http.ResponseWriter, r *http.Request, 
 		"related": related,
 	}
 	result["data"] = relationData
+	meta := obj.Metadata()
+	if len(meta) > 0 {
+		result["meta"] = meta
+	}
 
 	return marshalResponse(result, w, http.StatusOK, r, res.marshalers)
 }
@@ -852,6 +856,11 @@ func respondWith(obj Responder, info information, status int, w http.ResponseWri
 		return err
 	}
 
+	meta := obj.Metadata()
+	if len(meta) > 0 {
+		data["meta"] = meta
+	}
+
 	return marshalResponse(data, w, status, r, marshalers)
 }
 
@@ -862,6 +871,11 @@ func respondWithPagination(obj Responder, info information, status int, links ma
 	}
 
 	data["links"] = links
+	meta := obj.Metadata()
+	if len(meta) > 0 {
+		data["meta"] = meta
+	}
+
 	return marshalResponse(data, w, status, r, marshalers)
 }
 
