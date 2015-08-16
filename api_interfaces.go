@@ -54,7 +54,7 @@ type FindAll interface {
 	FindAll(req Request) (Responder, error)
 }
 
-// The Responder interface is used by all Resource Methods as a container for the Response
+// The Responder interface is used by all Resource Methods as a container for the Response.
 // Metadata is additional Metadata. You can put anything you like into it, see jsonapi spec.
 // Result returns the actual payload. For FindOne, put only one entry in it.
 // StatusCode sets the http status code.

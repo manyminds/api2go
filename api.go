@@ -448,7 +448,7 @@ func (res *resource) handleLinked(api *API, w http.ResponseWriter, r *http.Reque
 			request.QueryParams[res.name+"ID"] = []string{id}
 			request.QueryParams[res.name+"Name"] = []string{linked.Name}
 
-			// check for paginatioy, otherwise normal FindAll
+			// check for pagination, otherwise normal FindAll
 			pagination := newPaginationQueryParams(r)
 			if pagination.isValid() {
 				source, ok := resource.source.(PaginatedFindAll)
