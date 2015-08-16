@@ -105,8 +105,8 @@ var _ = Describe("Test interface api type casting", func() {
 		Expect(rec.Code).To(Equal(http.StatusOK))
 	})
 
-	It("reproduce issue with lowercase renaming", func() {
-		reqBody := strings.NewReader(`{"data": [{"attributes":{"customerId": 2 }, "type": "someDatas"}]}`)
+	It("Post works with lowercase renaming", func() {
+		reqBody := strings.NewReader(`{"data": [{"attributes":{"customerId": "2" }, "type": "someDatas"}]}`)
 		req, err := http.NewRequest("POST", "/v1/someDatas", reqBody)
 		Expect(err).To(BeNil())
 		api.Handler().ServeHTTP(rec, req)

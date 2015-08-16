@@ -260,7 +260,7 @@ func UnmarshalInto(input map[string]interface{}, targetStructType reflect.Type, 
 						for x := 0; x < val.NumField(); x++ {
 							tfield := val.Type().Field(x)
 							name := GetTagValueByName(tfield, "name")
-							if name == strings.ToLower(fieldName) {
+							if strings.ToLower(name) == strings.ToLower(fieldName) {
 								field = val.Field(x)
 							}
 						}
