@@ -14,7 +14,7 @@ OR
 	curl -X GET 'http://localhost:31415/v0/users?page\[number\]=1&page\[size\]=2'
 
 Update:
-	curl -vX PATCH http://localhost:31415/v0/users/1 -d '{ "data" : {"type" : "users", "attributes": {"user-name" : "better marvin", }}}'
+	curl -vX PATCH http://localhost:31415/v0/users/1 -d '{ "data" : {"type" : "users", "id": "1", "attributes": {"user-name" : "better marvin"}}}'
 
 Delete:
 	curl -vX DELETE http://localhost:31415/v0/users/2
