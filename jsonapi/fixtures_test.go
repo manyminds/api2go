@@ -308,6 +308,12 @@ func (i Identity) GetID() string {
 	return fmt.Sprintf("%d", i.ID)
 }
 
+func (i *Identity) SetID(ID string) error {
+	var err error
+	i.ID, err = strconv.ParseInt(ID, 10, 64)
+	return err
+}
+
 type Unicorn struct {
 	UnicornID int64    `json:"unicorn_id"` //Annotations are ignored
 	Scopes    []string `json:"scopes"`
