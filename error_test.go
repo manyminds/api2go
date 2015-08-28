@@ -23,17 +23,17 @@ var _ = Describe("Errors test", func() {
 		It("will be marshalled correctly with default error", func() {
 			httpErr := errors.New("Invalid use case done")
 			m := JSONContentMarshaler{}
-			result := m.MarshalError(httpErr)
-			expected := `{"errors":[{"status":"500","title":"Invalid use case done"}]}`
-			Expect(result).To(Equal(expected))
+			_, result := m.MarshalError(httpErr)
+			expected := `{"errors":[{"status":"500","code":"Invalid use case done","title":"Invalid use case done"}]}`
+			Expect(result).To(Equal([]byte(expected)))
 		})
 
 		It("will be marshalled correctly without child errors", func() {
 			m := JSONContentMarshaler{}
-			httpErr := NewHTTPError(errors.New("Bad Request"), "Bad Request", 400)
-			result := m.MarshalError(httpErr)
-			expected := `{"errors":[{"status":"400","title":"Bad Request"}]}`
-			Expect(result).To(Equal(expected))
+			httpErr := NewHTTPError(errors.New("bad_request"), "Bad Request", 400)
+			_, result := m.MarshalError(httpErr)
+			expected := `{"errors":[{"status":"400","code":"bad_request","title":"Bad Request"}]}`
+			Expect(result).To(Equal([]byte(expected)))
 		})
 
 		It("will be marshalled correctly with child errors", func() {
@@ -59,9 +59,9 @@ var _ = Describe("Errors test", func() {
 			httpErr.Errors = append(httpErr.Errors, errorOne)
 
 			m := JSONContentMarshaler{}
-			result := m.MarshalError(httpErr)
+			_, result := m.MarshalError(httpErr)
 			expected := `{"errors":[{"id":"001","links":{"about":"http://bla/blub"},"status":"500","code":"001","title":"Title must not be empty","detail":"Never occures in real life","source":{"pointer":"#titleField"},"meta":{"creator":"api2go"}}]}`
-			Expect(result).To(Equal(expected))
+			Expect(result).To(Equal([]byte(expected)))
 		})
 
 		It("will be marshalled correctly with child errors without links or source", func() {
@@ -81,9 +81,9 @@ var _ = Describe("Errors test", func() {
 			httpErr.Errors = append(httpErr.Errors, errorOne)
 
 			m := JSONContentMarshaler{}
-			result := m.MarshalError(httpErr)
+			_, result := m.MarshalError(httpErr)
 			expected := `{"errors":[{"id":"001","status":"500","code":"001","title":"Title must not be empty","detail":"Never occures in real life","meta":{"creator":"api2go"}}]}`
-			Expect(result).To(Equal(expected))
+			Expect(result).To(Equal([]byte(expected)))
 		})
 	})
 })

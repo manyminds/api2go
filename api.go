@@ -9,7 +9,6 @@ import (
 	"net/url"
 	"reflect"
 	"strconv"
-	"strings"
 
 	"github.com/golang/gddo/httputil"
 	"github.com/julienschmidt/httprouter"
@@ -21,7 +20,10 @@ const defaultContentTypHeader = "application/vnd.api+json"
 type response struct {
 	Meta   map[string]interface{}
 	Data   interface{}
+	RawData []byte
+	Error error
 	Status int
+	Header http.Header
 }
 
 func (r response) Metadata() map[string]interface{} {
@@ -53,14 +55,15 @@ type paginationQueryParams struct {
 	number, size, offset, limit string
 }
 
-func newPaginationQueryParams(r *http.Request) paginationQueryParams {
+func newPaginationQueryParams(r Request) paginationQueryParams {
 	var result paginationQueryParams
 
-	queryParams := r.URL.Query()
-	result.number = queryParams.Get("page[number]")
-	result.size = queryParams.Get("page[size]")
-	result.offset = queryParams.Get("page[offset]")
-	result.limit = queryParams.Get("page[limit]")
+	params := r.QueryParams
+
+	result.number = params.Get("page[number]")
+	result.size = params.Get("page[size]")
+	result.offset = params.Get("page[offset]")
+	result.limit = params.Get("page[limit]")
 
 	return result
 }
@@ -81,16 +84,17 @@ func (p paginationQueryParams) isValid() bool {
 	return false
 }
 
-func (p paginationQueryParams) getLinks(r *http.Request, count uint, info information) (result map[string]string, err error) {
+func (p paginationQueryParams) getLinks(r Request, count uint, info information) (result map[string]string, err error) {
 	result = make(map[string]string)
 
-	params := r.URL.Query()
+	params := r.QueryParams
 	prefix := ""
+
 	baseURL := info.GetBaseURL()
 	if baseURL != "" {
 		prefix = baseURL
 	}
-	requestURL := fmt.Sprintf("%s%s", prefix, r.URL.Path)
+	requestURL := fmt.Sprintf("%s%s", prefix, r.PlainRequest.URL.Path)
 
 	if p.number != "" {
 		// we have number & size params
@@ -185,11 +189,107 @@ func (n notAllowedHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 type resource struct {
-	resourceType reflect.Type
-	source       CRUD
-	name         string
-	marshalers   map[string]ContentMarshaler
+	resourceType   reflect.Type
+	source         CRUD
+	hooks          CRUDHooks
+	name           string
+	marshalers     map[string]ContentMarshaler
+
+	api            *API
 }
+
+func (res resource) buildRequest(r *http.Request, params httprouter.Params) (*Request, error) {
+	req := Request{
+		PlainRequest: r,
+		Header: r.Header,
+		Params: params,
+		QueryParams: r.URL.Query(),
+		Meta: make(map[string]interface{}),
+		Data: nil,
+	}
+
+	var body []byte
+
+	if r.Body != nil {
+		var err error
+		body, err = ioutil.ReadAll(r.Body)
+		if err != nil {
+			return nil, err
+		}
+		r.Body.Close()
+	}
+
+	if string(body) == "" {
+		req.Data = make(map[string]interface{})
+	} else {
+		data, err := unmarshalRequest(body, r, res.marshalers)
+		if err != nil {
+			return nil, errors.New("unmarshal_error: " + err.Error())
+		}
+		req.Data = data
+	}
+
+	if meta, ok := req.Data["meta"]; ok {
+		req.Meta = meta.(map[string]interface{})
+	}
+
+	return &req, nil
+}
+
+func (res *resource) getMiddleware(handler func(Request) response) func(http.ResponseWriter, *http.Request, httprouter.Params) {
+	return func(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+
+		var output []byte
+		var status int
+		contentType := "application/vnd.api+json"
+		header := w.Header()
+
+		request, err := res.buildRequest(r, params)
+
+		if err != nil {
+			output = []byte(fmt.Sprintf("{\"errors\": [{\"title\": \"%v\"}]}", err))
+			status = 500
+		} else {
+			// Todo: implement aborting + changing status code in hooks.
+			if res.hooks != nil {
+				res.hooks.BeforeHandle(request)
+			}
+
+			resp := handler(*request)
+			if res.hooks != nil {
+				res.hooks.AfterHandle(request, resp)
+			}
+
+			status = resp.Status
+
+			output = resp.RawData
+			
+			var err error
+
+			if resp.Error != nil {
+				log.Printf("api error: %v\n", resp.Error)
+				output, contentType, status = res.marshalError(resp.Error, r)
+			} else if resp.Data != nil {
+				output, contentType, err = res.marshalData(resp.Data, r)
+				if err != nil {
+					status = 500
+					output = []byte(fmt.Sprintf("{\"errors\": [{\"title\": \"%v\"}]}", err))
+				}
+			}
+
+			if resp.Header != nil {
+				for key := range resp.Header {
+					header[key] = resp.Header[key]
+				}
+			}
+		}
+
+		header.Set("Content-Type", contentType)
+		w.WriteHeader(status)
+		w.Write(output)	
+	}
+}
+
 
 func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD, marshalers map[string]ContentMarshaler) *resource {
 	resourceType := reflect.TypeOf(prototype)
@@ -216,36 +316,39 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD, ma
 		name = jsonapi.Jsonify(jsonapi.Pluralize(name))
 	}
 
+	// Check if CRUDHooks is implemented.
+	hooks, _ := source.(CRUDHooks) // Nil when not implemented.
+
 	res := resource{
 		resourceType: resourceType,
 		name:         name,
 		source:       source,
+		hooks:		    hooks,		
 		marshalers:   marshalers,
+		api:          api,
 	}
 
-	api.router.Handle("OPTIONS", api.prefix+name, func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		w.Header().Set("Allow", "GET,POST,PATCH,OPTIONS")
-		w.WriteHeader(http.StatusNoContent)
-	})
-
-	api.router.Handle("OPTIONS", api.prefix+name+"/:id", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		w.Header().Set("Allow", "GET,PATCH,DELETE,OPTIONS")
-		w.WriteHeader(http.StatusNoContent)
-	})
-
-	api.router.GET(api.prefix+name, func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-		err := res.handleIndex(w, r, api.info)
-		if err != nil {
-			handleError(err, w, r, marshalers)
+	api.router.Handle("OPTIONS", api.prefix+name, res.getMiddleware(func(r Request) response {
+		return response{
+			Status: http.StatusNoContent,
+			Header: http.Header{"Allow": []string{"GET,POST,PATCH,OPTIONS"}},
 		}
-	})
+	}))
 
-	api.router.GET(api.prefix+name+"/:id", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		err := res.handleRead(w, r, ps, api.info)
-		if err != nil {
-			handleError(err, w, r, marshalers)
+	api.router.Handle("OPTIONS", api.prefix+name+"/:id", res.getMiddleware(func(r Request) response {
+		return response{
+			Status: http.StatusNoContent,
+			Header: http.Header{"Allow": []string{"GET,PATCH,DELETE,OPTIONS"}},
 		}
-	})
+	}))
+
+	api.router.GET(api.prefix+name, res.getMiddleware(func(r Request) response {
+		return res.handleIndex(r)
+	}))
+
+	api.router.GET(api.prefix+name+"/:id", res.getMiddleware(func(r Request) response {
+		return res.handleRead(r)
+	}))
 
 	// generate all routes for linked relations if there are relations
 	casted, ok := prototype.(jsonapi.MarshalReferences)
@@ -253,148 +356,141 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD, ma
 		relations := casted.GetReferences()
 		for _, relation := range relations {
 			api.router.GET(api.prefix+name+"/:id/relationships/"+relation.Name, func(relation jsonapi.Reference) httprouter.Handle {
-				return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-					err := res.handleReadRelation(w, r, ps, api.info, relation)
-					if err != nil {
-						handleError(err, w, r, marshalers)
-					}
-				}
+				return res.getMiddleware(func(r Request) response {
+					return res.handleReadRelation(r, relation)
+				})			
 			}(relation))
 
 			api.router.GET(api.prefix+name+"/:id/"+relation.Name, func(relation jsonapi.Reference) httprouter.Handle {
-				return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-					err := res.handleLinked(api, w, r, ps, relation, api.info)
-					if err != nil {
-						handleError(err, w, r, marshalers)
-					}
-				}
+				return res.getMiddleware(func(r Request) response {
+					return res.handleLinked(r, relation)
+				})
 			}(relation))
 
 			api.router.PATCH(api.prefix+name+"/:id/relationships/"+relation.Name, func(relation jsonapi.Reference) httprouter.Handle {
-				return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-					err := res.handleReplaceRelation(w, r, ps, relation)
-					if err != nil {
-						handleError(err, w, r, marshalers)
-					}
-				}
+				return res.getMiddleware(func(r Request) response {
+					return res.handleReplaceRelation(r, relation)
+				})
 			}(relation))
 
 			if _, ok := ptrPrototype.(jsonapi.EditToManyRelations); ok && relation.Name == jsonapi.Pluralize(relation.Name) {
 				// generate additional routes to manipulate to-many relationships
 				api.router.POST(api.prefix+name+"/:id/relationships/"+relation.Name, func(relation jsonapi.Reference) httprouter.Handle {
-					return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-						err := res.handleAddToManyRelation(w, r, ps, relation)
-						if err != nil {
-							handleError(err, w, r, marshalers)
-						}
-					}
+					return res.getMiddleware(func(r Request) response {
+						return res.handleAddToManyRelation(r, relation)
+					})
 				}(relation))
 
 				api.router.DELETE(api.prefix+name+"/:id/relationships/"+relation.Name, func(relation jsonapi.Reference) httprouter.Handle {
-					return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-						err := res.handleDeleteToManyRelation(w, r, ps, relation)
-						if err != nil {
-							handleError(err, w, r, marshalers)
-						}
-					}
+					return res.getMiddleware(func(r Request) response {
+						return  res.handleDeleteToManyRelation(r, relation)
+					})
 				}(relation))
 			}
 		}
 	}
 
-	api.router.POST(api.prefix+name, func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		err := res.handleCreate(w, r, api.prefix, api.info)
-		if err != nil {
-			handleError(err, w, r, marshalers)
-		}
-	})
+	api.router.POST(api.prefix+name, res.getMiddleware(func(r Request) response {
+		return res.handleCreate(r)
+	}))
 
-	api.router.DELETE(api.prefix+name+"/:id", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		err := res.handleDelete(w, r, ps)
-		if err != nil {
-			handleError(err, w, r, marshalers)
-		}
-	})
+	api.router.DELETE(api.prefix+name+"/:id", res.getMiddleware(func(r Request) response {
+		return res.handleDelete(r)
+	}))
 
-	api.router.PATCH(api.prefix+name+"/:id", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		err := res.handleUpdate(w, r, ps)
-		if err != nil {
-			handleError(err, w, r, marshalers)
-		}
-	})
+	api.router.PATCH(api.prefix+name+"/:id", res.getMiddleware(func(r Request) response {
+		return res.handleUpdate(r)
+	}))
 
 	api.resources = append(api.resources, res)
 
 	return &res
 }
 
-func buildRequest(r *http.Request) Request {
-	req := Request{PlainRequest: r}
-	params := make(map[string][]string)
-	for key, values := range r.URL.Query() {
-		params[key] = strings.Split(values[0], ",")
+func (res *resource) marshalData(data interface{}, r *http.Request) ([]byte, string, error) {
+	marshaler, contentType := selectContentMarshaler(r, res.marshalers)
+	result, err := marshaler.Marshal(data)
+	if err != nil {
+		return nil, "", err
 	}
-	req.QueryParams = params
-	req.Header = r.Header
-	return req
+
+	return result, contentType, nil
 }
 
-func (res *resource) handleIndex(w http.ResponseWriter, r *http.Request, info information) error {
+func (res *resource) marshalError(data error, r *http.Request) ([]byte, string, int) {
+	marshaler, contentType := selectContentMarshaler(r, res.marshalers)
+
+	status, result := marshaler.MarshalError(data)
+
+	return result, contentType, status
+}
+
+func (res *resource) handleIndex(r Request) response {
 	pagination := newPaginationQueryParams(r)
 	if pagination.isValid() {
 		source, ok := res.source.(PaginatedFindAll)
 		if !ok {
-			return NewHTTPError(nil, "Resource does not implement the PaginatedFindAll interface", http.StatusNotFound)
+			return response{
+				Status: http.StatusNotFound,
+				Error: NewHTTPError(nil, "Resource does not implement the PaginatedFindAll interface", http.StatusNotFound),
+			}
 		}
 
-		count, response, err := source.PaginatedFindAll(buildRequest(r))
+		count, resp, err := source.PaginatedFindAll(r)
 		if err != nil {
-			return err
+			return response{
+				Error: err,
+			}
 		}
 
-		paginationLinks, err := pagination.getLinks(r, count, info)
+		paginationLinks, err := pagination.getLinks(r, count, res.api.info)
 		if err != nil {
-			return err
+			return response{Error: err}
 		}
 
-		return respondWithPagination(response, info, http.StatusOK, paginationLinks, w, r, res.marshalers)
+		return res.buildResponse(resp, paginationLinks, http.StatusOK)
 	}
+
 	source, ok := res.source.(FindAll)
 	if !ok {
-		return NewHTTPError(nil, "Resource does not implement the FindAll interface", http.StatusNotFound)
+		return response{
+			Error: NewHTTPError(nil, "Resource does not implement the FindAll interface", http.StatusNotFound),
+		}
 	}
 
-	response, err := source.FindAll(buildRequest(r))
+	resp, err := source.FindAll(r)
 	if err != nil {
-		return err
+		return response{Error: err}
 	}
 
-	return respondWith(response, info, http.StatusOK, w, r, res.marshalers)
+	return res.buildResponse(resp, nil, http.StatusOK)
 }
 
-func (res *resource) handleRead(w http.ResponseWriter, r *http.Request, ps httprouter.Params, info information) error {
-	id := ps.ByName("id")
+func (res *resource) handleRead(r Request) response {
+	id := r.Params.ByName("id")
 
-	response, err := res.source.FindOne(id, buildRequest(r))
+	resp, err := res.source.FindOne(id, r)
 
 	if err != nil {
-		return err
+		return response{Error: err}
 	}
 
-	return respondWith(response, info, http.StatusOK, w, r, res.marshalers)
+	return res.buildResponse(resp, nil, http.StatusOK)
 }
 
-func (res *resource) handleReadRelation(w http.ResponseWriter, r *http.Request, ps httprouter.Params, info information, relation jsonapi.Reference) error {
-	id := ps.ByName("id")
+func (res *resource) handleReadRelation(r Request, relation jsonapi.Reference) response {
+	id := r.Params.ByName("id")
 
-	obj, err := res.source.FindOne(id, buildRequest(r))
+	obj, err := res.source.FindOne(id, r)
 	if err != nil {
-		return err
+		return response{Error: err}
 	}
 
-	internalError := NewHTTPError(nil, "Internal server error, invalid object structure", http.StatusInternalServerError)
+	internalError := response{
+		Error: NewHTTPError(nil, "Internal server error, invalid object structure", http.StatusInternalServerError),
+	}
 
-	marshalled, err := jsonapi.MarshalWithURLs(obj.Result(), info)
+	marshalled, err := jsonapi.MarshalWithURLs(obj.Result(), res.api.info)
 	data, ok := marshalled["data"]
 	if !ok {
 		return internalError
@@ -406,7 +502,9 @@ func (res *resource) handleReadRelation(w http.ResponseWriter, r *http.Request, 
 
 	rel, ok := relationships.(map[string]map[string]interface{})[relation.Name]
 	if !ok {
-		return NewHTTPError(nil, fmt.Sprintf("There is no relation with the name %s", relation.Name), http.StatusNotFound)
+		return response{
+			Error: NewHTTPError(nil, fmt.Sprintf("There is no relation with the name %s", relation.Name), http.StatusNotFound),
+		}
 	}
 	links, ok := rel["links"].(map[string]string)
 	if !ok {
@@ -436,15 +534,15 @@ func (res *resource) handleReadRelation(w http.ResponseWriter, r *http.Request, 
 		result["meta"] = meta
 	}
 
-	return marshalResponse(result, w, http.StatusOK, r, res.marshalers)
+	return response{Status: http.StatusOK, Data: result}
 }
 
 // try to find the referenced resource and call the findAll Method with referencing resource id as param
-func (res *resource) handleLinked(api *API, w http.ResponseWriter, r *http.Request, ps httprouter.Params, linked jsonapi.Reference, info information) error {
-	id := ps.ByName("id")
-	for _, resource := range api.resources {
+func (res *resource) handleLinked(r Request, linked jsonapi.Reference) response {
+	id := r.Params.ByName("id")
+	for _, resource := range res.api.resources {
 		if resource.name == linked.Type {
-			request := buildRequest(r)
+			request := r
 			request.QueryParams[res.name+"ID"] = []string{id}
 			request.QueryParams[res.name+"Name"] = []string{linked.Name}
 
@@ -453,53 +551,50 @@ func (res *resource) handleLinked(api *API, w http.ResponseWriter, r *http.Reque
 			if pagination.isValid() {
 				source, ok := resource.source.(PaginatedFindAll)
 				if !ok {
-					return NewHTTPError(nil, "Resource does not implement the PaginatedFindAll interface", http.StatusNotFound)
+					return response{
+						Error: NewHTTPError(nil, "Resource does not implement the PaginatedFindAll interface", http.StatusNotFound),
+					}
 				}
 
 				var count uint
-				count, response, err := source.PaginatedFindAll(request)
+				count, resp, err := source.PaginatedFindAll(request)
 				if err != nil {
-					return err
+					return response{Error: err}
 				}
 
-				paginationLinks, err := pagination.getLinks(r, count, info)
+				paginationLinks, err := pagination.getLinks(r, count, res.api.info)
 				if err != nil {
-					return err
+					return response{Error: err}
 				}
 
-				return respondWithPagination(response, info, http.StatusOK, paginationLinks, w, r, res.marshalers)
+				return res.buildResponse(resp, paginationLinks, http.StatusOK)
 			}
 
 			source, ok := resource.source.(FindAll)
 			if !ok {
-				return NewHTTPError(nil, "Resource does not implement the FindAll interface", http.StatusNotFound)
+				return response{
+					Error: NewHTTPError(nil, "Resource does not implement the FindAll interface", http.StatusNotFound),
+				}
 			}
 
 			obj, err := source.FindAll(request)
 			if err != nil {
-				return err
+				return response{Error: err}
 			}
-			return respondWith(obj, info, http.StatusOK, w, r, res.marshalers)
+			return res.buildResponse(obj, nil, http.StatusOK)
 		}
 	}
 
-	err := Error{
-		Status: string(http.StatusNotFound),
-		Title:  "Not Found",
-		Detail: "No resource handler is registered to handle the linked resource " + linked.Name,
+	return response{
+		Error: NewHTTPError(
+			errors.New("Not Found"), 
+			"No resource handler is registered to handle the linked resource " + linked.Name, 
+			http.StatusNotFound),
 	}
-
-	answ := response{Data: err, Status: http.StatusNotFound}
-
-	return respondWith(answ, info, http.StatusNotFound, w, r, res.marshalers)
-
 }
 
-func (res *resource) handleCreate(w http.ResponseWriter, r *http.Request, prefix string, info information) error {
-	ctx, err := unmarshalRequest(r, res.marshalers)
-	if err != nil {
-		return err
-	}
+func (res *resource) handleCreate(r Request) response {
+	ctx := r.Data
 	newObjs := reflect.MakeSlice(reflect.SliceOf(res.resourceType), 0, 0)
 
 	structType := res.resourceType
@@ -507,90 +602,96 @@ func (res *resource) handleCreate(w http.ResponseWriter, r *http.Request, prefix
 		structType = structType.Elem()
 	}
 
-	err = jsonapi.UnmarshalInto(ctx, structType, &newObjs)
+	err := jsonapi.UnmarshalInto(ctx, structType, &newObjs)
 	if err != nil {
-		return err
+		return response{Error: err}
 	}
 	if newObjs.Len() != 1 {
-		return errors.New("expected one object in POST")
+		return response{Error: errors.New("expected one object in POST")}
 	}
 
 	//TODO create multiple objects not only one.
 	newObj := newObjs.Index(0).Interface()
 
-	response, err := res.source.Create(newObj, buildRequest(r))
+	resp, err := res.source.Create(newObj, r)
 	if err != nil {
-		return err
+		return response{Error: err}
 	}
 
-	result, ok := response.Result().(jsonapi.MarshalIdentifier)
+	result, ok := resp.Result().(jsonapi.MarshalIdentifier)
 
 	if !ok {
-		return fmt.Errorf("Expected one newly created object by resource %s", res.name)
+		return response{
+			Error:fmt.Errorf("Expected one newly created object by resource %s", res.name),
+		}
 	}
-	w.Header().Set("Location", prefix+res.name+"/"+result.GetID())
+
+	// TODO: ADD HEADER!
+	//w.Header().Set("Location", prefix+res.name+"/"+result.GetID())
+	header := http.Header{
+		"Location": []string{res.api.prefix+res.name+"/"+result.GetID()},
+	}
 
 	// handle 200 status codes
-	switch response.StatusCode() {
+	switch resp.StatusCode() {
 	case http.StatusCreated:
-		return respondWith(response, info, http.StatusCreated, w, r, res.marshalers)
+		r := res.buildResponse(response{
+			Data: result,
+		}, nil, http.StatusCreated)
+		r.Header = header
+		return r
 	case http.StatusNoContent:
-		w.WriteHeader(response.StatusCode())
-		return nil
+		return response{
+			Status: resp.StatusCode(),
+			Header: header,
+		}
 	case http.StatusAccepted:
-		w.WriteHeader(response.StatusCode())
-		return nil
+		return response{
+			Status: resp.StatusCode(),
+			Header: header,
+		}
 	default:
-		return fmt.Errorf("invalid status code %d from resource %s for method Create", response.StatusCode(), res.name)
+		err := NewHTTPError(errors.New("invalid_status_code"), 
+				fmt.Sprintf("invalid status code %d from resource %s for method Create", resp.StatusCode(), res.name), 500)
+		return response{
+			Error: err,
+		}
 	}
 }
 
-func (res *resource) handleUpdate(w http.ResponseWriter, r *http.Request, ps httprouter.Params) error {
-	obj, err := res.source.FindOne(ps.ByName("id"), buildRequest(r))
+func (res *resource) handleUpdate(r Request) response {
+	obj, err := res.source.FindOne(r.Params.ByName("id"), r)
 	if err != nil {
-		return err
+		log.Printf("ERROR!: %v\n", err)
+		return response{Error: err}
 	}
 
-	ctx, err := unmarshalRequest(r, res.marshalers)
-	if err != nil {
-		return err
-	}
-
+	ctx := r.Data
 	data, ok := ctx["data"]
-
 	if !ok {
-		return NewHTTPError(
-			errors.New("Forbidden"),
-			"missing mandatory data key.",
-			http.StatusForbidden,
-		)
+		return response{
+			Error: NewHTTPError(errors.New("missing_data_key"), "missing mandatory data key.", http.StatusForbidden),
+		}
 	}
 
 	check, ok := data.(map[string]interface{})
 	if !ok {
-		return NewHTTPError(
-			errors.New("Forbidden"),
-			"data must contain an object.",
-			http.StatusForbidden,
-		)
+		return response{
+			Error: NewHTTPError(errors.New("invalid_data"), "data must contain an object.", http.StatusForbidden),
+		}
 	}
 
 	if _, ok := check["id"]; !ok {
-		return NewHTTPError(
-			errors.New("Forbidden"),
-			"missing mandatory id key.",
-			http.StatusForbidden,
-		)
+		return response{
+			Error: NewHTTPError(errors.New("missing_id_key"), "missing mandatory id key.", http.StatusForbidden),
+		}
 	}
-
 	if _, ok := check["type"]; !ok {
-		return NewHTTPError(
-			errors.New("Forbidden"),
-			"missing mandatory type key.",
-			http.StatusForbidden,
-		)
-	}
+		return response{
+			Error: NewHTTPError(errors.New("missing_type_key"), "missing mandatory type key.", http.StatusForbidden),
+		}
 
+	}
 	updatingObjs := reflect.MakeSlice(reflect.SliceOf(res.resourceType), 1, 1)
 	updatingObjs.Index(0).Set(reflect.ValueOf(obj.Result()))
 
@@ -598,118 +699,129 @@ func (res *resource) handleUpdate(w http.ResponseWriter, r *http.Request, ps htt
 	if structType.Kind() == reflect.Ptr {
 		structType = structType.Elem()
 	}
-
 	err = jsonapi.UnmarshalInto(ctx, structType, &updatingObjs)
 	if err != nil {
-		return err
+		log.Printf("unmarshal failed: %v\n", err)
+		return response{Error: err}
 	}
 	if updatingObjs.Len() != 1 {
-		return errors.New("expected one object")
+		return response{Error: errors.New("expected one object")}
 	}
-
 	updatingObj := updatingObjs.Index(0).Interface()
 
-	response, err := res.source.Update(updatingObj, buildRequest(r))
+	resp, err := res.source.Update(updatingObj, r)
 
 	if err != nil {
-		return err
+		return response{Error: err}
 	}
-
-	switch response.StatusCode() {
+	switch resp.StatusCode() {
 	case http.StatusOK:
-		updated := response.Result()
+		updated := resp.Result()
 		if updated == nil {
-			internalResponse, err := res.source.FindOne(ps.ByName("id"), buildRequest(r))
+			internalResponse, err := res.source.FindOne(r.Params.ByName("id"), r)
 			if err != nil {
-				return err
+				return response{Error: err}
 			}
 			updated = internalResponse.Result()
 			if updated == nil {
-				return fmt.Errorf("Expected FindOne to return one object of resource %s", res.name)
+				return response{
+					Error: fmt.Errorf("Expected FindOne to return one object of resource %s", res.name),
+				}
 			}
 
-			response = internalResponse
+			resp = internalResponse
 		}
 
-		return respondWith(response, information{}, http.StatusOK, w, r, res.marshalers)
+		return res.buildResponse(response{Data: updated}, nil, http.StatusOK)
 	case http.StatusAccepted:
-		w.WriteHeader(http.StatusAccepted)
-		return nil
+		return response{
+			Status: http.StatusAccepted,
+		}
 	case http.StatusNoContent:
-		w.WriteHeader(http.StatusNoContent)
-		return nil
+		return response{
+			Status: http.StatusNoContent,
+		}
 	default:
-		return fmt.Errorf("invalid status code %d from resource %s for method Update", response.StatusCode(), res.name)
+		err := NewHTTPError(errors.New("invalid_status_code"), 
+			fmt.Sprintf("invalid status code %d from resource %s for method Update", resp.StatusCode(), res.name), 
+			http.StatusInternalServerError)
+
+		return response{
+			Error: err,
+		}
 	}
 }
 
-func (res *resource) handleReplaceRelation(w http.ResponseWriter, r *http.Request, ps httprouter.Params, relation jsonapi.Reference) error {
+func (res *resource) handleReplaceRelation(r Request, relation jsonapi.Reference) response {
 	var (
 		err     error
 		editObj interface{}
 	)
 
-	response, err := res.source.FindOne(ps.ByName("id"), buildRequest(r))
+	resp, err := res.source.FindOne(r.Params.ByName("id"), r)
 	if err != nil {
-		return err
+		return response{Error: err}
 	}
 
-	inc, err := unmarshalRequest(r, res.marshalers)
-	if err != nil {
-		return err
-	}
-
+	inc := r.Data
 	data, ok := inc["data"]
 	if !ok {
-		return errors.New("Invalid object. Need a \"data\" object")
+		return response{
+			Error: NewHTTPError(nil, "Invalid object. Need a \"data\" object", http.StatusInternalServerError),
+		}
 	}
 
-	resType := reflect.TypeOf(response.Result()).Kind()
+	resType := reflect.TypeOf(resp.Result()).Kind()
 	if resType == reflect.Struct {
-		editObj = getPointerToStruct(response.Result())
+		editObj = getPointerToStruct(resp.Result())
 	} else {
-		editObj = response.Result()
+		editObj = resp.Result()
 	}
 
 	err = jsonapi.UnmarshalRelationshipsData(editObj, relation.Name, data)
 	if err != nil {
-		return err
+		return response{Error: err}
 	}
 
 	if resType == reflect.Struct {
-		_, err = res.source.Update(reflect.ValueOf(editObj).Elem().Interface(), buildRequest(r))
+		_, err = res.source.Update(reflect.ValueOf(editObj).Elem().Interface(), r)
 	} else {
-		_, err = res.source.Update(editObj, buildRequest(r))
+		_, err = res.source.Update(editObj, r)
 	}
 
-	w.WriteHeader(http.StatusNoContent)
-	return err
+	if err != nil {
+		return response{Error: err}
+	}
+
+	return response{Status: http.StatusNoContent}
 }
 
-func (res *resource) handleAddToManyRelation(w http.ResponseWriter, r *http.Request, ps httprouter.Params, relation jsonapi.Reference) error {
+func (res *resource) handleAddToManyRelation(r Request, relation jsonapi.Reference) response {
 	var (
 		err     error
 		editObj interface{}
 	)
 
-	response, err := res.source.FindOne(ps.ByName("id"), buildRequest(r))
+	resp, err := res.source.FindOne(r.Params.ByName("id"), r)
 	if err != nil {
-		return err
+		return response{Error: err}
 	}
 
-	inc, err := unmarshalRequest(r, res.marshalers)
-	if err != nil {
-		return err
-	}
-
+	inc := r.Data
 	data, ok := inc["data"]
 	if !ok {
-		return errors.New("Invalid object. Need a \"data\" object")
+		return response{
+			Error: NewHTTPError(nil, "Invalid object. Need a \"data\" object", http.StatusInternalServerError),
+		}
 	}
 
 	newRels, ok := data.([]interface{})
 	if !ok {
-		return fmt.Errorf("Data must be an array with \"id\" and \"type\" field to add new to-many relationships")
+		return response{
+			Error: NewHTTPError(nil, 
+				"Data must be an array with \"id\" and \"type\" field to add new to-many relationships", 
+				http.StatusInternalServerError),
+		}
 	}
 
 	newIDs := []string{}
@@ -717,63 +829,75 @@ func (res *resource) handleAddToManyRelation(w http.ResponseWriter, r *http.Requ
 	for _, newRel := range newRels {
 		casted, ok := newRel.(map[string]interface{})
 		if !ok {
-			return errors.New("entry in data object invalid")
+			return response{
+				Error: NewHTTPError(nil, 
+					"entry in data object invalid", 
+					http.StatusInternalServerError),
+			}
 		}
 		newID, ok := casted["id"].(string)
 		if !ok {
-			return errors.New("no id field found inside data object")
+			return response{
+				Error: NewHTTPError(nil, 
+					"no id field found inside data object", 
+					http.StatusInternalServerError),
+			}
 		}
 
 		newIDs = append(newIDs, newID)
 	}
 
-	resType := reflect.TypeOf(response.Result()).Kind()
+	resType := reflect.TypeOf(resp.Result()).Kind()
 	if resType == reflect.Struct {
-		editObj = getPointerToStruct(response.Result())
+		editObj = getPointerToStruct(resp.Result())
 	} else {
-		editObj = response.Result()
+		editObj = resp.Result()
 	}
 
 	targetObj, ok := editObj.(jsonapi.EditToManyRelations)
 	if !ok {
-		return errors.New("target struct must implement jsonapi.EditToManyRelations")
+		return response{
+			Error: NewHTTPError(nil, 
+				"target struct must implement jsonapi.EditToManyRelations", 
+				http.StatusInternalServerError),
+		}
 	}
 	targetObj.AddToManyIDs(relation.Name, newIDs)
 
 	if resType == reflect.Struct {
-		_, err = res.source.Update(reflect.ValueOf(targetObj).Elem().Interface(), buildRequest(r))
+		_, err = res.source.Update(reflect.ValueOf(targetObj).Elem().Interface(), r)
 	} else {
-		_, err = res.source.Update(targetObj, buildRequest(r))
+		_, err = res.source.Update(targetObj, r)
 	}
 
-	w.WriteHeader(http.StatusNoContent)
-
-	return err
+	if err != nil {
+		return response{Error: err}
+	}
+	
+	return response{Status: http.StatusNoContent}
 }
 
-func (res *resource) handleDeleteToManyRelation(w http.ResponseWriter, r *http.Request, ps httprouter.Params, relation jsonapi.Reference) error {
+func (res *resource) handleDeleteToManyRelation(r Request, relation jsonapi.Reference) response {
 	var (
 		err     error
 		editObj interface{}
 	)
-	response, err := res.source.FindOne(ps.ByName("id"), buildRequest(r))
+	resp, err := res.source.FindOne(r.Params.ByName("id"), r)
 	if err != nil {
-		return err
+		return response{Error: err}
 	}
 
-	inc, err := unmarshalRequest(r, res.marshalers)
-	if err != nil {
-		return err
-	}
-
+	inc := r.Data
 	data, ok := inc["data"]
 	if !ok {
-		return errors.New("Invalid object. Need a \"data\" object")
+		return response{Error: errors.New("Invalid object. Need a \"data\" object")}
 	}
 
 	newRels, ok := data.([]interface{})
 	if !ok {
-		return fmt.Errorf("Data must be an array with \"id\" and \"type\" field to add new to-many relationships")
+		return response{
+			Error: errors.New("Data must be an array with \"id\" and \"type\" field to add new to-many relationships"),
+		}
 	}
 
 	obsoleteIDs := []string{}
@@ -781,38 +905,40 @@ func (res *resource) handleDeleteToManyRelation(w http.ResponseWriter, r *http.R
 	for _, newRel := range newRels {
 		casted, ok := newRel.(map[string]interface{})
 		if !ok {
-			return errors.New("entry in data object invalid")
+			return response{Error: errors.New("entry in data object invalid")}
 		}
 		obsoleteID, ok := casted["id"].(string)
 		if !ok {
-			return errors.New("no id field found inside data object")
+			return response{Error: errors.New("no id field found inside data object")}
 		}
 
 		obsoleteIDs = append(obsoleteIDs, obsoleteID)
 	}
 
-	resType := reflect.TypeOf(response.Result()).Kind()
+	resType := reflect.TypeOf(resp.Result()).Kind()
 	if resType == reflect.Struct {
-		editObj = getPointerToStruct(response.Result())
+		editObj = getPointerToStruct(resp.Result())
 	} else {
-		editObj = response.Result()
+		editObj = resp.Result()
 	}
 
 	targetObj, ok := editObj.(jsonapi.EditToManyRelations)
 	if !ok {
-		return errors.New("target struct must implement jsonapi.EditToManyRelations")
+		return response{Error: errors.New("target struct must implement jsonapi.EditToManyRelations")}
 	}
 	targetObj.DeleteToManyIDs(relation.Name, obsoleteIDs)
 
 	if resType == reflect.Struct {
-		_, err = res.source.Update(reflect.ValueOf(targetObj).Elem().Interface(), buildRequest(r))
+		_, err = res.source.Update(reflect.ValueOf(targetObj).Elem().Interface(), r)
 	} else {
-		_, err = res.source.Update(targetObj, buildRequest(r))
+		_, err = res.source.Update(targetObj, r)
 	}
 
-	w.WriteHeader(http.StatusNoContent)
-
-	return err
+	if err != nil {
+		return response{Error: err}
+	}
+	
+	return response{Status: http.StatusNoContent}
 }
 
 // returns a pointer to an interface{} struct
@@ -823,27 +949,37 @@ func getPointerToStruct(oldObj interface{}) interface{} {
 	return ptr.Interface()
 }
 
-func (res *resource) handleDelete(w http.ResponseWriter, r *http.Request, ps httprouter.Params) error {
-	response, err := res.source.Delete(ps.ByName("id"), buildRequest(r))
+func (res *resource) handleDelete(r Request) response {
+	resp, err := res.source.Delete(r.Params.ByName("id"), r)
 	if err != nil {
-		return err
+		return response{Error: err}
 	}
 
-	switch response.StatusCode() {
+	switch resp.StatusCode() {
 	case http.StatusOK:
 		data := map[string]interface{}{
-			"meta": response.Metadata(),
+			"meta": resp.Metadata(),
 		}
 
-		return marshalResponse(data, w, http.StatusOK, r, res.marshalers)
+		return response{
+			Status: http.StatusOK,
+			Data: data,
+		}
 	case http.StatusAccepted:
-		w.WriteHeader(http.StatusAccepted)
-		return nil
+		return response{
+			Status: http.StatusAccepted,
+		}
 	case http.StatusNoContent:
-		w.WriteHeader(http.StatusNoContent)
-		return nil
+		return response{
+			Status: http.StatusNoContent,
+		}
 	default:
-		return fmt.Errorf("invalid status code %d from resource %s for method Delete", response.StatusCode(), res.name)
+		err := NewHTTPError(errors.New("invalid_status_code"),
+			fmt.Sprintf("invalid status code %d from resource %s for method Delete", resp.StatusCode(), res.name),
+			http.StatusInternalServerError)
+		return response{
+			Error: err,
+		}
 	}
 }
 
@@ -853,58 +989,27 @@ func writeResult(w http.ResponseWriter, data []byte, status int, contentType str
 	w.Write(data)
 }
 
-func respondWith(obj Responder, info information, status int, w http.ResponseWriter, r *http.Request, marshalers map[string]ContentMarshaler) error {
-	data, err := jsonapi.MarshalWithURLs(obj.Result(), info)
+func (res *resource) buildResponse(obj Responder, links map[string]string, status int) response {
+	data, err := jsonapi.MarshalWithURLs(obj.Result(), res.api.info)
 	if err != nil {
-		return err
+		return response{Error: err}
+	}
+	if links != nil {
+		data["links"] = links
 	}
 
-	meta := obj.Metadata()
-	if len(meta) > 0 {
-		data["meta"] = meta
-	}
-
-	return marshalResponse(data, w, status, r, marshalers)
+	return response{Data: data, Status: status, Meta: obj.Metadata()}
 }
 
-func respondWithPagination(obj Responder, info information, status int, links map[string]string, w http.ResponseWriter, r *http.Request, marshalers map[string]ContentMarshaler) error {
-	data, err := jsonapi.MarshalWithURLs(obj.Result(), info)
-	if err != nil {
-		return err
-	}
 
-	data["links"] = links
-	meta := obj.Metadata()
-	if len(meta) > 0 {
-		data["meta"] = meta
-	}
-
-	return marshalResponse(data, w, status, r, marshalers)
-}
-
-func unmarshalRequest(r *http.Request, marshalers map[string]ContentMarshaler) (map[string]interface{}, error) {
-	defer r.Body.Close()
-	data, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		return nil, err
-	}
+func unmarshalRequest(body []byte, r *http.Request, marshalers map[string]ContentMarshaler) (map[string]interface{}, error) {
 	result := map[string]interface{}{}
 	marshaler, _ := selectContentMarshaler(r, marshalers)
-	err = marshaler.Unmarshal(data, &result)
+	err := marshaler.Unmarshal(body, &result)
 	if err != nil {
 		return nil, err
 	}
 	return result, nil
-}
-
-func marshalResponse(resp interface{}, w http.ResponseWriter, status int, r *http.Request, marshalers map[string]ContentMarshaler) error {
-	marshaler, contentType := selectContentMarshaler(r, marshalers)
-	result, err := marshaler.Marshal(resp)
-	if err != nil {
-		return err
-	}
-	writeResult(w, result, status, contentType)
-	return nil
 }
 
 func selectContentMarshaler(r *http.Request, marshalers map[string]ContentMarshaler) (marshaler ContentMarshaler, contentType string) {
@@ -932,12 +1037,12 @@ func selectContentMarshaler(r *http.Request, marshalers map[string]ContentMarsha
 func handleError(err error, w http.ResponseWriter, r *http.Request, marshalers map[string]ContentMarshaler) {
 	marshaler, contentType := selectContentMarshaler(r, marshalers)
 
-	log.Println(err)
-	if e, ok := err.(HTTPError); ok {
-		writeResult(w, []byte(marshaler.MarshalError(err)), e.status, contentType)
+	if _, ok := err.(HTTPError); ok {
+		status, result := marshaler.MarshalError(err)
+		writeResult(w, result, status, contentType)
 		return
-
 	}
 
-	writeResult(w, []byte(marshaler.MarshalError(err)), http.StatusInternalServerError, contentType)
+	status, result := marshaler.MarshalError(err)
+	writeResult(w, result, status, contentType)
 }

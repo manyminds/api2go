@@ -440,7 +440,7 @@ func (m prettyJSONContentMarshaler) Unmarshal(data []byte, i interface{}) error 
 	return json.Unmarshal(data, i)
 }
 
-func (m prettyJSONContentMarshaler) MarshalError(err error) string {
+func (m prettyJSONContentMarshaler) MarshalError(err error) (int, []byte) {
 	jsonmarshaler := JSONContentMarshaler{}
 	return jsonmarshaler.MarshalError(err)
 }
@@ -814,7 +814,8 @@ var _ = Describe("RestHandler", func() {
 			Expect(err).To(BeNil())
 			api.Handler().ServeHTTP(rec, req)
 			Expect(rec.Code).To(Equal(http.StatusForbidden))
-			Expect(string(rec.Body.Bytes())).To(MatchJSON(`{"errors":[{"status":"403","title":"missing mandatory type key."}]}`))
+			js := `{"errors":[{"status":"403","code":"missing_type_key","title":"missing mandatory type key."}]}`
+			Expect(string(rec.Body.Bytes())).To(MatchJSON(js))
 		})
 
 		It("patch must contain type and id but does not have id", func() {
@@ -823,7 +824,8 @@ var _ = Describe("RestHandler", func() {
 			Expect(err).To(BeNil())
 			api.Handler().ServeHTTP(rec, req)
 			Expect(rec.Code).To(Equal(http.StatusForbidden))
-			Expect(string(rec.Body.Bytes())).To(MatchJSON(`{"errors":[{"status":"403","title":"missing mandatory id key."}]}`))
+			js := `{"errors":[{"status":"403","code":"missing_id_key","title":"missing mandatory id key."}]}`
+			Expect(string(rec.Body.Bytes())).To(MatchJSON(js))
 		})
 
 		Context("Updating", func() {
@@ -1236,14 +1238,6 @@ var _ = Describe("RestHandler", func() {
 			Expect(result).To(Equal(map[string]interface{}{
 				"data": []interface{}{post1JSON},
 			}))
-		})
-
-		It("Extracts multiple parameters correctly", func() {
-			req, err := http.NewRequest("GET", "/v0/posts?sort=title,date", nil)
-			Expect(err).To(BeNil())
-
-			api2goReq := buildRequest(req)
-			Expect(api2goReq.QueryParams).To(Equal(map[string][]string{"sort": []string{"title", "date"}}))
 		})
 	})
 
