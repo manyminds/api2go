@@ -164,6 +164,67 @@ var _ = Describe("Unmarshal", func() {
 			Expect(err).To(BeNil())
 			Expect(posts).To(Equal([]SimplePost{firstPost}))
 		})
+
+		Context("slice fields", func() {
+			It("unmarshal slice fields correctly", func() {
+				sliceMap := map[string]interface{}{
+					"data": map[string]interface{}{
+						"id":   "1234",
+						"type": "identities",
+						"attributes": map[string]interface{}{
+							"scopes": []string{
+								"user_global",
+							},
+						},
+					},
+				}
+
+				var identity Identity
+				err := Unmarshal(sliceMap, &identity)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(identity.Scopes).To(HaveLen(1))
+				Expect(identity.Scopes[0]).To(Equal("user_global"))
+			})
+
+			It("unmarshal slice fields from json input", func() {
+				input := `
+					{
+						"data": {
+							"id": "1234",
+							"type": "identities",
+							"attributes": {
+								"scopes": ["test", "1234"]
+							}
+						}
+					}
+				`
+
+				var identity Identity
+				err := UnmarshalFromJSON([]byte(input), &identity)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(identity.Scopes[0]).To(Equal("test"))
+				Expect(identity.Scopes[1]).To(Equal("1234"))
+			})
+
+			It("unmarshal empty slice fields from json input", func() {
+				input := `
+					{
+						"data": {
+							"id": "1234",
+							"type": "identities",
+							"attributes": {
+								"scopes": []
+							}
+						}
+					}
+				`
+
+				var identity Identity
+				err := UnmarshalFromJSON([]byte(input), &identity)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(identity.Scopes).To(Equal([]string{}))
+			})
+		})
 	})
 
 	Context("when unmarshaling objects with relationships", func() {
