@@ -1,5 +1,6 @@
 package api2go
 
+
 // The CRUD interface MUST be implemented in order to use the api2go api.
 type CRUD interface {
 	// FindOne returns an object by its ID
@@ -28,6 +29,11 @@ type CRUD interface {
 	Update(obj interface{}, req Request) (Responder, error)
 }
 
+type CRUDHooks interface {
+	BeforeHandle(*Request) *Responder
+	AfterHandle(*Request, Responder)
+}
+
 // ContentMarshaler controls how requests from clients are unmarshaled
 // and responses from the server are marshaled. The content marshaler
 // is in charge of encoding and decoding data to and from a particular
@@ -36,7 +42,7 @@ type CRUD interface {
 type ContentMarshaler interface {
 	Marshal(i interface{}) ([]byte, error)
 	Unmarshal(data []byte, i interface{}) error
-	MarshalError(error) string
+	MarshalError(error) (int, []byte)
 }
 
 // The PaginatedFindAll interface can be optionally implemented to fetch a subset of all records.

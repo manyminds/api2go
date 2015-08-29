@@ -3,6 +3,7 @@ package api2go
 import (
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/julienschmidt/httprouter"
@@ -40,8 +41,11 @@ func (api *API) AddResource(prototype jsonapi.MarshalIdentifier, source CRUD) {
 // Request contains additional information for FindOne and Find Requests
 type Request struct {
 	PlainRequest *http.Request
-	QueryParams  map[string][]string
+	QueryParams  url.Values
 	Header       http.Header
+	Params 		   httprouter.Params
+	Meta         map[string]interface{}
+	Data         map[string]interface{}
 }
 
 //SetRedirectTrailingSlash enables 307 redirects on urls ending with /

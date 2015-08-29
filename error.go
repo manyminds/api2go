@@ -2,7 +2,6 @@ package api2go
 
 import (
 	"fmt"
-	"log"
 	"strconv"
 )
 
@@ -56,35 +55,38 @@ type ErrorSource struct {
 
 //MarshalError marshals errors recursively in json format.
 //it can make use of the jsonapi.HTTPError struct
-func (j JSONContentMarshaler) MarshalError(err error) string {
+func (j JSONContentMarshaler) MarshalError(err error) (int, []byte) {
 	httpErr, ok := err.(HTTPError)
 	if ok {
-		return marshalHTTPError(httpErr, j)
+		return httpErr.status, marshalHTTPError(httpErr, j)
 	}
 
 	httpErr = NewHTTPError(err, err.Error(), 500)
 
-	return marshalHTTPError(httpErr, j)
+	return httpErr.status, marshalHTTPError(httpErr, j)
 }
 
 //marshalHTTPError marshals an internal httpError
-func marshalHTTPError(input HTTPError, marshaler ContentMarshaler) string {
+func marshalHTTPError(input HTTPError, marshaler ContentMarshaler) []byte {
 	if len(input.Errors) == 0 {
-		input.Errors = []Error{Error{Title: input.msg, Status: strconv.Itoa(input.status)}}
+		code := ""
+		if input.err != nil {
+			code = input.err.Error()
+		}
+		input.Errors = []Error{Error{Code: code, Title: input.msg, Status: strconv.Itoa(input.status)}}
 	}
 
 	data, err := marshaler.Marshal(input)
 
 	if err != nil {
-		log.Println(err)
-		return "{}"
+		return []byte("{}")
 	}
 
-	return string(data)
+	return data
 }
 
 // NewHTTPError creates a new error with message and status code.
-// `err` will be logged (but never sent to a client), `msg` will be sent and `status` is the http status code.
+// `err` will be sent as 'code', `msg` as 'title' and `status` is the http status code.
 // `err` can be nil.
 func NewHTTPError(err error, msg string, status int) HTTPError {
 	return HTTPError{err: err, msg: msg, status: status}
