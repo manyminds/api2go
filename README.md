@@ -5,6 +5,7 @@
 [![GoDoc](https://godoc.org/github.com/manyminds/api2go?status.svg)](https://godoc.org/github.com/manyminds/api2go)
 [![Build Status](https://travis-ci.org/manyminds/api2go.svg?branch=master)](https://travis-ci.org/manyminds/api2go)
 [![Coverage Status](https://coveralls.io/repos/manyminds/api2go/badge.svg?branch=master&service=github)](https://coveralls.io/github/manyminds/api2go?branch=master)
+[![Go Report Card](http://goreportcard.com/badge/manyminds/api2go)](http://goreportcard.com/report/manyminds/api2go)
 
 A [JSON API](http://jsonapi.org) Implementation for Go, to be used e.g. as server for [Ember Data](https://github.com/emberjs/data).
 
