@@ -78,13 +78,13 @@ var _ = Describe("Marshalling with the same reference type", func() {
 					"content": "I am the Super Node",
 				},
 				"relationships": map[string]map[string]interface{}{
-					"mother-node": map[string]interface{}{
+					"mother-node": {
 						"data": map[string]interface{}{
 							"type": "nodes",
 							"id":   "1337",
 						},
 					},
-					"child-nodes": map[string]interface{}{
+					"child-nodes": {
 						"data": []map[string]interface{}{
 							{
 								"type": "nodes",
@@ -96,7 +96,7 @@ var _ = Describe("Marshalling with the same reference type", func() {
 							},
 						},
 					},
-					"abandoned-child-nodes": map[string]interface{}{
+					"abandoned-child-nodes": {
 						"data": []map[string]interface{}{
 							{
 								"type": "nodes",

@@ -70,7 +70,7 @@ func (j JSONContentMarshaler) MarshalError(err error) string {
 //marshalHTTPError marshals an internal httpError
 func marshalHTTPError(input HTTPError, marshaler ContentMarshaler) string {
 	if len(input.Errors) == 0 {
-		input.Errors = []Error{Error{Title: input.msg, Status: strconv.Itoa(input.status)}}
+		input.Errors = []Error{{Title: input.msg, Status: strconv.Itoa(input.status)}}
 	}
 
 	data, err := marshaler.Marshal(input)
