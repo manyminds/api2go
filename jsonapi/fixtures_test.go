@@ -324,7 +324,7 @@ func (u Unicorn) GetID() string {
 }
 
 type NumberPost struct {
-	ID             string `json"-"`
+	ID             string `json:"-"`
 	Title          string
 	Number         int64
 	UnsignedNumber uint64
