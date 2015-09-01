@@ -137,7 +137,7 @@ var _ = Describe("Marshalling", func() {
 				"data": []map[string]interface{}{
 					firstPostMap,
 					secondPostMap,
-					map[string]interface{}{
+					{
 						"id":   "1337",
 						"type": "users",
 						"attributes": map[string]interface{}{
@@ -169,26 +169,26 @@ var _ = Describe("Marshalling", func() {
 
 			expected := map[string]interface{}{
 				"data": []map[string]interface{}{
-					map[string]interface{}{
+					{
 						"id": "1",
 						"relationships": map[string]map[string]interface{}{
-							"comments": map[string]interface{}{
+							"comments": {
 								"links": map[string]string{
 									"self":    completePrefix + "/posts/1/relationships/comments",
 									"related": completePrefix + "/posts/1/comments",
 								},
 								"data": []map[string]interface{}{
-									map[string]interface{}{
+									{
 										"id":   "1",
 										"type": "comments",
 									},
-									map[string]interface{}{
+									{
 										"id":   "2",
 										"type": "comments",
 									},
 								},
 							},
-							"author": map[string]interface{}{
+							"author": {
 								"links": map[string]string{
 									"self":    completePrefix + "/posts/1/relationships/author",
 									"related": completePrefix + "/posts/1/author",
@@ -204,26 +204,26 @@ var _ = Describe("Marshalling", func() {
 							"title": "Foobar",
 						},
 					},
-					map[string]interface{}{
+					{
 						"id": "2",
 						"relationships": map[string]map[string]interface{}{
-							"comments": map[string]interface{}{
+							"comments": {
 								"links": map[string]string{
 									"self":    completePrefix + "/posts/2/relationships/comments",
 									"related": completePrefix + "/posts/2/comments",
 								},
 								"data": []map[string]interface{}{
-									map[string]interface{}{
+									{
 										"id":   "1",
 										"type": "comments",
 									},
-									map[string]interface{}{
+									{
 										"id":   "2",
 										"type": "comments",
 									},
 								},
 							},
-							"author": map[string]interface{}{
+							"author": {
 								"links": map[string]string{
 									"self":    completePrefix + "/posts/2/relationships/author",
 									"related": completePrefix + "/posts/2/author",
@@ -241,21 +241,21 @@ var _ = Describe("Marshalling", func() {
 					},
 				},
 				"included": []map[string]interface{}{
-					map[string]interface{}{
+					{
 						"id":   "1",
 						"type": "users",
 						"attributes": map[string]interface{}{
 							"name": "Test Author",
 						},
 					},
-					map[string]interface{}{
+					{
 						"id":   "1",
 						"type": "comments",
 						"attributes": map[string]interface{}{
 							"text": "First!",
 						},
 					},
-					map[string]interface{}{
+					{
 						"id":   "2",
 						"type": "comments",
 						"attributes": map[string]interface{}{
@@ -279,19 +279,19 @@ var _ = Describe("Marshalling", func() {
 						"title": "",
 					},
 					"relationships": map[string]map[string]interface{}{
-						"comments": map[string]interface{}{
+						"comments": {
 							"links": map[string]string{
 								"self":    completePrefix + "/posts/1/relationships/comments",
 								"related": completePrefix + "/posts/1/comments",
 							},
 							"data": []map[string]interface{}{
-								map[string]interface{}{
+								{
 									"id":   "1",
 									"type": "comments",
 								},
 							},
 						},
-						"author": map[string]interface{}{
+						"author": {
 							"data": nil,
 							"links": map[string]string{
 								"self":    completePrefix + "/posts/1/relationships/author",
@@ -319,15 +319,15 @@ var _ = Describe("Marshalling", func() {
 						"title": "",
 					},
 					"relationships": map[string]map[string]interface{}{
-						"comments": map[string]interface{}{
+						"comments": {
 							"data": []map[string]interface{}{
-								map[string]interface{}{
+								{
 									"id":   "1",
 									"type": "comments",
 								},
 							},
 						},
-						"author": map[string]interface{}{
+						"author": {
 							"data": map[string]interface{}{
 								"id":   "1",
 								"type": "users",
@@ -336,14 +336,14 @@ var _ = Describe("Marshalling", func() {
 					},
 				},
 				"included": []map[string]interface{}{
-					map[string]interface{}{
+					{
 						"id":   "1",
 						"type": "users",
 						"attributes": map[string]interface{}{
 							"name": "Tester",
 						},
 					},
-					map[string]interface{}{
+					{
 						"id":   "1",
 						"type": "comments",
 						"attributes": map[string]interface{}{
@@ -364,7 +364,7 @@ var _ = Describe("Marshalling", func() {
 					"type":       "anotherPosts",
 					"attributes": map[string]interface{}{},
 					"relationships": map[string]map[string]interface{}{
-						"author": map[string]interface{}{
+						"author": {
 							"data": map[string]interface{}{
 								"id":   "1",
 								"type": "users",
@@ -392,13 +392,13 @@ var _ = Describe("Marshalling", func() {
 						"title": "Test",
 					},
 					"relationships": map[string]map[string]interface{}{
-						"author": map[string]interface{}{
+						"author": {
 							"links": map[string]string{
 								"self":    "http://my.domain/v1/posts/123/relationships/author",
 								"related": "http://my.domain/v1/posts/123/author",
 							},
 						},
-						"comments": map[string]interface{}{
+						"comments": {
 							"links": map[string]string{
 								"self":    "http://my.domain/v1/posts/123/relationships/comments",
 								"related": "http://my.domain/v1/posts/123/comments",
@@ -423,13 +423,13 @@ var _ = Describe("Marshalling", func() {
 						"title": "Test",
 					},
 					"relationships": map[string]map[string]interface{}{
-						"author": map[string]interface{}{
+						"author": {
 							"links": map[string]string{
 								"self":    "http://my.domain/v1/posts/123/relationships/author",
 								"related": "http://my.domain/v1/posts/123/author",
 							},
 						},
-						"comments": map[string]interface{}{
+						"comments": {
 							"data": []interface{}{},
 							"links": map[string]string{
 								"self":    "http://my.domain/v1/posts/123/relationships/comments",
@@ -455,14 +455,14 @@ var _ = Describe("Marshalling", func() {
 						"title": "Test",
 					},
 					"relationships": map[string]map[string]interface{}{
-						"author": map[string]interface{}{
+						"author": {
 							"data": nil,
 							"links": map[string]string{
 								"self":    "http://my.domain/v1/posts/123/relationships/author",
 								"related": "http://my.domain/v1/posts/123/author",
 							},
 						},
-						"comments": map[string]interface{}{
+						"comments": {
 							"links": map[string]string{
 								"self":    "http://my.domain/v1/posts/123/relationships/comments",
 								"related": "http://my.domain/v1/posts/123/comments",
@@ -565,7 +565,7 @@ var _ = Describe("Marshalling", func() {
 						"text": "Will it ever work?",
 					},
 					"relationships": map[string]map[string]interface{}{
-						"inspiringQuestion": map[string]interface{}{
+						"inspiringQuestion": {
 							"data": map[string]interface{}{
 								"id":   "1",
 								"type": "questions",
@@ -574,14 +574,14 @@ var _ = Describe("Marshalling", func() {
 					},
 				},
 				"included": []map[string]interface{}{
-					map[string]interface{}{
+					{
 						"id":   "1",
 						"type": "questions",
 						"attributes": map[string]interface{}{
 							"text": "Does this test work?",
 						},
 						"relationships": map[string]map[string]interface{}{
-							"inspiringQuestion": map[string]interface{}{
+							"inspiringQuestion": {
 								"data": nil,
 							},
 						},
@@ -597,14 +597,14 @@ var _ = Describe("Marshalling", func() {
 		It("Does not marshall same dependencies multiple times", func() {
 			expected := map[string]interface{}{
 				"data": []map[string]interface{}{
-					map[string]interface{}{
+					{
 						"id":   "3",
 						"type": "questions",
 						"attributes": map[string]interface{}{
 							"text": "It works now",
 						},
 						"relationships": map[string]map[string]interface{}{
-							"inspiringQuestion": map[string]interface{}{
+							"inspiringQuestion": {
 								"data": map[string]interface{}{
 									"id":   "1",
 									"type": "questions",
@@ -612,14 +612,14 @@ var _ = Describe("Marshalling", func() {
 							},
 						},
 					},
-					map[string]interface{}{
+					{
 						"id":   "2",
 						"type": "questions",
 						"attributes": map[string]interface{}{
 							"text": "Will it ever work?",
 						},
 						"relationships": map[string]map[string]interface{}{
-							"inspiringQuestion": map[string]interface{}{
+							"inspiringQuestion": {
 								"data": map[string]interface{}{
 									"id":   "1",
 									"type": "questions",
@@ -629,14 +629,14 @@ var _ = Describe("Marshalling", func() {
 					},
 				},
 				"included": []map[string]interface{}{
-					map[string]interface{}{
+					{
 						"id":   "1",
 						"type": "questions",
 						"attributes": map[string]interface{}{
 							"text": "Does this test work?",
 						},
 						"relationships": map[string]map[string]interface{}{
-							"inspiringQuestion": map[string]interface{}{
+							"inspiringQuestion": {
 								"data": nil,
 							},
 						},
@@ -748,7 +748,7 @@ var _ = Describe("Marshalling", func() {
 			links := getStructRelationships(post, serverInformationNil)
 			Expect(links["comments"]).To(Equal(map[string]interface{}{
 				"data": []map[string]interface{}{
-					map[string]interface{}{
+					{
 						"id":   "1",
 						"type": "comments",
 					},

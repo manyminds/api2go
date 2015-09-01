@@ -415,7 +415,7 @@ var _ = Describe("Unmarshal", func() {
 			posts := []Post{post}
 			err := Unmarshal(postMap, &posts)
 			Expect(err).To(BeNil())
-			Expect(posts).To(Equal([]Post{Post{ID: 1, Title: "New Title"}}))
+			Expect(posts).To(Equal([]Post{{ID: 1, Title: "New Title"}}))
 		})
 	})
 

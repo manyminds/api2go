@@ -10,7 +10,7 @@ main() {
 check_fmt() {
   eval "set -e"
   for file in $(git ls-files '*.go') ; do
-    gofmt $file | diff -u $file -
+    gofmt -s $file | diff -u $file -
   done
   eval "set +e"
 }

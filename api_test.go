@@ -464,20 +464,20 @@ var _ = Describe("RestHandler", func() {
 
 		BeforeEach(func() {
 			source = &fixtureSource{map[string]*Post{
-				"1": &Post{
+				"1": {
 					ID:    "1",
 					Title: "Hello, World!",
 					Author: &User{
 						ID:   "1",
 						Name: "Dieter",
 					},
-					Comments: []Comment{Comment{
+					Comments: []Comment{{
 						ID:    "1",
 						Value: "This is a stupid post!",
 					}},
 				},
-				"2": &Post{ID: "2", Title: "I am NR. 2"},
-				"3": &Post{ID: "3", Title: "I am NR. 3"},
+				"2": {ID: "2", Title: "I am NR. 2"},
+				"3": {ID: "3", Title: "I am NR. 3"},
 			}, usePointerResources}
 
 			post1Json = map[string]interface{}{
@@ -500,7 +500,7 @@ var _ = Describe("RestHandler", func() {
 					},
 					"comments": map[string]interface{}{
 						"data": []map[string]interface{}{
-							map[string]interface{}{
+							{
 								"id":   "1",
 								"type": "comments",
 							},
@@ -521,14 +521,14 @@ var _ = Describe("RestHandler", func() {
 			}
 
 			post1LinkedJSON = []map[string]interface{}{
-				map[string]interface{}{
+				{
 					"id":   "1",
 					"type": "users",
 					"attributes": map[string]interface{}{
 						"name": "Dieter",
 					},
 				},
-				map[string]interface{}{
+				{
 					"id":   "1",
 					"type": "comments",
 					"attributes": map[string]interface{}{
@@ -985,7 +985,7 @@ var _ = Describe("RestHandler", func() {
 
 		BeforeEach(func() {
 			source = &fixtureSource{map[string]*Post{
-				"1": &Post{ID: "1", Title: "Hello, World!"},
+				"1": {ID: "1", Title: "Hello, World!"},
 			}, false}
 
 			post1Json = map[string]interface{}{
@@ -1023,7 +1023,7 @@ var _ = Describe("RestHandler", func() {
 
 		BeforeEach(func() {
 			source = &fixtureSource{map[string]*Post{
-				"1": &Post{ID: "1", Title: "Hello, World!"},
+				"1": {ID: "1", Title: "Hello, World!"},
 			}, false}
 
 			jsonResponse = `{"data":{"attributes":{"title":"Hello, World!","value":null},"id":"1","relationships":{"author":{"data":null,"links":{"related":"/posts/1/author","self":"/posts/1/relationships/author"}},"bananas":{"data":[],"links":{"related":"/posts/1/bananas","self":"/posts/1/relationships/bananas"}},"comments":{"data":[],"links":{"related":"/posts/1/comments","self":"/posts/1/relationships/comments"}}},"type":"posts"}}`
@@ -1139,8 +1139,8 @@ var _ = Describe("RestHandler", func() {
 
 		BeforeEach(func() {
 			source = &fixtureSource{map[string]*Post{
-				"1": &Post{ID: "1", Title: "Hello, World!"},
-				"2": &Post{ID: "2", Title: "Hello, from second Post!"},
+				"1": {ID: "1", Title: "Hello, World!"},
+				"2": {ID: "2", Title: "Hello, from second Post!"},
 			}, false}
 
 			post1JSON = map[string]interface{}{
@@ -1243,7 +1243,7 @@ var _ = Describe("RestHandler", func() {
 			Expect(err).To(BeNil())
 
 			api2goReq := buildRequest(req)
-			Expect(api2goReq.QueryParams).To(Equal(map[string][]string{"sort": []string{"title", "date"}}))
+			Expect(api2goReq.QueryParams).To(Equal(map[string][]string{"sort": {"title", "date"}}))
 		})
 	})
 
@@ -1256,13 +1256,13 @@ var _ = Describe("RestHandler", func() {
 
 		BeforeEach(func() {
 			source = &fixtureSource{map[string]*Post{
-				"1": &Post{ID: "1", Title: "Hello, World!"},
-				"2": &Post{ID: "2", Title: "Hello, World!"},
-				"3": &Post{ID: "3", Title: "Hello, World!"},
-				"4": &Post{ID: "4", Title: "Hello, World!"},
-				"5": &Post{ID: "5", Title: "Hello, World!"},
-				"6": &Post{ID: "6", Title: "Hello, World!"},
-				"7": &Post{ID: "7", Title: "Hello, World!"},
+				"1": {ID: "1", Title: "Hello, World!"},
+				"2": {ID: "2", Title: "Hello, World!"},
+				"3": {ID: "3", Title: "Hello, World!"},
+				"4": {ID: "4", Title: "Hello, World!"},
+				"5": {ID: "5", Title: "Hello, World!"},
+				"6": {ID: "6", Title: "Hello, World!"},
+				"7": {ID: "7", Title: "Hello, World!"},
 			}, false}
 
 			api = NewAPI("v1")

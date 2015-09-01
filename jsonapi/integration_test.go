@@ -108,9 +108,9 @@ var _ = Describe("Test for the public api of this package", func() {
 	}
 
 	pages := []Page{
-		Page{ID: "Page 1", Content: "First Page"},
-		Page{ID: "Page 2", Content: "Second Page"},
-		Page{ID: "Page 3", Content: "Final page"},
+		{ID: "Page 1", Content: "First Page"},
+		{ID: "Page 2", Content: "Second Page"},
+		{ID: "Page 3", Content: "Final page"},
 	}
 
 	testBook := Book{
@@ -227,7 +227,7 @@ var _ = Describe("Test for the public api of this package", func() {
 		It("Should be unmarshalled correctly", func() {
 			result := &[]Book{}
 			expected := []Book{
-				Book{
+				{
 					ID:       "TheOneAndOnlyID",
 					AuthorID: "A Magical UserID",
 					PagesIDs: []string{"Page 1", "Page 2", "Page 3"},
