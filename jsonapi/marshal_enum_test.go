@@ -67,22 +67,37 @@ func (e *EnumPost) SetID(ID string) error {
 	return nil
 }
 
-var _ = Describe("Unmarshal", func() {
-	Context("When unmarshaling objects including enums", func() {
-		status := StatusPublished
-		statusValue := "\"published\""
-		singleJSON := []byte(`{"data":{"id": "1", "type": "enumPosts", "attributes": {"title":"First Post","status":"published"}}}`)
-		firstPost := EnumPost{ID: "1", Title: "First Post", Status: StatusPublished}
-		singlePostMap := map[string]interface{}{
-			"data": map[string]interface{}{
-				"id":   "1",
-				"type": "enumPosts",
-				"attributes": map[string]interface{}{
-					"title":  firstPost.Title,
-					"status": StatusPublished,
-				},
+var _ = Describe("Custom enum types", func() {
+	status := StatusPublished
+	statusValue := "\"published\""
+	singleJSON := []byte(`{"data":{"id": "1", "type": "enumPosts", "attributes": {"title":"First Post","status":"published"}}}`)
+	firstPost := EnumPost{ID: "1", Title: "First Post", Status: StatusPublished}
+	singlePostMap := map[string]interface{}{
+		"data": map[string]interface{}{
+			"id":   "1",
+			"type": "enumPosts",
+			"attributes": map[string]interface{}{
+				"title":  firstPost.Title,
+				"status": StatusPublished,
 			},
+		},
+	}
+
+	Context("When marshaling objects including enumes", func() {
+		singlePost := EnumPost{
+			ID:     "1",
+			Title:  "First Post",
+			Status: StatusPublished,
 		}
+
+		It("marshals JSON", func() {
+			result, err := MarshalToJSON(singlePost)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(MatchJSON(singleJSON))
+		})
+	})
+
+	Context("When unmarshaling objects including enums", func() {
 
 		It("unmarshals status string values to int enum type", func() {
 			var result PublishStatus
@@ -93,14 +108,14 @@ var _ = Describe("Unmarshal", func() {
 		It("unmarshals single objects into a struct", func() {
 			var post EnumPost
 			err := Unmarshal(singlePostMap, &post)
-			Expect(err).To(BeNil())
+			Expect(err).ToNot(HaveOccurred())
 			Expect(post).To(Equal(firstPost))
 		})
 
 		It("unmarshals JSON", func() {
 			var posts []EnumPost
 			err := UnmarshalFromJSON(singleJSON, &posts)
-			Expect(err).To(BeNil())
+			Expect(err).ToNot(HaveOccurred())
 			Expect(posts).To(Equal([]EnumPost{firstPost}))
 		})
 	})
