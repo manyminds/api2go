@@ -34,8 +34,7 @@ func (s PublishStatus) MarshalText() (text []byte, err error) {
 
 // UnmarshalText implements the TextUnmarshaler interface.
 func (s *PublishStatus) UnmarshalText(text []byte) error {
-	var label string
-	json.Unmarshal(text, &label)
+	label := string(text)
 
 	for key, v := range publishStatusValues {
 		if v == label {
@@ -48,7 +47,11 @@ func (s *PublishStatus) UnmarshalText(text []byte) error {
 }
 
 func (s *PublishStatus) UnmarshalJSON(data []byte) error {
-	return s.UnmarshalText(data)
+	var text string
+	if err := json.Unmarshal(data, &text); err != nil {
+		return err
+	}
+	return s.UnmarshalText([]byte(text))
 }
 
 type EnumPost struct {
@@ -69,7 +72,7 @@ func (e *EnumPost) SetID(ID string) error {
 
 var _ = Describe("Custom enum types", func() {
 	status := StatusPublished
-	statusValue := "\"published\""
+	statusValue := "published"
 	singleJSON := []byte(`{"data":{"id": "1", "type": "enumPosts", "attributes": {"title":"First Post","status":"published"}}}`)
 	firstPost := EnumPost{ID: "1", Title: "First Post", Status: StatusPublished}
 	singlePostMap := map[string]interface{}{
