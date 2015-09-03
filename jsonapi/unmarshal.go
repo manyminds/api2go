@@ -329,44 +329,44 @@ func setFieldValue(field *reflect.Value, value reflect.Value) (err error) {
 		}
 	}()
 
-	switch field.Type().Kind() {
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		field.SetInt(int64(value.Float()))
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-		field.SetUint(uint64(value.Float()))
-	case reflect.Slice:
-		// we always get a []interface{] from json and now need to cast to the right slice type
-		if value.Type() == reflect.TypeOf([]interface{}{}) {
-			targetSlice := reflect.MakeSlice(field.Type(), 0, value.Len())
-			sliceData := value.Interface().([]interface{})
-
-			// only iterate over the array if it's not empty
-			if value.Len() > 0 {
-				targetType := reflect.TypeOf(sliceData[0])
-				for _, entry := range sliceData {
-					casted := reflect.ValueOf(entry).Convert(targetType)
-					targetSlice = reflect.Append(targetSlice, casted)
-				}
-			}
-
-			field.Set(targetSlice)
-		} else {
-			// we have the correct type, hm this is only for tests that use direct type at the moment.. we have to refactor the unmarshalling
-			// anyways..
-			field.Set(value)
+	// check for Unmarshaler interface first, after that try to guess the right type
+	target, ok := field.Addr().Interface().(json.Unmarshaler)
+	if ok {
+		marshaledValue, err := json.Marshal(value.Interface())
+		if err != nil {
+			return err
 		}
-	default:
-		// try to set it with json.Unmarshaler interface, if that does not work, set value directly
-		switch target := field.Addr().Interface().(type) {
-		case json.Unmarshaler:
-			marshaledValue, err := json.Marshal(value.Interface())
-			if err != nil {
-				return err
-			}
 
-			err = target.UnmarshalJSON(marshaledValue)
-			if err != nil {
-				return err
+		err = target.UnmarshalJSON(marshaledValue)
+		if err != nil {
+			return err
+		}
+	} else {
+		switch field.Type().Kind() {
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+			field.SetInt(int64(value.Float()))
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+			field.SetUint(uint64(value.Float()))
+		case reflect.Slice:
+			// we always get a []interface{] from json and now need to cast to the right slice type
+			if value.Type() == reflect.TypeOf([]interface{}{}) {
+				targetSlice := reflect.MakeSlice(field.Type(), 0, value.Len())
+				sliceData := value.Interface().([]interface{})
+
+				// only iterate over the array if it's not empty
+				if value.Len() > 0 {
+					targetType := reflect.TypeOf(sliceData[0])
+					for _, entry := range sliceData {
+						casted := reflect.ValueOf(entry).Convert(targetType)
+						targetSlice = reflect.Append(targetSlice, casted)
+					}
+				}
+
+				field.Set(targetSlice)
+			} else {
+				// we have the correct type, hm this is only for tests that use direct type at the moment.. we have to refactor the unmarshalling
+				// anyways..
+				field.Set(value)
 			}
 		default:
 			field.Set(value)
