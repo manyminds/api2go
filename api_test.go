@@ -1468,4 +1468,34 @@ var _ = Describe("RestHandler", func() {
 			})
 		})
 	})
+
+	Context("When using middleware", func() {
+		var (
+			api    *API
+			rec    *httptest.ResponseRecorder
+			source *fixtureSource
+		)
+
+		BeforeEach(func() {
+			source = &fixtureSource{map[string]*Post{
+				"1": {ID: "1", Title: "Hello, World!"},
+			}, false}
+
+			api = NewAPI("v1")
+			api.AddResource(Post{}, source)
+			MiddleTest := func(c *APIContext, w http.ResponseWriter, r *http.Request) {
+				w.Header().Add("x-test", "test123")
+			}
+			api.UseMiddleware(MiddleTest)
+			rec = httptest.NewRecorder()
+		})
+
+		It("Should call the middleware and set value", func() {
+			rec = httptest.NewRecorder()
+			req, err := http.NewRequest("OPTIONS", "/v1/posts", nil)
+			Expect(err).To(BeNil())
+			api.Handler().ServeHTTP(rec, req)
+			Expect(rec.Header().Get("x-test")).To(Equal("test123"))
+		})
+	})
 })

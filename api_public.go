@@ -4,19 +4,25 @@ import (
 	"encoding/json"
 	"net/http"
 	"strings"
+	"sync"
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/manyminds/api2go/jsonapi"
 )
 
+// HandlerFunc for api2go middlewares
+type HandlerFunc func(*APIContext, http.ResponseWriter, *http.Request)
+
 // API is a REST JSONAPI.
 type API struct {
 	router *httprouter.Router
 	// Route prefix, including slashes
-	prefix     string
-	info       information
-	resources  []resource
-	marshalers map[string]ContentMarshaler
+	prefix      string
+	info        information
+	resources   []resource
+	marshalers  map[string]ContentMarshaler
+	middlewares []HandlerFunc
+	contextPool sync.Pool
 }
 
 // Handler returns the http.Handler instance for the API.
@@ -35,6 +41,12 @@ func (api *API) Router() *httprouter.Router {
 // a struct such as `&Post{}`. The same type will be used for constructing new elements.
 func (api *API) AddResource(prototype jsonapi.MarshalIdentifier, source CRUD) {
 	api.addResource(prototype, source, api.marshalers)
+}
+
+// UseMiddleware registers middlewares that implement the api2go.HandlerFunc
+// Middleware is run before any generated routes.
+func (api *API) UseMiddleware(middleware ...HandlerFunc) {
+	api.middlewares = append(api.middlewares, middleware...)
 }
 
 // Request contains additional information for FindOne and Find Requests
@@ -79,12 +91,19 @@ func NewAPIWithMarshalers(prefix string, baseURL string, marshalers map[string]C
 
 	info := information{prefix: prefix, baseURL: baseURL}
 
-	return &API{
-		router:     router,
-		prefix:     prefixSlashes,
-		info:       info,
-		marshalers: marshalers,
+	api := &API{
+		router:      router,
+		prefix:      prefixSlashes,
+		info:        info,
+		marshalers:  marshalers,
+		middlewares: make([]HandlerFunc, 0),
 	}
+
+	api.contextPool.New = func() interface{} {
+		return api.allocateContext()
+	}
+
+	return api
 }
 
 // NewAPI returns an initialized API instance
