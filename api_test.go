@@ -41,12 +41,12 @@ func (r Response) StatusCode() int {
 }
 
 type Post struct {
-	ID       string `json:"-"`
+	ID       string `jsonapi:"-"`
 	Title    string
 	Value    null.Float
-	Author   *User     `json:"-"`
-	Comments []Comment `json:"-"`
-	Bananas  []Banana  `json:"-"`
+	Author   *User     `jsonapi:"-"`
+	Comments []Comment `jsonapi:"-"`
+	Bananas  []Banana  `jsonapi:"-"`
 }
 
 func (p Post) GetID() string {
@@ -181,7 +181,7 @@ func (p Post) GetReferencedStructs() []jsonapi.MarshalIdentifier {
 }
 
 type Comment struct {
-	ID    string `json:"-"`
+	ID    string `jsonapi:"-"`
 	Value string
 }
 
@@ -199,7 +199,7 @@ func (b Banana) GetID() string {
 }
 
 type User struct {
-	ID   string `json:"-"`
+	ID   string `jsonapi:"-"`
 	Name string
 }
 

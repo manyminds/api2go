@@ -55,7 +55,7 @@ func (s *PublishStatus) UnmarshalJSON(data []byte) error {
 }
 
 type EnumPost struct {
-	ID     string `json:"-"`
+	ID     string `jsonapi:"-"`
 	Title  string
 	Status PublishStatus
 }

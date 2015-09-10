@@ -49,10 +49,11 @@ comments that belong with a has-many relation to the post.
 
 ```go
 type Post struct {
-  ID          int
+  ID          int       `jsonapi:"-"` // Ignore ID field because the ID is fetched via the
+                                      // GetID() method and must not be inside the attributes object.
   Title       string
-  Comments    []Comment `json:"-"` // this will be ignored by the api2go marshaller
-  CommentsIDs []int     `json:"-"` // it's only useful for our internal relationship handling
+  Comments    []Comment `jsonapi:"-"` // this will be ignored by the api2go marshaller
+  CommentsIDs []int     `jsonapi:"-"` // it's only useful for our internal relationship handling
 }
 
 type Comment struct {
@@ -65,8 +66,9 @@ You must at least implement one interface for api2go to work, which is the one f
 that you want to marshal/unmarshal. This is because of the huge variety of types that you could  use for the primary ID. For example a string,
 a UUID or a BSON Object for MongoDB etc...
 
-If the struct already has a field named `ID`, or `Id`, it will be ignored automatically. If your ID field has a different name, please use the
-json ignore tag. Api2go will use the `GetID` method that you implemented for your struct to fetch the ID of the struct.
+In the Post example struct, the `ID` field is ignored because Api2go will use the `GetID` method that you implemented for your struct to fetch the ID of the struct.
+Every field inside a struct will be marshaled into the `attributes` object in
+the json. In our example, we just want to have the `Title` field there.
 
 In order to use different internal names for elements, you can specify a jsonapi tag. The api will marshal results now with the name in the tag.
 Create/Update/Delete works accordingly, but will fallback to the internal value as well if possible.

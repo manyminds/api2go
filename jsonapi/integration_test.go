@@ -8,11 +8,11 @@ import (
 )
 
 type Book struct {
-	ID       string      `json:"-"`
-	Author   *StupidUser `json:"-"`
-	AuthorID string      `json:"-"`
-	Pages    []Page      `json:"-"`
-	PagesIDs []string    `json:"-"`
+	ID       string      `jsonapi:"-"`
+	Author   *StupidUser `jsonapi:"-"`
+	AuthorID string      `jsonapi:"-"`
+	Pages    []Page      `jsonapi:"-"`
+	PagesIDs []string    `jsonapi:"-"`
 }
 
 func (b Book) GetID() string {
@@ -84,7 +84,7 @@ func (b Book) GetReferencedStructs() []MarshalIdentifier {
 }
 
 type StupidUser struct {
-	ID   string `json:"-"`
+	ID   string `jsonapi:"-"`
 	Name string
 }
 
@@ -93,7 +93,7 @@ func (s StupidUser) GetID() string {
 }
 
 type Page struct {
-	ID      string `json:"-"`
+	ID      string `jsonapi:"-"`
 	Content string
 }
 

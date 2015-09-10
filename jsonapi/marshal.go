@@ -387,7 +387,7 @@ func getStructFields(data MarshalIdentifier) map[string]interface{} {
 	}
 	valType := val.Type()
 	for i := 0; i < val.NumField(); i++ {
-		tag := valType.Field(i).Tag.Get("json")
+		tag := valType.Field(i).Tag.Get("jsonapi")
 		if tag == "-" {
 			continue
 		}

@@ -13,7 +13,7 @@ import (
 )
 
 type SomeData struct {
-	ID         string `json:"-"`
+	ID         string `jsonapi:"-"`
 	Data       string
 	CustomerID string `jsonapi:"name=customerId"`
 }
