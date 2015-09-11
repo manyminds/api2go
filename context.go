@@ -37,7 +37,7 @@ func (c *APIContext) Get(key string) (value interface{}, exists bool) {
 	return
 }
 
-// reset resets all values on Context, making it safe to reuse
+// Reset resets all values on Context, making it safe to reuse
 func (c *APIContext) Reset() {
 	c.keys = nil
 }
