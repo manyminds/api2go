@@ -8,12 +8,12 @@ import (
 
 // User is a generic database user
 type User struct {
-	ID string
+	ID string `jsonapi:"-"`
 	//rename the username field to user-name.
 	Username      string       `jsonapi:"name=user-name"`
-	PasswordHash  string       `json:"-"`
-	Chocolates    []*Chocolate `json:"-"`
-	ChocolatesIDs []string     `json:"-"`
+	PasswordHash  string       `jsonapi:"-"`
+	Chocolates    []*Chocolate `jsonapi:"-"`
+	ChocolatesIDs []string     `jsonapi:"-"`
 	exists        bool
 }
 

@@ -2,7 +2,7 @@ package model
 
 // Chocolate is the chocolate that a user consumes in order to get fat and happy
 type Chocolate struct {
-	ID    string `json:"-"`
+	ID    string `jsonapi:"-"`
 	Name  string
 	Taste string
 }

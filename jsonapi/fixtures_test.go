@@ -11,7 +11,7 @@ import (
 )
 
 type Magic struct {
-	ID MagicID `json:"-"`
+	ID MagicID `jsonapi:"-"`
 }
 
 func (m Magic) GetID() string {
@@ -25,7 +25,7 @@ func (m MagicID) String() string {
 }
 
 type Comment struct {
-	ID   int `json:"-"`
+	ID   int `jsonapi:"-"`
 	Text string
 }
 
@@ -45,9 +45,9 @@ func (c *Comment) SetID(stringID string) error {
 }
 
 type User struct {
-	ID       int `json:"-"`
+	ID       int `jsonapi:"-"`
 	Name     string
-	Password string `json:"-"`
+	Password string `jsonapi:"-"`
 }
 
 func (u User) GetID() string {
@@ -66,8 +66,9 @@ func (u *User) SetID(stringID string) error {
 }
 
 type SimplePost struct {
-	ID          string `json:"-"`
+	ID          string `jsonapi:"-"`
 	Title, Text string
+	Internal    string `jsonapi:"-"`
 	Size        int
 	Created     time.Time `jsonapi:"name=create-date"`
 }
@@ -83,14 +84,14 @@ func (s *SimplePost) SetID(ID string) error {
 }
 
 type Post struct {
-	ID            int `json:"-"`
+	ID            int `jsonapi:"-"`
 	Title         string
-	Comments      []Comment     `json:"-"`
-	CommentsIDs   []int         `json:"-"`
-	CommentsEmpty bool          `json:"-"`
-	Author        *User         `json:"-"`
-	AuthorID      sql.NullInt64 `json:"-"`
-	AuthorEmpty   bool          `json:"-"`
+	Comments      []Comment     `jsonapi:"-"`
+	CommentsIDs   []int         `jsonapi:"-"`
+	CommentsEmpty bool          `jsonapi:"-"`
+	Author        *User         `jsonapi:"-"`
+	AuthorID      sql.NullInt64 `jsonapi:"-"`
+	AuthorEmpty   bool          `jsonapi:"-"`
 }
 
 func (c Post) GetID() string {
@@ -213,9 +214,9 @@ func (c *Post) SetReferencedStructs(references []UnmarshalIdentifier) error {
 }
 
 type AnotherPost struct {
-	ID       int   `json:"-"`
-	AuthorID int   `json:"-"`
-	Author   *User `json:"-"`
+	ID       int   `jsonapi:"-"`
+	AuthorID int   `jsonapi:"-"`
+	Author   *User `jsonapi:"-"`
 }
 
 func (p AnotherPost) GetID() string {
@@ -242,7 +243,7 @@ func (p AnotherPost) GetReferencedIDs() []ReferenceID {
 }
 
 type ZeroPost struct {
-	ID    string `json:"-"`
+	ID    string `jsonapi:"-"`
 	Title string
 	Value zero.Float
 }
@@ -252,7 +253,7 @@ func (z ZeroPost) GetID() string {
 }
 
 type ZeroPostPointer struct {
-	ID    string `json:"-"`
+	ID    string `jsonapi:"-"`
 	Title string
 	Value *zero.Float
 }
@@ -262,10 +263,10 @@ func (z ZeroPostPointer) GetID() string {
 }
 
 type Question struct {
-	ID                  string `json:"-"`
+	ID                  string `jsonapi:"-"`
 	Text                string
-	InspiringQuestionID sql.NullString `json:"-"`
-	InspiringQuestion   *Question      `json:"-"`
+	InspiringQuestionID sql.NullString `jsonapi:"-"`
+	InspiringQuestion   *Question      `jsonapi:"-"`
 }
 
 func (q Question) GetID() string {
@@ -300,7 +301,7 @@ func (q Question) GetReferencedStructs() []MarshalIdentifier {
 }
 
 type Identity struct {
-	ID     int64    `json:"-"`
+	ID     int64    `jsonapi:"-"`
 	Scopes []string `json:"scopes"`
 }
 
@@ -324,7 +325,7 @@ func (u Unicorn) GetID() string {
 }
 
 type NumberPost struct {
-	ID             string `json:"-"`
+	ID             string `jsonapi:"-"`
 	Title          string
 	Number         int64
 	UnsignedNumber uint64
@@ -337,7 +338,7 @@ func (n *NumberPost) SetID(ID string) error {
 }
 
 type SQLNullPost struct {
-	ID     string `json:"-"`
+	ID     string `jsonapi:"-"`
 	Title  zero.String
 	Likes  zero.Int
 	Rating zero.Float

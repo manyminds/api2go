@@ -6,11 +6,11 @@ import (
 )
 
 type Node struct {
-	ID                string `json:"-"`
+	ID                string `jsonapi:"-"`
 	Content           string
-	MotherID          string   `json:"-"`
-	ChildIDs          []string `json:"-"`
-	AbandonedChildIDs []string `json:"-"`
+	MotherID          string   `jsonapi:"-"`
+	ChildIDs          []string `jsonapi:"-"`
+	AbandonedChildIDs []string `jsonapi:"-"`
 }
 
 func (n *Node) GetID() string {

@@ -10,7 +10,7 @@ import (
 )
 
 type BaguetteTaste struct {
-	ID    string `json:"-"`
+	ID    string `jsonapi:"-"`
 	Taste string
 }
 

@@ -125,6 +125,21 @@ var _ = Describe("Unmarshal", func() {
 			Expect(err).To(HaveOccurred())
 		})
 
+		It("errors if a field is in the json that is ignored by the struct", func() {
+			var post SimplePost
+			err := Unmarshal(map[string]interface{}{
+				"data": map[string]interface{}{
+					"id": "1234",
+					"attributes": map[string]interface{}{
+						"title":    "something",
+						"text":     "blubb",
+						"internal": "1337",
+					},
+				},
+			}, &post)
+			Expect(err.Error()).To(Equal("invalid key \"internal\" in json. Cannot be assigned to target struct \"SimplePost\""))
+		})
+
 		It("errors with wrong type, expected int, got a string", func() {
 			var posts []SimplePost
 			err := Unmarshal(map[string]interface{}{

@@ -53,7 +53,6 @@ var _ = Describe("CrudExample", func() {
 				"id": "1",
 				"type": "users",
 				"attributes": {
-					"id": "1",
 					"user-name": "marvin"
 				},
 				"relationships": {
@@ -144,7 +143,6 @@ var _ = Describe("CrudExample", func() {
 			},
 			"data": {
 				"attributes": {
-					"id": "1",
 					"user-name": "marvin"
 				},
 				"id": "1",
@@ -219,7 +217,6 @@ var _ = Describe("CrudExample", func() {
 			},
 			"data": {
 				"attributes": {
-					"id": "1",
 					"user-name": "marvin"
 				},
 				"id": "1",
@@ -272,7 +269,6 @@ var _ = Describe("CrudExample", func() {
 			},
 			"data": {
 				"attributes": {
-					"id": "1",
 					"user-name": "marvin"
 				},
 				"id": "1",
@@ -397,7 +393,6 @@ var _ = Describe("CrudExample", func() {
 				},
 				"data": {
 					"attributes": {
-						"id": "1",
 						"user-name": "marvin"
 					},
 					"id": "1",
