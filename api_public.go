@@ -60,6 +60,7 @@ type Request struct {
 	PlainRequest *http.Request
 	QueryParams  map[string][]string
 	Header       http.Header
+	Context      APIContexter
 }
 
 //SetRedirectTrailingSlash enables 307 redirects on urls ending with /

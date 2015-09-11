@@ -1241,8 +1241,9 @@ var _ = Describe("RestHandler", func() {
 		It("Extracts multiple parameters correctly", func() {
 			req, err := http.NewRequest("GET", "/v0/posts?sort=title,date", nil)
 			Expect(err).To(BeNil())
+			c := &APIContext{}
 
-			api2goReq := buildRequest(req)
+			api2goReq := buildRequest(c, req)
 			Expect(api2goReq.QueryParams).To(Equal(map[string][]string{"sort": {"title", "date"}}))
 		})
 	})
