@@ -22,24 +22,6 @@ func (i invalid) GetID() string {
 	return "invalid"
 }
 
-type Response struct {
-	Meta map[string]interface{}
-	Res  interface{}
-	Code int
-}
-
-func (r Response) Metadata() map[string]interface{} {
-	return r.Meta
-}
-
-func (r Response) Result() interface{} {
-	return r.Res
-}
-
-func (r Response) StatusCode() int {
-	return r.Code
-}
-
 type Post struct {
 	ID       string `jsonapi:"-"`
 	Title    string
