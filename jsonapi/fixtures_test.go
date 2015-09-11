@@ -68,6 +68,7 @@ func (u *User) SetID(stringID string) error {
 type SimplePost struct {
 	ID          string `jsonapi:"-"`
 	Title, Text string
+	Internal    string `jsonapi:"-"`
 	Size        int
 	Created     time.Time `jsonapi:"name=create-date"`
 }

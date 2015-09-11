@@ -256,19 +256,20 @@ func UnmarshalInto(input map[string]interface{}, targetStructType reflect.Type, 
 					fieldName := Dejsonify(key)
 					field := val.FieldByName(fieldName)
 					fieldType, found := val.Type().FieldByName(fieldName)
-					if !found || found && fieldType.Tag.Get("jsonapi") == "-" {
+					if !found {
 						//check if there is any field tag with the given name available
 						for x := 0; x < val.NumField(); x++ {
 							tfield := val.Type().Field(x)
 							name := GetTagValueByName(tfield, "name")
 							if tfield.Tag.Get("jsonapi") != "-" && strings.ToLower(name) == strings.ToLower(fieldName) {
 								field = val.Field(x)
+								found = true
 							}
 						}
 
-						if !field.IsValid() {
-							return errors.New("expected struct " + targetStructType.Name() + " to have field " + fieldName)
-						}
+					}
+					if !found || fieldType.Tag.Get("jsonapi") == "-" {
+						return fmt.Errorf("invalid key \"%s\" in json. Cannot be assigned to target struct \"%s\"", key, targetStructType.Name())
 					}
 
 					value := reflect.ValueOf(attributeValue)
