@@ -1483,7 +1483,7 @@ var _ = Describe("RestHandler", func() {
 
 			api = NewAPI("v1")
 			api.AddResource(Post{}, source)
-			MiddleTest := func(c *APIContext, w http.ResponseWriter, r *http.Request) {
+			MiddleTest := func(c APIContexter, w http.ResponseWriter, r *http.Request) {
 				w.Header().Add("x-test", "test123")
 			}
 			api.UseMiddleware(MiddleTest)
@@ -1497,5 +1497,40 @@ var _ = Describe("RestHandler", func() {
 			api.Handler().ServeHTTP(rec, req)
 			Expect(rec.Header().Get("x-test")).To(Equal("test123"))
 		})
+	})
+
+	Context("Custom context", func() {
+		var (
+			api                 *API
+			customContextCalled bool = false
+			rec                 *httptest.ResponseRecorder
+			source              *fixtureSource
+		)
+		type CustomContext struct {
+			APIContext
+		}
+
+		BeforeEach(func() {
+			source = &fixtureSource{map[string]*Post{
+				"1": {ID: "1", Title: "Hello, World!"},
+			}, false}
+
+			api = NewAPI("v1")
+			api.AddResource(Post{}, source)
+			api.SetContextAllocator(func(api *API) APIContexter {
+				customContextCalled = true
+				return &CustomContext{}
+			})
+			rec = httptest.NewRecorder()
+		})
+
+		It("calls into custom context allocator", func() {
+			rec = httptest.NewRecorder()
+			req, err := http.NewRequest("OPTIONS", "/v1/posts", nil)
+			Expect(err).To(BeNil())
+			api.Handler().ServeHTTP(rec, req)
+			Expect(customContextCalled).To(BeTrue())
+		})
+
 	})
 })

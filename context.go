@@ -5,6 +5,17 @@ import (
 	"time"
 )
 
+// APIContextAllocatorFunc to allow custom context implementations
+type APIContextAllocatorFunc func(*API) APIContexter
+
+// APIContexter embedding context.Context and requesting two helper functions
+type APIContexter interface {
+	context.Context
+	Set(key string, value interface{})
+	Get(key string) (interface{}, bool)
+	Reset()
+}
+
 // APIContext api2go context for handlers, nil implementations related to Deadline and Done.
 type APIContext struct {
 	keys map[string]interface{}
@@ -27,7 +38,7 @@ func (c *APIContext) Get(key string) (value interface{}, exists bool) {
 }
 
 // reset resets all values on Context, making it safe to reuse
-func (c *APIContext) reset() {
+func (c *APIContext) Reset() {
 	c.keys = nil
 }
 
@@ -56,7 +67,7 @@ func (c *APIContext) Value(key interface{}) interface{} {
 }
 
 // Compile time check
-var _ context.Context = &APIContext{}
+var _ APIContexter = &APIContext{}
 
 // ContextQueryParams fetches the QueryParams if Set
 func ContextQueryParams(c *APIContext) map[string][]string {

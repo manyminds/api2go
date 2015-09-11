@@ -31,12 +31,12 @@ var _ = Describe("Context", func() {
 			Expect(key).To(BeNil())
 		})
 	})
-	Context("reset", func() {
+	Context("Reset", func() {
 		c := &APIContext{}
 		c.Set("test", 3)
 
 		It("reset removes keys", func() {
-			c.reset()
+			c.Reset()
 			_, ok := c.Get("test")
 			Expect(ok).To(BeFalse())
 		})

@@ -192,14 +192,14 @@ type resource struct {
 }
 
 // middlewareChain executes the middleeware chain setup
-func (api *API) middlewareChain(c *APIContext, w http.ResponseWriter, r *http.Request) {
+func (api *API) middlewareChain(c APIContexter, w http.ResponseWriter, r *http.Request) {
 	for _, middleware := range api.middlewares {
 		middleware(c, w, r)
 	}
 }
 
 // allocateContext creates a context for the api.contextPool, saving allocations
-func (api *API) allocateContext() *APIContext {
+func (api *API) allocateDefaultContext() APIContexter {
 	return &APIContext{}
 }
 
@@ -236,8 +236,8 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD, ma
 	}
 
 	api.router.Handle("OPTIONS", api.prefix+name, func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		c := api.contextPool.Get().(*APIContext)
-		c.reset()
+		c := api.contextPool.Get().(APIContexter)
+		c.Reset()
 		api.middlewareChain(c, w, r)
 		w.Header().Set("Allow", "GET,POST,PATCH,OPTIONS")
 		w.WriteHeader(http.StatusNoContent)
@@ -245,8 +245,8 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD, ma
 	})
 
 	api.router.Handle("OPTIONS", api.prefix+name+"/:id", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		c := api.contextPool.Get().(*APIContext)
-		c.reset()
+		c := api.contextPool.Get().(APIContexter)
+		c.Reset()
 		api.middlewareChain(c, w, r)
 		w.Header().Set("Allow", "GET,PATCH,DELETE,OPTIONS")
 		w.WriteHeader(http.StatusNoContent)
@@ -254,8 +254,8 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD, ma
 	})
 
 	api.router.GET(api.prefix+name, func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-		c := api.contextPool.Get().(*APIContext)
-		c.reset()
+		c := api.contextPool.Get().(APIContexter)
+		c.Reset()
 		api.middlewareChain(c, w, r)
 		err := res.handleIndex(w, r, api.info)
 		api.contextPool.Put(c)
@@ -265,8 +265,8 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD, ma
 	})
 
 	api.router.GET(api.prefix+name+"/:id", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		c := api.contextPool.Get().(*APIContext)
-		c.reset()
+		c := api.contextPool.Get().(APIContexter)
+		c.Reset()
 		api.middlewareChain(c, w, r)
 		err := res.handleRead(w, r, ps, api.info)
 		api.contextPool.Put(c)
@@ -282,8 +282,8 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD, ma
 		for _, relation := range relations {
 			api.router.GET(api.prefix+name+"/:id/relationships/"+relation.Name, func(relation jsonapi.Reference) httprouter.Handle {
 				return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-					c := api.contextPool.Get().(*APIContext)
-					c.reset()
+					c := api.contextPool.Get().(APIContexter)
+					c.Reset()
 					api.middlewareChain(c, w, r)
 					err := res.handleReadRelation(w, r, ps, api.info, relation)
 					api.contextPool.Put(c)
@@ -295,8 +295,8 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD, ma
 
 			api.router.GET(api.prefix+name+"/:id/"+relation.Name, func(relation jsonapi.Reference) httprouter.Handle {
 				return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-					c := api.contextPool.Get().(*APIContext)
-					c.reset()
+					c := api.contextPool.Get().(APIContexter)
+					c.Reset()
 					api.middlewareChain(c, w, r)
 					err := res.handleLinked(api, w, r, ps, relation, api.info)
 					api.contextPool.Put(c)
@@ -308,8 +308,8 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD, ma
 
 			api.router.PATCH(api.prefix+name+"/:id/relationships/"+relation.Name, func(relation jsonapi.Reference) httprouter.Handle {
 				return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-					c := api.contextPool.Get().(*APIContext)
-					c.reset()
+					c := api.contextPool.Get().(APIContexter)
+					c.Reset()
 					api.middlewareChain(c, w, r)
 					err := res.handleReplaceRelation(w, r, ps, relation)
 					api.contextPool.Put(c)
@@ -323,8 +323,8 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD, ma
 				// generate additional routes to manipulate to-many relationships
 				api.router.POST(api.prefix+name+"/:id/relationships/"+relation.Name, func(relation jsonapi.Reference) httprouter.Handle {
 					return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-						c := api.contextPool.Get().(*APIContext)
-						c.reset()
+						c := api.contextPool.Get().(APIContexter)
+						c.Reset()
 						api.middlewareChain(c, w, r)
 						err := res.handleAddToManyRelation(w, r, ps, relation)
 						api.contextPool.Put(c)
@@ -336,8 +336,8 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD, ma
 
 				api.router.DELETE(api.prefix+name+"/:id/relationships/"+relation.Name, func(relation jsonapi.Reference) httprouter.Handle {
 					return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-						c := api.contextPool.Get().(*APIContext)
-						c.reset()
+						c := api.contextPool.Get().(APIContexter)
+						c.Reset()
 						api.middlewareChain(c, w, r)
 						err := res.handleDeleteToManyRelation(w, r, ps, relation)
 						api.contextPool.Put(c)
@@ -351,8 +351,8 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD, ma
 	}
 
 	api.router.POST(api.prefix+name, func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		c := api.contextPool.Get().(*APIContext)
-		c.reset()
+		c := api.contextPool.Get().(APIContexter)
+		c.Reset()
 		api.middlewareChain(c, w, r)
 		err := res.handleCreate(w, r, api.prefix, api.info)
 		api.contextPool.Put(c)
@@ -362,8 +362,8 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD, ma
 	})
 
 	api.router.DELETE(api.prefix+name+"/:id", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		c := api.contextPool.Get().(*APIContext)
-		c.reset()
+		c := api.contextPool.Get().(APIContexter)
+		c.Reset()
 		api.middlewareChain(c, w, r)
 		err := res.handleDelete(w, r, ps)
 		api.contextPool.Put(c)
@@ -373,8 +373,8 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD, ma
 	})
 
 	api.router.PATCH(api.prefix+name+"/:id", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		c := api.contextPool.Get().(*APIContext)
-		c.reset()
+		c := api.contextPool.Get().(APIContexter)
+		c.Reset()
 		api.middlewareChain(c, w, r)
 		err := res.handleUpdate(w, r, ps)
 		api.contextPool.Put(c)
