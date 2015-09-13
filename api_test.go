@@ -1223,8 +1223,9 @@ var _ = Describe("RestHandler", func() {
 		It("Extracts multiple parameters correctly", func() {
 			req, err := http.NewRequest("GET", "/v0/posts?sort=title,date", nil)
 			Expect(err).To(BeNil())
+			c := &APIContext{}
 
-			api2goReq := buildRequest(req)
+			api2goReq := buildRequest(c, req)
 			Expect(api2goReq.QueryParams).To(Equal(map[string][]string{"sort": {"title", "date"}}))
 		})
 	})
@@ -1449,5 +1450,70 @@ var _ = Describe("RestHandler", func() {
 				Expect(&testItem).To(Equal(actual))
 			})
 		})
+	})
+
+	Context("When using middleware", func() {
+		var (
+			api    *API
+			rec    *httptest.ResponseRecorder
+			source *fixtureSource
+		)
+
+		BeforeEach(func() {
+			source = &fixtureSource{map[string]*Post{
+				"1": {ID: "1", Title: "Hello, World!"},
+			}, false}
+
+			api = NewAPI("v1")
+			api.AddResource(Post{}, source)
+			MiddleTest := func(c APIContexter, w http.ResponseWriter, r *http.Request) {
+				w.Header().Add("x-test", "test123")
+			}
+			api.UseMiddleware(MiddleTest)
+			rec = httptest.NewRecorder()
+		})
+
+		It("Should call the middleware and set value", func() {
+			rec = httptest.NewRecorder()
+			req, err := http.NewRequest("OPTIONS", "/v1/posts", nil)
+			Expect(err).To(BeNil())
+			api.Handler().ServeHTTP(rec, req)
+			Expect(rec.Header().Get("x-test")).To(Equal("test123"))
+		})
+	})
+
+	Context("Custom context", func() {
+		var (
+			api                 *API
+			customContextCalled bool = false
+			rec                 *httptest.ResponseRecorder
+			source              *fixtureSource
+		)
+		type CustomContext struct {
+			APIContext
+		}
+
+		BeforeEach(func() {
+			source = &fixtureSource{map[string]*Post{
+				"1": {ID: "1", Title: "Hello, World!"},
+			}, false}
+
+			api = NewAPI("v1")
+			api.AddResource(Post{}, source)
+			api.SetContextAllocator(func(api *API) APIContexter {
+				customContextCalled = true
+				return &CustomContext{}
+			})
+			rec = httptest.NewRecorder()
+		})
+
+		It("calls into custom context allocator", func() {
+			rec = httptest.NewRecorder()
+			req, err := http.NewRequest("OPTIONS", "/v1/posts", nil)
+			Expect(err).To(BeNil())
+			api.Handler().ServeHTTP(rec, req)
+			Expect(customContextCalled).To(BeTrue())
+		})
+
 	})
 })

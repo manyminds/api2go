@@ -4,19 +4,26 @@ import (
 	"encoding/json"
 	"net/http"
 	"strings"
+	"sync"
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/manyminds/api2go/jsonapi"
 )
 
+// HandlerFunc for api2go middlewares
+type HandlerFunc func(APIContexter, http.ResponseWriter, *http.Request)
+
 // API is a REST JSONAPI.
 type API struct {
 	router *httprouter.Router
 	// Route prefix, including slashes
-	prefix     string
-	info       information
-	resources  []resource
-	marshalers map[string]ContentMarshaler
+	prefix           string
+	info             information
+	resources        []resource
+	marshalers       map[string]ContentMarshaler
+	middlewares      []HandlerFunc
+	contextPool      sync.Pool
+	contextAllocator APIContextAllocatorFunc
 }
 
 // Handler returns the http.Handler instance for the API.
@@ -37,11 +44,23 @@ func (api *API) AddResource(prototype jsonapi.MarshalIdentifier, source CRUD) {
 	api.addResource(prototype, source, api.marshalers)
 }
 
+// UseMiddleware registers middlewares that implement the api2go.HandlerFunc
+// Middleware is run before any generated routes.
+func (api *API) UseMiddleware(middleware ...HandlerFunc) {
+	api.middlewares = append(api.middlewares, middleware...)
+}
+
+// SetContextAllocator custom implementation for making contexts
+func (api *API) SetContextAllocator(allocator APIContextAllocatorFunc) {
+	api.contextAllocator = allocator
+}
+
 // Request contains additional information for FindOne and Find Requests
 type Request struct {
 	PlainRequest *http.Request
 	QueryParams  map[string][]string
 	Header       http.Header
+	Context      APIContexter
 }
 
 //SetRedirectTrailingSlash enables 307 redirects on urls ending with /
@@ -79,12 +98,23 @@ func NewAPIWithMarshalers(prefix string, baseURL string, marshalers map[string]C
 
 	info := information{prefix: prefix, baseURL: baseURL}
 
-	return &API{
-		router:     router,
-		prefix:     prefixSlashes,
-		info:       info,
-		marshalers: marshalers,
+	api := &API{
+		router:           router,
+		prefix:           prefixSlashes,
+		info:             info,
+		marshalers:       marshalers,
+		middlewares:      make([]HandlerFunc, 0),
+		contextAllocator: nil,
 	}
+
+	api.contextPool.New = func() interface{} {
+		if api.contextAllocator != nil {
+			return api.contextAllocator(api)
+		}
+		return api.allocateDefaultContext()
+	}
+
+	return api
 }
 
 // NewAPI returns an initialized API instance
