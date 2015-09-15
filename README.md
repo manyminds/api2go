@@ -37,6 +37,7 @@ go get github.com/manyminds/api2go/jsonapi
   - [Using Pagination](#using-pagination)
   - [Fetching related IDs](#fetching-related-ids)
   - [Fetching related resources](#fetching-related-resources)
+  - [Using middleware](#using-middleware)
 - [Tests](#tests)
 
 ## Examples
@@ -536,6 +537,35 @@ parameter `postsID`.
 So if you implement the `FindAll` method, do not forget to check for all possible query Parameters. This means you have
 to check all your other structs and if it references the one for that you are implementing `FindAll`, check for the
 query Paramter and only return comments that belong to it. In this example, return the comments for the Post.
+
+### Using middleware
+Using middlewares can always be useful. We provide a custom `APIContext` with
+a [context](https://godoc.org/golang.org/x/net/context) implementation that you
+can use if you for example need to check if a user is properly authenticated
+before a request reaches the api2go routes.
+
+You can either use our struct or implement your own with the `APIContexter`
+interface
+
+```go
+type APIContexter interface {
+    context.Context
+    Set(key string, value interface{})
+    Get(key string) (interface{}, bool)
+    Reset()
+}
+```
+
+If you implemented your own `APIContexter`, don't forget to define
+a `APIContextAllocatorFunc` and set it with `func (api *API) SetContextAllocator(allocator APIContextAllocatorFunc)`
+
+But in most cases, this is not needed.
+
+To use a middleware, it is needed to implement our
+`type HandlerFunc func(APIContexter, http.ResponseWriter, *http.Request)`. A `HandlerFunc` can then be 
+registered with `func (api *API) UseMiddleware(middleware ...HandlerFunc)`. You can either pass one or many middlewares 
+that will be executed in order before any other api2go routes. Use this to set up database connections, user authentication
+and so on.
 
 ## Tests
 
