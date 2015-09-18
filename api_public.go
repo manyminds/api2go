@@ -94,7 +94,7 @@ func NewAPIWithMarshalers(prefix string, baseURL string, marshalers map[string]C
 	}
 
 	router := httprouter.New()
-	router.MethodNotAllowed = notAllowedHandler{marshalers: marshalers}
+	router.MethodNotAllowed = notAllowedHandler{marshalers: marshalers}.ServeHTTP
 
 	info := information{prefix: prefix, baseURL: baseURL}
 
