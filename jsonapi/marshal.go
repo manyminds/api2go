@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 )
 
 // MarshalIdentifier interface is necessary to give an element
@@ -301,25 +302,18 @@ func getStructRelationships(relationer MarshalLinkedRelations, information Serve
 // helper method to generate URL fields for `links`
 func getLinksForServerInformation(relationer MarshalLinkedRelations, name string, information ServerInformation) map[string]string {
 	links := map[string]string{}
-	// generate links if necessary
+
 	if information != serverInformationNil {
-		prefix := ""
-		baseURL := information.GetBaseURL()
-		if baseURL != "" {
-			prefix = baseURL
-		}
-		p := information.GetPrefix()
-		if p != "" {
-			prefix += "/" + p
+		prefix := strings.Trim(information.GetBaseURL(), "/")
+		namespace := strings.Trim(information.GetPrefix(), "/")
+		structType := getStructType(relationer)
+
+		if namespace != "" {
+			prefix += "/" + namespace
 		}
 
-		if prefix != "" {
-			links["self"] = fmt.Sprintf("%s/%s/%s/relationships/%s", prefix, getStructType(relationer), relationer.GetID(), name)
-			links["related"] = fmt.Sprintf("%s/%s/%s/%s", prefix, getStructType(relationer), relationer.GetID(), name)
-		} else {
-			links["self"] = fmt.Sprintf("/%s/%s/relationships/%s", getStructType(relationer), relationer.GetID(), name)
-			links["related"] = fmt.Sprintf("/%s/%s/%s", getStructType(relationer), relationer.GetID(), name)
-		}
+		links["self"] = fmt.Sprintf("%s/%s/%s/relationships/%s", prefix, structType, relationer.GetID(), name)
+		links["related"] = fmt.Sprintf("%s/%s/%s/%s", prefix, structType, relationer.GetID(), name)
 	}
 
 	return links
