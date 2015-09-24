@@ -73,14 +73,21 @@ func (api *API) SetRedirectTrailingSlash(enabled bool) {
 	api.router.RedirectTrailingSlash = enabled
 }
 
-// NewAPIWithMarshalers does the same as NewAPIWithBaseURL with the addition
+//NewAPIWithMarshalers is DEPRECATED
+//use NewApiWithMarshalling instead
+func NewAPIWithMarshalers(prefix string, baseURL string, marshalers map[string]ContentMarshaler) *API {
+	staticResolver := newStaticResolver(baseURL)
+	return NewAPIWithMarshalling(prefix, staticResolver, marshalers)
+}
+
+// NewAPIWithMarshalling does the same as NewAPIWithBaseURL with the addition
 // of a set of marshalers that provide a way to interact with clients that
 // use a serialization format other than JSON. The marshalers map is indexed
 // by the MIME content type to use for a given request-response pair. If the
 // client provides an Accept header the server will respond using the client's
 // preferred content type, otherwise it will respond using whatever content
 // type the client provided in its Content-Type request header.
-func NewAPIWithMarshalers(prefix string, baseURL string, marshalers map[string]ContentMarshaler) *API {
+func NewAPIWithMarshalling(prefix string, resolver URLResolver, marshalers map[string]ContentMarshaler) *API {
 	if len(marshalers) == 0 {
 		panic("marshaler map must not be empty")
 	}
@@ -96,7 +103,7 @@ func NewAPIWithMarshalers(prefix string, baseURL string, marshalers map[string]C
 	router := httprouter.New()
 	router.MethodNotAllowed = notAllowedHandler{marshalers: marshalers}
 
-	info := information{prefix: prefix, baseURL: baseURL}
+	info := information{prefix: prefix, resolver: resolver}
 
 	api := &API{
 		router:           router,

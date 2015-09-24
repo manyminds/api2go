@@ -38,6 +38,7 @@ go get github.com/manyminds/api2go/jsonapi
   - [Fetching related IDs](#fetching-related-ids)
   - [Fetching related resources](#fetching-related-resources)
   - [Using middleware](#using-middleware)
+  - [Dynamic URL Handling](#dynamic-url-handling)
 - [Tests](#tests)
 
 ## Examples
@@ -567,6 +568,32 @@ registered with `func (api *API) UseMiddleware(middleware ...HandlerFunc)`. You 
 that will be executed in order before any other api2go routes. Use this to set up database connections, user authentication
 and so on.
 
+### Dynamic URL handling
+If you have different TLDs for one api, or want to use different domains in development and production, you can implement a custom
+URLResolver in api2go. 
+
+There is a simple interface, which can be used if you get TLD information from the database, the server environment, or anything else
+that's not request dependant:
+```go
+type URLResolver interface {
+	GetBaseURL() string
+}
+```
+And a more complex one that also gets request information:
+```go
+type RequestAwareURLResolver interface {
+	URLResolver
+	SetRequest(http.Request)
+}
+```
+
+For most use cases we provide a CallbackResolver which works on a per request basis and may fill
+your basic needs. This is particulary useful if you are using an nginx proxy which sets `X-Forwarded-For` headers.
+
+```go
+resolver := NewCallbackResolver(func(r http.Request) string{})
+api := NewApiWithMarshalling("v1", resolver, marshalers)
+```
 ## Tests
 
 ```sh

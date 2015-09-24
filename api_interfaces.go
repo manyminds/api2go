@@ -1,5 +1,7 @@
 package api2go
 
+import "net/http"
+
 // The CRUD interface MUST be implemented in order to use the api2go api.
 type CRUD interface {
 	// FindOne returns an object by its ID
@@ -52,6 +54,29 @@ type PaginatedFindAll interface {
 type FindAll interface {
 	// FindAll returns all objects
 	FindAll(req Request) (Responder, error)
+}
+
+//URLResolver allows you to implement a static
+//way to return a baseURL for all incoming
+//requests for one api2go instance.
+type URLResolver interface {
+	GetBaseURL() string
+}
+
+//RequestAwareURLResolver allows you to dynamically change
+//generated urls.
+//
+//This is particulary useful if you have the same
+//API answering to multiple domains, or subdomains
+//e.g customer[1,2,3,4].yourapi.example.com
+//
+//SetRequest will always be called prior to
+//the GetBaseURL() from `URLResolver` so you
+//have to change the result value based on the last
+//request.
+type RequestAwareURLResolver interface {
+	URLResolver
+	SetRequest(http.Request)
 }
 
 // The Responder interface is used by all Resource Methods as a container for the Response.

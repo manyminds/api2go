@@ -2,6 +2,8 @@
 Package examples shows how to implement a basic CRUD for two data structures with the api2go server functionality.
 To play with this example server you can run some of the following curl requests
 
+In order to demonstrate dynamic baseurl handling for requests, apply the --header="REQUEST_URI:https://www.your.domain.example.com" parameter to any of the commands.
+
 Create a new user:
 	curl -X POST http://localhost:31415/v0/users -d '{"data" : [{"type" : "users" , "attributes": {"user-name" : "marvin"}}]}'
 
@@ -47,6 +49,7 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"github.com/manyminds/api2go"
 	"github.com/manyminds/api2go/examples/model"
+	"github.com/manyminds/api2go/examples/resolver"
 	"github.com/manyminds/api2go/examples/resource"
 	"github.com/manyminds/api2go/examples/storage"
 )
@@ -75,17 +78,19 @@ func main() {
 		"application/vnd.api+json": PrettyJSONContentMarshaler{},
 	}
 
-	api := api2go.NewAPIWithMarshalers("v0", "http://localhost:31415", marshalers)
+	port := 31415
+	api := api2go.NewAPIWithMarshalling("v0", &resolver.RequestURL{Port: port}, marshalers)
 	userStorage := storage.NewUserStorage()
 	chocStorage := storage.NewChocolateStorage()
 	api.AddResource(model.User{}, resource.UserResource{ChocStorage: chocStorage, UserStorage: userStorage})
 	api.AddResource(model.Chocolate{}, resource.ChocolateResource{ChocStorage: chocStorage, UserStorage: userStorage})
 
-	fmt.Println("Listening on :31415")
+	fmt.Printf("Listening on :%d", port)
 	handler := api.Handler().(*httprouter.Router)
 	// It is also possible to get the instance of julienschmidt/httprouter and add more custom routes!
 	handler.GET("/hello-world", func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		fmt.Fprint(w, "Hello World!\n")
 	})
-	http.ListenAndServe(":31415", handler)
+
+	http.ListenAndServe(fmt.Sprintf(":%d", port), handler)
 }

@@ -37,12 +37,12 @@ func (r response) StatusCode() int {
 }
 
 type information struct {
-	prefix  string
-	baseURL string
+	prefix   string
+	resolver URLResolver
 }
 
 func (i information) GetBaseURL() string {
-	return i.baseURL
+	return i.resolver.GetBaseURL()
 }
 
 func (i information) GetPrefix() string {
@@ -235,6 +235,18 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD, ma
 		marshalers:   marshalers,
 	}
 
+	requestInfo := func(r *http.Request) *information {
+		var info *information
+		if resolver, ok := api.info.resolver.(RequestAwareURLResolver); ok {
+			resolver.SetRequest(*r)
+			info = &information{prefix: api.prefix, resolver: resolver}
+		} else {
+			info = &api.info
+		}
+
+		return info
+	}
+
 	api.router.Handle("OPTIONS", api.prefix+name, func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		c := api.contextPool.Get().(APIContexter)
 		c.Reset()
@@ -254,10 +266,12 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD, ma
 	})
 
 	api.router.GET(api.prefix+name, func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+		info := requestInfo(r)
 		c := api.contextPool.Get().(APIContexter)
 		c.Reset()
 		api.middlewareChain(c, w, r)
-		err := res.handleIndex(c, w, r, api.info)
+
+		err := res.handleIndex(c, w, r, *info)
 		api.contextPool.Put(c)
 		if err != nil {
 			handleError(err, w, r, marshalers)
@@ -265,10 +279,11 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD, ma
 	})
 
 	api.router.GET(api.prefix+name+"/:id", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+		info := requestInfo(r)
 		c := api.contextPool.Get().(APIContexter)
 		c.Reset()
 		api.middlewareChain(c, w, r)
-		err := res.handleRead(c, w, r, ps, api.info)
+		err := res.handleRead(c, w, r, ps, *info)
 		api.contextPool.Put(c)
 		if err != nil {
 			handleError(err, w, r, marshalers)
@@ -282,10 +297,11 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD, ma
 		for _, relation := range relations {
 			api.router.GET(api.prefix+name+"/:id/relationships/"+relation.Name, func(relation jsonapi.Reference) httprouter.Handle {
 				return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+					info := requestInfo(r)
 					c := api.contextPool.Get().(APIContexter)
 					c.Reset()
 					api.middlewareChain(c, w, r)
-					err := res.handleReadRelation(c, w, r, ps, api.info, relation)
+					err := res.handleReadRelation(c, w, r, ps, *info, relation)
 					api.contextPool.Put(c)
 					if err != nil {
 						handleError(err, w, r, marshalers)
@@ -295,10 +311,11 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD, ma
 
 			api.router.GET(api.prefix+name+"/:id/"+relation.Name, func(relation jsonapi.Reference) httprouter.Handle {
 				return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+					info := requestInfo(r)
 					c := api.contextPool.Get().(APIContexter)
 					c.Reset()
 					api.middlewareChain(c, w, r)
-					err := res.handleLinked(c, api, w, r, ps, relation, api.info)
+					err := res.handleLinked(c, api, w, r, ps, relation, *info)
 					api.contextPool.Put(c)
 					if err != nil {
 						handleError(err, w, r, marshalers)
@@ -351,10 +368,11 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD, ma
 	}
 
 	api.router.POST(api.prefix+name, func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+		info := requestInfo(r)
 		c := api.contextPool.Get().(APIContexter)
 		c.Reset()
 		api.middlewareChain(c, w, r)
-		err := res.handleCreate(c, w, r, api.prefix, api.info)
+		err := res.handleCreate(c, w, r, api.prefix, *info)
 		api.contextPool.Put(c)
 		if err != nil {
 			handleError(err, w, r, marshalers)

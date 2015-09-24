@@ -16,6 +16,22 @@ import (
 	"gopkg.in/guregu/null.v2"
 )
 
+type requestURLResolver struct {
+	r     http.Request
+	calls int
+}
+
+func (m requestURLResolver) GetBaseURL() string {
+	if uri := m.r.Header.Get("REQUEST_URI"); uri != "" {
+		return uri
+	}
+	return "https://example.com"
+}
+
+func (m *requestURLResolver) SetRequest(r http.Request) {
+	m.r = r
+}
+
 type invalid string
 
 func (i invalid) GetID() string {
@@ -1515,5 +1531,60 @@ var _ = Describe("RestHandler", func() {
 			Expect(customContextCalled).To(BeTrue())
 		})
 
+	})
+
+	Context("dynamic baseurl handling", func() {
+		var (
+			api    *API
+			rec    *httptest.ResponseRecorder
+			source *fixtureSource
+		)
+
+		BeforeEach(func() {
+			source = &fixtureSource{map[string]*Post{
+				"1": {ID: "1", Title: "Hello, World!"},
+			}, false}
+
+			marshalers := map[string]ContentMarshaler{
+				`application/vnd.api+json`: JSONContentMarshaler{},
+			}
+
+			api = NewAPIWithMarshalling("/secret/", &requestURLResolver{}, marshalers)
+			api.AddResource(Post{}, source)
+			rec = httptest.NewRecorder()
+		})
+
+		It("should change dependening on request header in FindAll", func() {
+			firstURI := "https://god-mode.example.com"
+			secondURI := "https://top-secret.example.com"
+			req, err := http.NewRequest("GET", "/secret/posts", nil)
+			req.Header.Set("REQUEST_URI", firstURI)
+			Expect(err).To(BeNil())
+			api.Handler().ServeHTTP(rec, req)
+			Expect(rec.Code).To(Equal(http.StatusOK))
+			Expect(err).ToNot(HaveOccurred())
+			Expect(rec.Body.Bytes()).To(ContainSubstring(firstURI))
+			Expect(rec.Body.Bytes()).ToNot(ContainSubstring(secondURI))
+			rec = httptest.NewRecorder()
+			req2, err := http.NewRequest("GET", "/secret/posts", nil)
+			req2.Header.Set("REQUEST_URI", secondURI)
+			Expect(err).To(BeNil())
+			api.Handler().ServeHTTP(rec, req2)
+			Expect(rec.Code).To(Equal(http.StatusOK))
+			Expect(err).ToNot(HaveOccurred())
+			Expect(rec.Body.Bytes()).To(ContainSubstring(secondURI))
+			Expect(rec.Body.Bytes()).ToNot(ContainSubstring(firstURI))
+		})
+
+		It("should change dependening on request header in FindOne", func() {
+			expected := "https://god-mode.example.com"
+			req, err := http.NewRequest("GET", "/secret/posts/1", nil)
+			req.Header.Set("REQUEST_URI", expected)
+			Expect(err).To(BeNil())
+			api.Handler().ServeHTTP(rec, req)
+			Expect(rec.Code).To(Equal(http.StatusOK))
+			Expect(err).ToNot(HaveOccurred())
+			Expect(rec.Body.Bytes()).To(ContainSubstring(expected))
+		})
 	})
 })
