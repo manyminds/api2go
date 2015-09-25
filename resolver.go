@@ -35,6 +35,8 @@ func (s staticResolver) GetBaseURL() string {
 	return s.baseURL
 }
 
-func newStaticResolver(baseURL string) URLResolver {
+//NewStaticResolver returns a simple resolver that
+//will always answer with the same url
+func NewStaticResolver(baseURL string) URLResolver {
 	return &staticResolver{baseURL: baseURL}
 }

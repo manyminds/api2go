@@ -32,6 +32,7 @@ go get github.com/manyminds/api2go/jsonapi
 - [Ignoring fields](#ignoring-fields)
 - [Manual marshaling / unmarshaling](#manual-marshaling--unmarshaling)
 - [SQL Null-Types](#sql-null-types)
+- [Using api2go with the gin framework](#api2go-with-gin)
 - [Building a REST API](#building-a-rest-api)
   - [Query Params](#query-params)
   - [Using Pagination](#using-pagination)
@@ -317,6 +318,47 @@ these values, it is required to implement the `json.Marshaller` and `json.Unmars
 
 But you dont have to do this by yourself! There already is a library that did the work for you. We recommend that you use the types
 of this library: http://gopkg.in/guregu/null.v2/zero
+
+## Using api2go with the gin framework
+
+If you want to use api2go with [gin](https://github.com/gin-gonic/gin) you need to use a different router than the default one.
+Get the according adapter using:
+
+```go get github.com/manyminds/api2go-adapter/gingonic```
+
+After that you can bootstrap api2go the following way:
+```go
+  import (
+    "github.com/gin-gonic/gin"
+    "github.com/manyminds/api2go"
+    "github.com/manyminds/api2go-adapter/gingonic"
+    "github.com/manyminds/api2go/examples/model"
+    "github.com/manyminds/api2go/examples/resource"
+    "github.com/manyminds/api2go/examples/storage"
+  )
+
+  func main() {
+    r := gin.Default()
+    api := api2go.NewAPIWithRouting(
+      "api",
+      api2go.NewStaticResolver("/"),
+      api2go.DefaultContentMarshalers,
+      gingonic.New(r),
+    )
+
+    userStorage := storage.NewUserStorage()
+    chocStorage := storage.NewChocolateStorage()
+    api.AddResource(model.User{}, resource.UserResource{ChocStorage: chocStorage, UserStorage: userStorage})
+    api.AddResource(model.Chocolate{}, resource.ChocolateResource{ChocStorage: chocStorage, UserStorage: userStorage})
+
+    r.GET("/ping", func(c *gin.Context) {
+      c.String(200, "pong")
+    })
+    r.Run(":8080")
+  }
+```
+
+Keep in mind that you absolutely should map api2go under its own namespace to not get conflicts with your normal routes.
 
 ## Building a REST API
 
