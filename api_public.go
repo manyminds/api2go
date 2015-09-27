@@ -5,6 +5,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/manyminds/api2go/jsonapi"
 	"github.com/manyminds/api2go/routing"
 )
 
@@ -44,10 +45,24 @@ func (api *API) SetContextAllocator(allocator APIContextAllocatorFunc) {
 	api.contextAllocator = allocator
 }
 
-//SetRedirectTrailingSlash enables 307 redirects on urls ending with /
-//when disabled, an URL ending with / will 404
-//this will and should work only if using the default router
-//DEPRECATED
+// AddResource registers a data source for the given resource
+// At least the CRUD interface must be implemented, all the other interfaces are optional.
+// `resource` should be either an empty struct instance such as `Post{}` or a pointer to
+// a struct such as `&Post{}`. The same type will be used for constructing new elements.
+func (api *API) AddResource(prototype jsonapi.MarshalIdentifier, source CRUD) {
+	api.addResource(prototype, source, api.marshalers)
+}
+
+// UseMiddleware registers middlewares that implement the api2go.HandlerFunc
+// Middleware is run before any generated routes.
+func (api *API) UseMiddleware(middleware ...HandlerFunc) {
+	api.middlewares = append(api.middlewares, middleware...)
+}
+
+// SetRedirectTrailingSlash enables 307 redirects on urls ending with /
+// when disabled, an URL ending with / will 404
+// this will and should work only if using the default router
+// DEPRECATED
 func (api *API) SetRedirectTrailingSlash(enabled bool) {
 	if api.router == nil {
 		panic("router must not be nil")
@@ -86,21 +101,21 @@ func NewAPI(prefix string) *API {
 	return NewAPIWithMarshalers(prefix, "", DefaultContentMarshalers)
 }
 
-//NewAPIWithRouting allows you to use a custom URLResolver, marshalers and custom routing
-//if you want to use the default routing, you should use another constructor.
+// NewAPIWithRouting allows you to use a custom URLResolver, marshalers and custom routing
+// if you want to use the default routing, you should use another constructor.
 //
-//If you don't need any of the parameters you can skip them with the defaults:
-//the default for `prefix` would be `""`, which means there is no namespace for your api.
-//although we suggest using one.
+// If you don't need any of the parameters you can skip them with the defaults:
+// the default for `prefix` would be `""`, which means there is no namespace for your api.
+// although we suggest using one.
 //
-//if your api only answers to one url you can use a NewStaticResolver() as  `resolver`
+// if your api only answers to one url you can use a NewStaticResolver() as  `resolver`
 //
-//if you have no specific marshalling needs, use `DefaultContentMarshalers`
+// if you have no specific marshalling needs, use `DefaultContentMarshalers`
 func NewAPIWithRouting(prefix string, resolver URLResolver, marshalers map[string]ContentMarshaler, router routing.Routeable) *API {
 	return newAPI(prefix, resolver, marshalers, router)
 }
 
-//newAPI is now an internal method that can be changed if params are changing
+// newAPI is now an internal method that can be changed if params are changing
 func newAPI(prefix string, resolver URLResolver, marshalers map[string]ContentMarshaler, router routing.Routeable) *API {
 	if len(marshalers) == 0 {
 		panic("marshaler map must not be empty")
@@ -134,8 +149,8 @@ func newAPI(prefix string, resolver URLResolver, marshalers map[string]ContentMa
 	return api
 }
 
-//NewAPIWithMarshalers is DEPRECATED
-//use NewApiWithMarshalling instead
+// NewAPIWithMarshalers is DEPRECATED
+// use NewApiWithMarshalling instead
 func NewAPIWithMarshalers(prefix string, baseURL string, marshalers map[string]ContentMarshaler) *API {
 	staticResolver := NewStaticResolver(baseURL)
 	return NewAPIWithMarshalling(prefix, staticResolver, marshalers)

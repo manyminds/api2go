@@ -191,20 +191,6 @@ type resource struct {
 	marshalers   map[string]ContentMarshaler
 }
 
-// AddResource registers a data source for the given resource
-// At least the CRUD interface must be implemented, all the other interfaces are optional.
-// `resource` should be either an empty struct instance such as `Post{}` or a pointer to
-// a struct such as `&Post{}`. The same type will be used for constructing new elements.
-func (api *API) AddResource(prototype jsonapi.MarshalIdentifier, source CRUD) {
-	api.addResource(prototype, source, api.marshalers)
-}
-
-// UseMiddleware registers middlewares that implement the api2go.HandlerFunc
-// Middleware is run before any generated routes.
-func (api *API) UseMiddleware(middleware ...HandlerFunc) {
-	api.middlewares = append(api.middlewares, middleware...)
-}
-
 // middlewareChain executes the middleeware chain setup
 func (api *API) middlewareChain(c APIContexter, w http.ResponseWriter, r *http.Request) {
 	for _, middleware := range api.middlewares {

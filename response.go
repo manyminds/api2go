@@ -1,9 +1,9 @@
 package api2go
 
-//The Response struct implements api2go.Responder and can be used as a default
-//implementation for your responses
-//you can fill the field `Meta` with all the metadata your application needs
-//like license, tokens, etc
+// The Response struct implements api2go.Responder and can be used as a default
+// implementation for your responses
+// you can fill the field `Meta` with all the metadata your application needs
+// like license, tokens, etc
 type Response struct {
 	Res  interface{}
 	Code int
