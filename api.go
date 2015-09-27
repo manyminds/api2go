@@ -12,8 +12,8 @@ import (
 	"strings"
 
 	"github.com/golang/gddo/httputil"
-	"github.com/julienschmidt/httprouter"
 	"github.com/manyminds/api2go/jsonapi"
+	"github.com/manyminds/api2go/routing"
 )
 
 const defaultContentTypHeader = "application/vnd.api+json"
@@ -235,11 +235,11 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD, ma
 		marshalers:   marshalers,
 	}
 
-	requestInfo := func(r *http.Request) *information {
+	requestInfo := func(r *http.Request, api *API) *information {
 		var info *information
 		if resolver, ok := api.info.resolver.(RequestAwareURLResolver); ok {
 			resolver.SetRequest(*r)
-			info = &information{prefix: api.prefix, resolver: resolver}
+			info = &information{prefix: api.info.prefix, resolver: resolver}
 		} else {
 			info = &api.info
 		}
@@ -247,7 +247,13 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD, ma
 		return info
 	}
 
-	api.router.Handle("OPTIONS", api.prefix+name, func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	prefix := strings.Trim(api.info.prefix, "/")
+	baseURL := "/" + name
+	if prefix != "" {
+		baseURL = "/" + prefix + baseURL
+	}
+
+	api.router.Handle("OPTIONS", baseURL, func(w http.ResponseWriter, r *http.Request, _ map[string]string) {
 		c := api.contextPool.Get().(APIContexter)
 		c.Reset()
 		api.middlewareChain(c, w, r)
@@ -256,7 +262,7 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD, ma
 		api.contextPool.Put(c)
 	})
 
-	api.router.Handle("OPTIONS", api.prefix+name+"/:id", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	api.router.Handle("OPTIONS", baseURL+"/:id", func(w http.ResponseWriter, r *http.Request, _ map[string]string) {
 		c := api.contextPool.Get().(APIContexter)
 		c.Reset()
 		api.middlewareChain(c, w, r)
@@ -265,8 +271,8 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD, ma
 		api.contextPool.Put(c)
 	})
 
-	api.router.GET(api.prefix+name, func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-		info := requestInfo(r)
+	api.router.Handle("GET", baseURL, func(w http.ResponseWriter, r *http.Request, _ map[string]string) {
+		info := requestInfo(r, api)
 		c := api.contextPool.Get().(APIContexter)
 		c.Reset()
 		api.middlewareChain(c, w, r)
@@ -278,12 +284,12 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD, ma
 		}
 	})
 
-	api.router.GET(api.prefix+name+"/:id", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		info := requestInfo(r)
+	api.router.Handle("GET", baseURL+"/:id", func(w http.ResponseWriter, r *http.Request, params map[string]string) {
+		info := requestInfo(r, api)
 		c := api.contextPool.Get().(APIContexter)
 		c.Reset()
 		api.middlewareChain(c, w, r)
-		err := res.handleRead(c, w, r, ps, *info)
+		err := res.handleRead(c, w, r, params, *info)
 		api.contextPool.Put(c)
 		if err != nil {
 			handleError(err, w, r, marshalers)
@@ -295,13 +301,13 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD, ma
 	if ok {
 		relations := casted.GetReferences()
 		for _, relation := range relations {
-			api.router.GET(api.prefix+name+"/:id/relationships/"+relation.Name, func(relation jsonapi.Reference) httprouter.Handle {
-				return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-					info := requestInfo(r)
+			api.router.Handle("GET", baseURL+"/:id/relationships/"+relation.Name, func(relation jsonapi.Reference) routing.HandlerFunc {
+				return func(w http.ResponseWriter, r *http.Request, params map[string]string) {
+					info := requestInfo(r, api)
 					c := api.contextPool.Get().(APIContexter)
 					c.Reset()
 					api.middlewareChain(c, w, r)
-					err := res.handleReadRelation(c, w, r, ps, *info, relation)
+					err := res.handleReadRelation(c, w, r, params, *info, relation)
 					api.contextPool.Put(c)
 					if err != nil {
 						handleError(err, w, r, marshalers)
@@ -309,13 +315,13 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD, ma
 				}
 			}(relation))
 
-			api.router.GET(api.prefix+name+"/:id/"+relation.Name, func(relation jsonapi.Reference) httprouter.Handle {
-				return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-					info := requestInfo(r)
+			api.router.Handle("GET", baseURL+"/:id/"+relation.Name, func(relation jsonapi.Reference) routing.HandlerFunc {
+				return func(w http.ResponseWriter, r *http.Request, params map[string]string) {
+					info := requestInfo(r, api)
 					c := api.contextPool.Get().(APIContexter)
 					c.Reset()
 					api.middlewareChain(c, w, r)
-					err := res.handleLinked(c, api, w, r, ps, relation, *info)
+					err := res.handleLinked(c, api, w, r, params, relation, *info)
 					api.contextPool.Put(c)
 					if err != nil {
 						handleError(err, w, r, marshalers)
@@ -323,12 +329,12 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD, ma
 				}
 			}(relation))
 
-			api.router.PATCH(api.prefix+name+"/:id/relationships/"+relation.Name, func(relation jsonapi.Reference) httprouter.Handle {
-				return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+			api.router.Handle("PATCH", baseURL+"/:id/relationships/"+relation.Name, func(relation jsonapi.Reference) routing.HandlerFunc {
+				return func(w http.ResponseWriter, r *http.Request, params map[string]string) {
 					c := api.contextPool.Get().(APIContexter)
 					c.Reset()
 					api.middlewareChain(c, w, r)
-					err := res.handleReplaceRelation(c, w, r, ps, relation)
+					err := res.handleReplaceRelation(c, w, r, params, relation)
 					api.contextPool.Put(c)
 					if err != nil {
 						handleError(err, w, r, marshalers)
@@ -338,12 +344,12 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD, ma
 
 			if _, ok := ptrPrototype.(jsonapi.EditToManyRelations); ok && relation.Name == jsonapi.Pluralize(relation.Name) {
 				// generate additional routes to manipulate to-many relationships
-				api.router.POST(api.prefix+name+"/:id/relationships/"+relation.Name, func(relation jsonapi.Reference) httprouter.Handle {
-					return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+				api.router.Handle("POST", baseURL+"/:id/relationships/"+relation.Name, func(relation jsonapi.Reference) routing.HandlerFunc {
+					return func(w http.ResponseWriter, r *http.Request, params map[string]string) {
 						c := api.contextPool.Get().(APIContexter)
 						c.Reset()
 						api.middlewareChain(c, w, r)
-						err := res.handleAddToManyRelation(c, w, r, ps, relation)
+						err := res.handleAddToManyRelation(c, w, r, params, relation)
 						api.contextPool.Put(c)
 						if err != nil {
 							handleError(err, w, r, marshalers)
@@ -351,12 +357,12 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD, ma
 					}
 				}(relation))
 
-				api.router.DELETE(api.prefix+name+"/:id/relationships/"+relation.Name, func(relation jsonapi.Reference) httprouter.Handle {
-					return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+				api.router.Handle("DELETE", baseURL+"/:id/relationships/"+relation.Name, func(relation jsonapi.Reference) routing.HandlerFunc {
+					return func(w http.ResponseWriter, r *http.Request, params map[string]string) {
 						c := api.contextPool.Get().(APIContexter)
 						c.Reset()
 						api.middlewareChain(c, w, r)
-						err := res.handleDeleteToManyRelation(c, w, r, ps, relation)
+						err := res.handleDeleteToManyRelation(c, w, r, params, relation)
 						api.contextPool.Put(c)
 						if err != nil {
 							handleError(err, w, r, marshalers)
@@ -367,34 +373,34 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD, ma
 		}
 	}
 
-	api.router.POST(api.prefix+name, func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		info := requestInfo(r)
+	api.router.Handle("POST", baseURL, func(w http.ResponseWriter, r *http.Request, params map[string]string) {
+		info := requestInfo(r, api)
 		c := api.contextPool.Get().(APIContexter)
 		c.Reset()
 		api.middlewareChain(c, w, r)
-		err := res.handleCreate(c, w, r, api.prefix, *info)
+		err := res.handleCreate(c, w, r, info.prefix, *info)
 		api.contextPool.Put(c)
 		if err != nil {
 			handleError(err, w, r, marshalers)
 		}
 	})
 
-	api.router.DELETE(api.prefix+name+"/:id", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	api.router.Handle("DELETE", baseURL+"/:id", func(w http.ResponseWriter, r *http.Request, params map[string]string) {
 		c := api.contextPool.Get().(APIContexter)
 		c.Reset()
 		api.middlewareChain(c, w, r)
-		err := res.handleDelete(c, w, r, ps)
+		err := res.handleDelete(c, w, r, params)
 		api.contextPool.Put(c)
 		if err != nil {
 			handleError(err, w, r, marshalers)
 		}
 	})
 
-	api.router.PATCH(api.prefix+name+"/:id", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	api.router.Handle("PATCH", baseURL+"/:id", func(w http.ResponseWriter, r *http.Request, params map[string]string) {
 		c := api.contextPool.Get().(APIContexter)
 		c.Reset()
 		api.middlewareChain(c, w, r)
-		err := res.handleUpdate(c, w, r, ps)
+		err := res.handleUpdate(c, w, r, params)
 		api.contextPool.Put(c)
 		if err != nil {
 			handleError(err, w, r, marshalers)
@@ -451,8 +457,8 @@ func (res *resource) handleIndex(c APIContexter, w http.ResponseWriter, r *http.
 	return respondWith(response, info, http.StatusOK, w, r, res.marshalers)
 }
 
-func (res *resource) handleRead(c APIContexter, w http.ResponseWriter, r *http.Request, ps httprouter.Params, info information) error {
-	id := ps.ByName("id")
+func (res *resource) handleRead(c APIContexter, w http.ResponseWriter, r *http.Request, params map[string]string, info information) error {
+	id := params["id"]
 
 	response, err := res.source.FindOne(id, buildRequest(c, r))
 
@@ -463,8 +469,8 @@ func (res *resource) handleRead(c APIContexter, w http.ResponseWriter, r *http.R
 	return respondWith(response, info, http.StatusOK, w, r, res.marshalers)
 }
 
-func (res *resource) handleReadRelation(c APIContexter, w http.ResponseWriter, r *http.Request, ps httprouter.Params, info information, relation jsonapi.Reference) error {
-	id := ps.ByName("id")
+func (res *resource) handleReadRelation(c APIContexter, w http.ResponseWriter, r *http.Request, params map[string]string, info information, relation jsonapi.Reference) error {
+	id := params["id"]
 
 	obj, err := res.source.FindOne(id, buildRequest(c, r))
 	if err != nil {
@@ -519,8 +525,8 @@ func (res *resource) handleReadRelation(c APIContexter, w http.ResponseWriter, r
 }
 
 // try to find the referenced resource and call the findAll Method with referencing resource id as param
-func (res *resource) handleLinked(c APIContexter, api *API, w http.ResponseWriter, r *http.Request, ps httprouter.Params, linked jsonapi.Reference, info information) error {
-	id := ps.ByName("id")
+func (res *resource) handleLinked(c APIContexter, api *API, w http.ResponseWriter, r *http.Request, params map[string]string, linked jsonapi.Reference, info information) error {
+	id := params["id"]
 	for _, resource := range api.resources {
 		if resource.name == linked.Type {
 			request := buildRequest(c, r)
@@ -607,7 +613,8 @@ func (res *resource) handleCreate(c APIContexter, w http.ResponseWriter, r *http
 	if !ok {
 		return fmt.Errorf("Expected one newly created object by resource %s", res.name)
 	}
-	w.Header().Set("Location", prefix+res.name+"/"+result.GetID())
+
+	w.Header().Set("Location", "/"+prefix+"/"+res.name+"/"+result.GetID())
 
 	// handle 200 status codes
 	switch response.StatusCode() {
@@ -624,8 +631,9 @@ func (res *resource) handleCreate(c APIContexter, w http.ResponseWriter, r *http
 	}
 }
 
-func (res *resource) handleUpdate(c APIContexter, w http.ResponseWriter, r *http.Request, ps httprouter.Params) error {
-	obj, err := res.source.FindOne(ps.ByName("id"), buildRequest(c, r))
+func (res *resource) handleUpdate(c APIContexter, w http.ResponseWriter, r *http.Request, params map[string]string) error {
+	id := params["id"]
+	obj, err := res.source.FindOne(id, buildRequest(c, r))
 	if err != nil {
 		return err
 	}
@@ -698,7 +706,7 @@ func (res *resource) handleUpdate(c APIContexter, w http.ResponseWriter, r *http
 	case http.StatusOK:
 		updated := response.Result()
 		if updated == nil {
-			internalResponse, err := res.source.FindOne(ps.ByName("id"), buildRequest(c, r))
+			internalResponse, err := res.source.FindOne(id, buildRequest(c, r))
 			if err != nil {
 				return err
 			}
@@ -722,13 +730,15 @@ func (res *resource) handleUpdate(c APIContexter, w http.ResponseWriter, r *http
 	}
 }
 
-func (res *resource) handleReplaceRelation(c APIContexter, w http.ResponseWriter, r *http.Request, ps httprouter.Params, relation jsonapi.Reference) error {
+func (res *resource) handleReplaceRelation(c APIContexter, w http.ResponseWriter, r *http.Request, params map[string]string, relation jsonapi.Reference) error {
 	var (
 		err     error
 		editObj interface{}
 	)
 
-	response, err := res.source.FindOne(ps.ByName("id"), buildRequest(c, r))
+	id := params["id"]
+
+	response, err := res.source.FindOne(id, buildRequest(c, r))
 	if err != nil {
 		return err
 	}
@@ -765,13 +775,15 @@ func (res *resource) handleReplaceRelation(c APIContexter, w http.ResponseWriter
 	return err
 }
 
-func (res *resource) handleAddToManyRelation(c APIContexter, w http.ResponseWriter, r *http.Request, ps httprouter.Params, relation jsonapi.Reference) error {
+func (res *resource) handleAddToManyRelation(c APIContexter, w http.ResponseWriter, r *http.Request, params map[string]string, relation jsonapi.Reference) error {
 	var (
 		err     error
 		editObj interface{}
 	)
 
-	response, err := res.source.FindOne(ps.ByName("id"), buildRequest(c, r))
+	id := params["id"]
+
+	response, err := res.source.FindOne(id, buildRequest(c, r))
 	if err != nil {
 		return err
 	}
@@ -830,12 +842,15 @@ func (res *resource) handleAddToManyRelation(c APIContexter, w http.ResponseWrit
 	return err
 }
 
-func (res *resource) handleDeleteToManyRelation(c APIContexter, w http.ResponseWriter, r *http.Request, ps httprouter.Params, relation jsonapi.Reference) error {
+func (res *resource) handleDeleteToManyRelation(c APIContexter, w http.ResponseWriter, r *http.Request, params map[string]string, relation jsonapi.Reference) error {
 	var (
 		err     error
 		editObj interface{}
 	)
-	response, err := res.source.FindOne(ps.ByName("id"), buildRequest(c, r))
+
+	id := params["id"]
+
+	response, err := res.source.FindOne(id, buildRequest(c, r))
 	if err != nil {
 		return err
 	}
@@ -902,8 +917,9 @@ func getPointerToStruct(oldObj interface{}) interface{} {
 	return ptr.Interface()
 }
 
-func (res *resource) handleDelete(c APIContexter, w http.ResponseWriter, r *http.Request, ps httprouter.Params) error {
-	response, err := res.source.Delete(ps.ByName("id"), buildRequest(c, r))
+func (res *resource) handleDelete(c APIContexter, w http.ResponseWriter, r *http.Request, params map[string]string) error {
+	id := params["id"]
+	response, err := res.source.Delete(id, buildRequest(c, r))
 	if err != nil {
 		return err
 	}

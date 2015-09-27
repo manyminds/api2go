@@ -119,7 +119,7 @@ func (s UserResource) PaginatedFindAll(r api2go.Request) (uint, api2go.Responder
 func (s UserResource) FindOne(ID string, r api2go.Request) (api2go.Responder, error) {
 	user, err := s.UserStorage.GetOne(ID)
 	if err != nil {
-		return &Response{}, err
+		return &Response{}, api2go.NewHTTPError(err, err.Error(), http.StatusNotFound)
 	}
 
 	user.Chocolates = []*model.Chocolate{}
