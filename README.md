@@ -69,7 +69,7 @@ You must at least implement one interface for api2go to work, which is the one f
 that you want to marshal/unmarshal. This is because of the huge variety of types that you could  use for the primary ID. For example a string,
 a UUID or a BSON Object for MongoDB etc...
 
-In the Post example struct, the `ID` field is ignored because Api2go will use the `GetID` method that you implemented for your struct to fetch the ID of the struct.
+In the Post example struct, the `ID` field is ignored because api2go will use the `GetID` method that you implemented for your struct to fetch the ID of the struct.
 Every field inside a struct will be marshaled into the `attributes` object in
 the json. In our example, we just want to have the `Title` field there.
 
@@ -159,7 +159,8 @@ type MarshalIncludedRelations interface {
 }
 ```
 
-Here, you can choose what you want to implement too, but, you must at least implement `MarshalReferences` and `MarshalLinkedRelations`.
+Here, you can choose what you want to implement as well. But if your API has any relationships, 
+you must at least implement `MarshalReferences` and `MarshalLinkedRelations`.
 
 `MarshalReferences` must be implemented in order for api2go to know which relations are possible for your struct.
 
@@ -170,7 +171,7 @@ knows what is possible, even if nothing is referenced at the time.
 In addition to that, you can implement `MarshalIncludedRelations` which exports the complete referenced structs and embeds them in the json
 result inside the `included` object.
 
-We choose to do this because it gives you better flexibility and eliminates the conventions in the previous versions of api2go. **You can
+We choose to do this because it increases flexibility and eliminates the conventions in the previous versions of api2go. **You can
 now choose how you internally manage relations.** So, there are no limits regarding the use of ORMs.
 
 ### Unmarshalling with references to other structs
@@ -192,7 +193,7 @@ type UnmarshalToManyRelations interface {
 **If you need to know more about how to use the interfaces, look at our tests or at the example project.**
 
 ## Ignoring fields
-api2go ignores all fields that are marked with the `json"-"` ignore tag. This is useful if your struct has some more
+api2go ignores all fields that are marked with the `jsonapi:"-"` ignore tag. This is useful if your struct has some more
 fields which are only used internally to manage relations or data that needs to stay private, like a password field.
 
 ## Manual marshaling / unmarshaling
