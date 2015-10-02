@@ -388,9 +388,8 @@ func getStructFields(data MarshalIdentifier) map[string]interface{} {
 		}
 
 		field := val.Field(i)
-		keyName := Jsonify(valType.Field(i).Name)
 
-		//skip private fields
+		// skip private fields
 		if !field.CanInterface() {
 			continue
 		}
@@ -400,6 +399,19 @@ func getStructFields(data MarshalIdentifier) map[string]interface{} {
 				continue
 			}
 		}
+
+		// check for embedded structs and also extract all fields of them into result
+		if embeddedStruct, ok := field.Interface().(MarshalIdentifier); ok {
+			embeddedFields := getStructFields(embeddedStruct)
+			for k, v := range embeddedFields {
+				result[k] = v
+			}
+
+			// skip embedded struct itself
+			continue
+		}
+
+		keyName := Jsonify(valType.Field(i).Name)
 
 		name := GetTagValueByName(valType.Field(i), "name")
 		if name != "" {
