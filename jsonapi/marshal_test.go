@@ -20,6 +20,7 @@ var _ = Describe("Marshalling", func() {
 
 		BeforeEach(func() {
 			created, _ = time.Parse(time.RFC3339, "2014-11-10T16:30:48.823Z")
+			var nilDate *time.Time
 			firstPost = SimplePost{ID: "first", Title: "First Post", Text: "Lipsum", Created: created}
 			firstPostMap = map[string]interface{}{
 				"type": "simplePosts",
@@ -29,6 +30,7 @@ var _ = Describe("Marshalling", func() {
 					"text":        firstPost.Text,
 					"size":        0,
 					"create-date": created,
+					"update-date": nilDate,
 				},
 			}
 
@@ -41,6 +43,7 @@ var _ = Describe("Marshalling", func() {
 					"text":        secondPost.Text,
 					"size":        0,
 					"create-date": created,
+					"update-date": nilDate,
 				},
 			}
 
