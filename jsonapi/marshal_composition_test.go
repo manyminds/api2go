@@ -39,4 +39,28 @@ var _ = Describe("Embedded struct types", func() {
 			}))
 		})
 	})
+
+	Context("When unmarshaling objects with struct composition", func() {
+		postJSON := `
+			{
+				"data": {
+					"type": "taggedPosts",
+					"id": "first",
+					"attributes": {
+						"title": "First Post",
+						"text":  "Lipsum",
+						"size": 0,
+						"create-date": "2014-11-10T16:30:48.823Z",
+						"tag": "important"
+					}
+				}
+			}
+		`
+		It("unmarshals", func() {
+			target := TaggedPost{}
+			err := UnmarshalFromJSON([]byte(postJSON), &target)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(target).To(Equal(post))
+		})
+	})
 })
