@@ -13,9 +13,9 @@ import (
 var _ = Describe("Unmarshal", func() {
 	Context("When unmarshaling simple objects", func() {
 		t, _ := time.Parse(time.RFC3339, "2014-11-10T16:30:48.823Z")
-		singleJSON := []byte(`{"data":{"id": "1", "type": "simplePosts", "attributes": {"title":"First Post","text":"Lipsum", "Created": "2014-11-10T16:30:48.823Z"}}}`)
-		firstPost := SimplePost{ID: "1", Title: "First Post", Text: "Lipsum", Created: t}
-		secondPost := SimplePost{ID: "2", Title: "Second Post", Text: "Foobar!", Created: t}
+		singleJSON := []byte(`{"data":{"id": "1", "type": "simplePosts", "attributes": {"title":"First Post","text":"Lipsum", "Created": "2014-11-10T16:30:48.823Z", "Updated": "2014-11-10T16:30:48.823Z"}}}`)
+		firstPost := SimplePost{ID: "1", Title: "First Post", Text: "Lipsum", Created: t, Updated: &t}
+		secondPost := SimplePost{ID: "2", Title: "Second Post", Text: "Foobar!", Created: t, Updated: &t}
 		singlePostMap := map[string]interface{}{
 			"data": map[string]interface{}{
 				"id":   "1",
@@ -24,6 +24,7 @@ var _ = Describe("Unmarshal", func() {
 					"title":       firstPost.Title,
 					"text":        firstPost.Text,
 					"create-date": "2014-11-10T16:30:48.823Z",
+					"update-date": "2014-11-10T16:30:48.823Z",
 				},
 			},
 		}
@@ -36,6 +37,7 @@ var _ = Describe("Unmarshal", func() {
 						"title":       firstPost.Title,
 						"text":        firstPost.Text,
 						"create-date": "2014-11-10T16:30:48.823Z",
+						"update-date": "2014-11-10T16:30:48.823Z",
 					},
 				},
 				map[string]interface{}{
@@ -45,6 +47,7 @@ var _ = Describe("Unmarshal", func() {
 						"title":       secondPost.Title,
 						"text":        secondPost.Text,
 						"create-date": "2014-11-10T16:30:48.823Z",
+						"update-date": "2014-11-10T16:30:48.823Z",
 					},
 				},
 			},

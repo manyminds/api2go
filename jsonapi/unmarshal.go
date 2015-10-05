@@ -285,6 +285,13 @@ func UnmarshalInto(input map[string]interface{}, targetStructType reflect.Type, 
 							}
 
 							field.Set(reflect.ValueOf(t))
+						case *time.Time:
+							t, err := time.Parse(time.RFC3339, plainValue.String())
+							if err != nil {
+								return errors.New("expected RFC3339 time string, got '" + plainValue.String() + "'")
+							}
+
+							field.Set(reflect.ValueOf(&t))
 						default:
 							if field.CanAddr() {
 								switch field.Addr().Interface().(type) {
