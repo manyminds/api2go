@@ -32,15 +32,16 @@ var _ = Describe("Marshalling", func() {
 				},
 			}
 
-			secondPost = SimplePost{ID: "second", Title: "Second Post", Text: "Getting more advanced!", Created: created}
+			secondPost = SimplePost{ID: "second", Title: "Second Post", Text: "Getting more advanced!", Created: created, Updated: created}
 			secondPostMap = map[string]interface{}{
 				"type": "simplePosts",
 				"id":   "second",
 				"attributes": map[string]interface{}{
-					"title":       secondPost.Title,
-					"text":        secondPost.Text,
-					"size":        0,
-					"create-date": created,
+					"title":        secondPost.Title,
+					"text":         secondPost.Text,
+					"size":         0,
+					"create-date":  created,
+					"updated-date": created,
 				},
 			}
 

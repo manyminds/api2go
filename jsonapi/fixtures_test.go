@@ -71,6 +71,7 @@ type SimplePost struct {
 	Internal    string `jsonapi:"-"`
 	Size        int
 	Created     time.Time `jsonapi:"name=create-date"`
+	Updated     time.Time `jsonapi:"name=updated-date"`
 }
 
 func (s SimplePost) GetID() string {

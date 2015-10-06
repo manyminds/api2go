@@ -15,7 +15,7 @@ var _ = Describe("Unmarshal", func() {
 		t, _ := time.Parse(time.RFC3339, "2014-11-10T16:30:48.823Z")
 		singleJSON := []byte(`{"data":{"id": "1", "type": "simplePosts", "attributes": {"title":"First Post","text":"Lipsum", "Created": "2014-11-10T16:30:48.823Z"}}}`)
 		firstPost := SimplePost{ID: "1", Title: "First Post", Text: "Lipsum", Created: t}
-		secondPost := SimplePost{ID: "2", Title: "Second Post", Text: "Foobar!", Created: t}
+		secondPost := SimplePost{ID: "2", Title: "Second Post", Text: "Foobar!", Created: t, Updated: t}
 		singlePostMap := map[string]interface{}{
 			"data": map[string]interface{}{
 				"id":   "1",
@@ -33,18 +33,20 @@ var _ = Describe("Unmarshal", func() {
 					"id":   "1",
 					"type": "simplePosts",
 					"attributes": map[string]interface{}{
-						"title":       firstPost.Title,
-						"text":        firstPost.Text,
-						"create-date": "2014-11-10T16:30:48.823Z",
+						"title":        firstPost.Title,
+						"text":         firstPost.Text,
+						"create-date":  "2014-11-10T16:30:48.823Z",
+						"updated-date": nil,
 					},
 				},
 				map[string]interface{}{
 					"id":   "2",
 					"type": "simplePosts",
 					"attributes": map[string]interface{}{
-						"title":       secondPost.Title,
-						"text":        secondPost.Text,
-						"create-date": "2014-11-10T16:30:48.823Z",
+						"title":        secondPost.Title,
+						"text":         secondPost.Text,
+						"create-date":  "2014-11-10T16:30:48.823Z",
+						"updated-date": "2014-11-10T16:30:48.823Z",
 					},
 				},
 			},

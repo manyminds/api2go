@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"time"
 )
 
 // MarshalIdentifier interface is necessary to give an element
@@ -392,6 +393,12 @@ func getStructFields(data MarshalIdentifier) map[string]interface{} {
 		//skip private fields
 		if !field.CanInterface() {
 			continue
+		}
+		if field.Type() == reflect.TypeOf(time.Time{}) {
+			checkDate := field.Interface().(time.Time)
+			if checkDate.IsZero() {
+				continue
+			}
 		}
 
 		name := GetTagValueByName(valType.Field(i), "name")
