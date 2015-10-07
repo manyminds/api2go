@@ -368,21 +368,31 @@ First, write an implementation of `api2go.CRUD`. You have to implement at least 
 ```go
 type fixtureSource struct {}
 
-func (s *fixtureSource) FindOne(ID string, r api2go.Request) (Responder, error) {
-  // Return a single post by ID as Post
-}
+// FindOne returns an object by its ID
+// Possible success status code 200
+func (s *fixtureSource) FindOne(ID string, r api2go.Request) (Responder, error) {}
 
-func (s *fixtureSource) Create(obj interface{}, r api2go.Request) (Responder, err error) {
-  // Save the new Post in `obj` and return its ID.
-}
+// Create a new object. Newly created object/struct must be in Responder.
+// Possible status codes are:
+// - 201 Created: Resource was created and needs to be returned
+// - 202 Accepted: Processing is delayed, return nothing
+// - 204 No Content: Resource created with a client generated ID, and no fields were modified by
+//   the server
+func (s *fixtureSource) Create(obj interface{}, r api2go.Request) (Responder, err error) {}
 
-func (s *fixtureSource) Delete(id string, r api2go.Request) (Responder, err error) {
-  // Delete a post
-}
+// Delete an object
+// Possible status codes are:
+// - 200 OK: Deletion was a success, returns meta information, currently not implemented! Do not use this
+// - 202 Accepted: Processing is delayed, return nothing
+// - 204 No Content: Deletion was successful, return nothing
+func (s *fixtureSource) Delete(id string, r api2go.Request) (Responder, err error) {}
 
-func (s *fixtureSource) Update(obj interface{}, r api2go.Request) (Responder, err error) {
-  // Apply the new values in the Post in `obj`
-}
+// Update an object
+// Possible status codes are:
+// - 200 OK: Update successful, however some field(s) were changed, returns updates source
+// - 202 Accepted: Processing is delayed, return nothing
+// - 204 No Content: Update was successful, no fields were changed by the server, return nothing
+func (s *fixtureSource) Update(obj interface{}, r api2go.Request) (Responder, err error) {}
 ```
 
 To fetch all objects of a specific resource you can choose to implement one or both of the following
