@@ -241,6 +241,27 @@ var _ = Describe("Unmarshal", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(identity.Scopes).To(Equal([]string{}))
 			})
+
+			It("unmarshals renamed fields", func() {
+				input := `
+						{
+							"data": {
+								"id": "1",
+								"type": "renamedPostWithEmbeddings",
+								"attributes": {
+									"foo": "field content",
+									"bar-bar": "other content",
+									"another": "foo"
+								}
+							}
+						}`
+
+				var renamedPost RenamedPostWithEmbedding
+				err := UnmarshalFromJSON([]byte(input), &renamedPost)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(renamedPost.Field).To(Equal("field content"))
+				Expect(renamedPost.Other).To(Equal("other content"))
+			})
 		})
 	})
 

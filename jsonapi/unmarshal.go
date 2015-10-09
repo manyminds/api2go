@@ -330,6 +330,7 @@ func getFieldByTagName(val reflect.Value, fieldName string) (field reflect.Value
 		if tfield.Tag.Get("jsonapi") != "-" && strings.ToLower(name) == strings.ToLower(fieldName) {
 			field = val.Field(x)
 			found = true
+			return
 		}
 	}
 
