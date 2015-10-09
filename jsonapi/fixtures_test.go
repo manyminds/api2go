@@ -355,6 +355,20 @@ func (s *SQLNullPost) SetID(ID string) error {
 	return nil
 }
 
+type RenamedPostWithEmbedding struct {
+	ID       string `jsonapi:"-"`
+	Another  string `jsonapi:"name=another"`
+	Field    string `jsonapi:"name=foo"`
+	Other    string `jsonapi:"name=bar-bar"`
+	Ignored  string `jsonapi:"-"`
+	Embedded SQLNullPost
+}
+
+func (p *RenamedPostWithEmbedding) SetID(ID string) error {
+	p.ID = ID
+	return nil
+}
+
 func (s SQLNullPost) GetName() string {
 	return "sqlNullPosts"
 }
