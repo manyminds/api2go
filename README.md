@@ -395,6 +395,10 @@ func (s *fixtureSource) Delete(id string, r api2go.Request) (Responder, err erro
 func (s *fixtureSource) Update(obj interface{}, r api2go.Request) (Responder, err error) {}
 ```
 
+If you want to return a jsonapi compatible error because something went wrong inside the CRUD methods, you can use our
+`HTTPError` struct, which can be created with `NewHTTPError`. This allowes you to set the error status code and add
+as many information about the error as you like. See: [jsonapi error](http://jsonapi.org/format/#errors)
+
 To fetch all objects of a specific resource you can choose to implement one or both of the following
 interfaces:
 
