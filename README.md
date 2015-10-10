@@ -44,7 +44,8 @@ go get github.com/manyminds/api2go/jsonapi
 
 ## Examples
 
-Examples can be found [here](https://github.com/manyminds/api2go/blob/master/examples/crud_example.go).
+- Basic Examples can be found [here](https://github.com/manyminds/api2go/blob/master/examples/crud_example.go).
+- For a more real life example implementation of api2go using [jinzhu/gorm](https://github.com/jinzhu/gorm) and [gin-gonic/gin](https://github.com/gin-gonic/gin) you can have a look at hnakamur's [repository](https://github.com/hnakamur/api2go-gorm-gin-crud-example)
 
 ## Interfaces to implement
 For the following query and result examples, imagine the following 2 structs which represent a posts and
