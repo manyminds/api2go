@@ -315,6 +315,11 @@ func UnmarshalInto(input map[string]interface{}, targetStructType reflect.Type, 
 // check if there is any field tag with the given name available
 func getFieldByTagName(val reflect.Value, fieldName string) (field reflect.Value, found bool) {
 	for x := 0; x < val.NumField(); x++ {
+		tfield := val.Type().Field(x)
+		if tfield.Tag.Get("jsonapi") == "-" {
+			continue
+		}
+
 		// check if there is an embedded struct which needs to be searched
 		if val.Field(x).CanAddr() && val.Field(x).Addr().CanInterface() {
 			_, isEmbedded := val.Field(x).Addr().Interface().(UnmarshalIdentifier)
@@ -327,9 +332,8 @@ func getFieldByTagName(val reflect.Value, fieldName string) (field reflect.Value
 		}
 
 		// try to find the field
-		tfield := val.Type().Field(x)
 		name := GetTagValueByName(tfield, "name")
-		if tfield.Tag.Get("jsonapi") != "-" && strings.ToLower(name) == strings.ToLower(fieldName) {
+		if strings.ToLower(name) == strings.ToLower(fieldName) {
 			field = val.Field(x)
 			found = true
 			return
