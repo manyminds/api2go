@@ -320,7 +320,9 @@ func getFieldByTagName(val reflect.Value, fieldName string) (field reflect.Value
 			_, isEmbedded := val.Field(x).Addr().Interface().(UnmarshalIdentifier)
 			if isEmbedded {
 				field, found = getFieldByTagName(val.Field(x), fieldName)
-				return
+				if found {
+					return
+				}
 			}
 		}
 
