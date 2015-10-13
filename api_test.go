@@ -199,6 +199,7 @@ func (b Banana) GetID() string {
 type User struct {
 	ID   string `jsonapi:"-"`
 	Name string
+	Info string
 }
 
 func (u User) GetID() string {
@@ -524,6 +525,7 @@ var _ = Describe("RestHandler", func() {
 					"type": "users",
 					"attributes": map[string]interface{}{
 						"name": "Dieter",
+						"info": "",
 					},
 				},
 				{
@@ -650,7 +652,8 @@ var _ = Describe("RestHandler", func() {
 					"id": "1",
 					"type": "users",
 					"attributes": {
-						"name": "Dieter"
+						"name": "Dieter",
+						"info": ""
 					}
 				}}`))
 		})
@@ -1585,6 +1588,207 @@ var _ = Describe("RestHandler", func() {
 			Expect(rec.Code).To(Equal(http.StatusOK))
 			Expect(err).ToNot(HaveOccurred())
 			Expect(rec.Body.Bytes()).To(ContainSubstring(expected))
+		})
+	})
+
+	Context("Sparse Fieldsets", func() {
+		var (
+			source *fixtureSource
+			api    *API
+			rec    *httptest.ResponseRecorder
+		)
+
+		BeforeEach(func() {
+			author := User{ID: "666", Name: "Tester", Info: "Is curious about testing"}
+			source = &fixtureSource{map[string]*Post{
+				"1": {ID: "1", Title: "Nice Post", Value: null.FloatFrom(13.37), Author: &author},
+			}, false}
+			api = NewAPI("")
+			api.AddResource(Post{}, source)
+			rec = httptest.NewRecorder()
+		})
+
+		It("only returns requested post fields for single post", func() {
+			req, err := http.NewRequest("GET", "/posts/1?fields[posts]=title,value", nil)
+			Expect(err).ToNot(HaveOccurred())
+			api.Handler().ServeHTTP(rec, req)
+			Expect(rec.Code).To(Equal(http.StatusOK))
+			Expect(rec.Body.Bytes()).To(MatchJSON(`
+				{"data": {
+					"id": "1",
+					"type": "posts",
+					"attributes": {
+						"title": "Nice Post",
+						"value": 13.37
+					},
+					"relationships": {
+						"author": {
+							"data": {
+								"id": "666",
+								"type": "users"
+							},
+							"links": {
+								"related": "/posts/1/author",
+								"self": "/posts/1/relationships/author"
+								}
+							},
+						"bananas": {
+						"data": [],
+							"links": {
+								"related": "/posts/1/bananas",
+								"self": "/posts/1/relationships/bananas"
+								}
+							},
+						"comments": {
+							"data": [],
+							"links": {
+								"related": "/posts/1/comments",
+								"self": "/posts/1/relationships/comments"
+							}
+						}
+					}
+				},
+				"included": [
+					{
+						"attributes": {
+							"info": "Is curious about testing",
+							"name": "Tester"
+						},
+						"id": "666",
+						"type": "users"
+					}
+				]
+			}`))
+		})
+
+		It("FindOne: only returns requested post field for single post and includes", func() {
+			req, err := http.NewRequest("GET", "/posts/1?fields[posts]=title&fields[users]=name", nil)
+			Expect(err).ToNot(HaveOccurred())
+			api.Handler().ServeHTTP(rec, req)
+			Expect(rec.Code).To(Equal(http.StatusOK))
+			Expect(rec.Body.Bytes()).To(MatchJSON(`
+				{"data": {
+					"id": "1",
+					"type": "posts",
+					"attributes": {
+						"title": "Nice Post"
+					},
+					"relationships": {
+						"author": {
+							"data": {
+								"id": "666",
+								"type": "users"
+							},
+							"links": {
+								"related": "/posts/1/author",
+								"self": "/posts/1/relationships/author"
+								}
+						},
+						"bananas": {
+							"data": [],
+							"links": {
+								"related": "/posts/1/bananas",
+								"self": "/posts/1/relationships/bananas"
+								}
+							},
+						"comments": {
+							"data": [],
+							"links": {
+								"related": "/posts/1/comments",
+								"self": "/posts/1/relationships/comments"
+							}
+						}
+					}
+				},
+				"included": [
+					{
+						"attributes": {
+							"name": "Tester"
+						},
+						"id": "666",
+						"type": "users"
+					}
+				]
+			}`))
+		})
+
+		It("FindAll: only returns requested post field for single post and includes", func() {
+			req, err := http.NewRequest("GET", "/posts?fields[posts]=title&fields[users]=name", nil)
+			Expect(err).ToNot(HaveOccurred())
+			api.Handler().ServeHTTP(rec, req)
+			Expect(rec.Code).To(Equal(http.StatusOK))
+			Expect(rec.Body.Bytes()).To(MatchJSON(`
+				{"data": [{
+					"id": "1",
+					"type": "posts",
+					"attributes": {
+						"title": "Nice Post"
+					},
+					"relationships": {
+						"author": {
+							"data": {
+								"id": "666",
+								"type": "users"
+							},
+							"links": {
+								"related": "/posts/1/author",
+								"self": "/posts/1/relationships/author"
+								}
+						},
+						"bananas": {
+							"data": [],
+							"links": {
+								"related": "/posts/1/bananas",
+								"self": "/posts/1/relationships/bananas"
+								}
+							},
+						"comments": {
+							"data": [],
+							"links": {
+								"related": "/posts/1/comments",
+								"self": "/posts/1/relationships/comments"
+							}
+						}
+					}
+				}],
+				"included": [
+					{
+						"attributes": {
+							"name": "Tester"
+						},
+						"id": "666",
+						"type": "users"
+					}
+				]
+			}`))
+		})
+
+		It("Summarize all invalid field query parameters as error", func() {
+			req, err := http.NewRequest("GET", "/posts?fields[posts]=title,nonexistent&fields[users]=name,title,fluffy,pink", nil)
+			Expect(err).ToNot(HaveOccurred())
+			api.Handler().ServeHTTP(rec, req)
+			Expect(rec.Code).To(Equal(http.StatusBadRequest))
+			error := HTTPError{}
+			err = json.Unmarshal(rec.Body.Bytes(), &error)
+			Expect(err).ToNot(HaveOccurred())
+
+			expectedError := func(field, objType string) Error {
+				return Error{
+					Status: "Bad Request",
+					Code:   codeInvalidQueryFields,
+					Title:  fmt.Sprintf(`Field "%s" does not exist for type "%s"`, field, objType),
+					Detail: "Please make sure you do only request existing fields",
+					Source: &ErrorSource{
+						Parameter: fmt.Sprintf("fields[%s]", objType),
+					},
+				}
+			}
+
+			Expect(error.Errors).To(HaveLen(4))
+			Expect(error.Errors).To(ContainElement(expectedError("nonexistent", "posts")))
+			Expect(error.Errors).To(ContainElement(expectedError("title", "users")))
+			Expect(error.Errors).To(ContainElement(expectedError("fluffy", "users")))
+			Expect(error.Errors).To(ContainElement(expectedError("pink", "users")))
 		})
 	})
 })

@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -16,7 +17,12 @@ import (
 	"github.com/manyminds/api2go/routing"
 )
 
-const defaultContentTypHeader = "application/vnd.api+json"
+const (
+	codeInvalidQueryFields  = "API2GO_INVALID_FIELD_QUERY_PARAM"
+	defaultContentTypHeader = "application/vnd.api+json"
+)
+
+var queryFieldsRegex = regexp.MustCompile(`^fields\[(\w+)\]$`)
 
 type response struct {
 	Meta   map[string]interface{}
@@ -994,11 +1000,122 @@ func unmarshalRequest(r *http.Request, marshalers map[string]ContentMarshaler) (
 
 func marshalResponse(resp interface{}, w http.ResponseWriter, status int, r *http.Request, marshalers map[string]ContentMarshaler) error {
 	marshaler, contentType := selectContentMarshaler(r, marshalers)
-	result, err := marshaler.Marshal(resp)
+	filtered, err := filterSparseFields(resp, r)
+	if err != nil {
+		return err
+	}
+	result, err := marshaler.Marshal(filtered)
 	if err != nil {
 		return err
 	}
 	writeResult(w, result, status, contentType)
+	return nil
+}
+
+func filterSparseFields(resp interface{}, r *http.Request) (interface{}, error) {
+	query := r.URL.Query()
+	queryParams := parseQueryFields(&query)
+	if len(queryParams) < 1 {
+		return resp, nil
+	}
+
+	if content, ok := resp.(map[string]interface{}); ok {
+		wrongFields := map[string][]string{}
+
+		// single entry in data
+		if data, ok := content["data"].(map[string]interface{}); ok {
+			errors := replaceAttributes(&queryParams, &data)
+			for t, v := range errors {
+				wrongFields[t] = v
+			}
+		}
+
+		// data can be a slice too
+		if datas, ok := content["data"].([]map[string]interface{}); ok {
+			for index, data := range datas {
+				errors := replaceAttributes(&queryParams, &data)
+				for t, v := range errors {
+					wrongFields[t] = v
+				}
+				datas[index] = data
+			}
+		}
+
+		// included slice
+		if included, ok := content["included"].([]map[string]interface{}); ok {
+			for index, include := range included {
+				errors := replaceAttributes(&queryParams, &include)
+				for t, v := range errors {
+					wrongFields[t] = v
+				}
+				included[index] = include
+			}
+		}
+
+		if len(wrongFields) > 0 {
+			httpError := NewHTTPError(nil, "Some requested fields were invalid", http.StatusBadRequest)
+			for k, v := range wrongFields {
+				for _, field := range v {
+					httpError.Errors = append(httpError.Errors, Error{
+						Status: "Bad Request",
+						Code:   codeInvalidQueryFields,
+						Title:  fmt.Sprintf(`Field "%s" does not exist for type "%s"`, field, k),
+						Detail: "Please make sure you do only request existing fields",
+						Source: &ErrorSource{
+							Parameter: fmt.Sprintf("fields[%s]", k),
+						},
+					})
+				}
+			}
+			return nil, httpError
+		}
+	}
+	return resp, nil
+}
+
+func parseQueryFields(query *url.Values) (result map[string][]string) {
+	result = map[string][]string{}
+	for name, param := range *query {
+		matches := queryFieldsRegex.FindStringSubmatch(name)
+		if len(matches) > 1 {
+			match := matches[1]
+			result[match] = strings.Split(param[0], ",")
+		}
+	}
+
+	return
+}
+
+func filterAttributes(attributes map[string]interface{}, fields []string) (filteredAttributes map[string]interface{}, wrongFields []string) {
+	wrongFields = []string{}
+	filteredAttributes = map[string]interface{}{}
+
+	for _, field := range fields {
+		if attribute, ok := attributes[field]; ok {
+			filteredAttributes[field] = attribute
+		} else {
+			wrongFields = append(wrongFields, field)
+		}
+	}
+
+	return
+}
+
+func replaceAttributes(query *map[string][]string, entry *map[string]interface{}) map[string][]string {
+	fieldType := (*entry)["type"].(string)
+	fields := (*query)[fieldType]
+	if len(fields) > 0 {
+		if attributes, ok := (*entry)["attributes"]; ok {
+			var wrongFields []string
+			(*entry)["attributes"], wrongFields = filterAttributes(attributes.(map[string]interface{}), fields)
+			if len(wrongFields) > 0 {
+				return map[string][]string{
+					fieldType: wrongFields,
+				}
+			}
+		}
+	}
+
 	return nil
 }
 
