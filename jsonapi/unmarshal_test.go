@@ -58,12 +58,30 @@ var _ = Describe("Unmarshal", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(posts).To(Equal([]SimplePost{firstPost}))
 		})
-
 		It("unmarshals single objects into a struct", func() {
 			var post SimplePost
 			err := Unmarshal(singlePostMap, &post)
 			Expect(err).To(BeNil())
 			Expect(post).To(Equal(firstPost))
+		})
+
+		It("does not unmarshal private fields", func() {
+			failingPostMap := map[string]interface{}{
+				"data": map[string]interface{}{
+					"id":   "1",
+					"type": "simplePosts",
+					"attributes": map[string]interface{}{
+						"title":       firstPost.Title,
+						"text":        firstPost.Text,
+						"create-date": "2014-11-10T16:30:48.823Z",
+						"top-secret":  "fish",
+					},
+				},
+			}
+			var post SimplePost
+			err := Unmarshal(failingPostMap, &post)
+			Expect(err).ToNot(BeNil())
+			Expect(err.Error()).To(Equal("field not exported. Expected field with name Top-secret to exist"))
 		})
 
 		It("unmarshals multiple objects", func() {
