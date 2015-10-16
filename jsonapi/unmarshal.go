@@ -260,6 +260,7 @@ func UnmarshalInto(input map[string]interface{}, targetStructType reflect.Type, 
 						//check if there is any field tag with the given name available
 						field, found = getFieldByTagName(val, fieldName)
 					}
+
 					if !found || fieldType.Tag.Get("jsonapi") == "-" {
 						return fmt.Errorf("invalid key \"%s\" in json. Cannot be assigned to target struct \"%s\"", key, targetStructType.Name())
 					}
@@ -267,6 +268,10 @@ func UnmarshalInto(input map[string]interface{}, targetStructType reflect.Type, 
 					value := reflect.ValueOf(attributeValue)
 
 					if value.IsValid() {
+						if !field.CanInterface() {
+							return fmt.Errorf("field not exported. Expected field with name %s to exist", fieldName)
+						}
+
 						plainValue := reflect.ValueOf(attributeValue)
 
 						switch field.Interface().(type) {
