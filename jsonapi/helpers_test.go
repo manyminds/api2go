@@ -38,7 +38,9 @@ var _ = Describe("StringHelpers", func() {
 
 	Context("Reflect funcs", func() {
 		type Element struct {
-			Name string `jsonapi:"name=actress;body=hot;chest=awesome;character"`
+			Name         string `jsonapi:"name=actress;body=hot;chest=awesome;character"`
+			FavoriteFood string `json:"favorite_food",jsonapi:""`
+			Color        string `json:"-"`
 		}
 
 		It("tests for existance of settings", func() {
@@ -54,6 +56,18 @@ var _ = Describe("StringHelpers", func() {
 			element := Element{Name: "Jennifer Lawrence"}
 			testField := reflect.ValueOf(element).Type().Field(0)
 			Expect(GetTagValueByName(testField, "talent")).To(Equal(""))
+		})
+
+		It("falls back to json tag", func() {
+			element := Element{FavoriteFood: "pizza"}
+			testField := reflect.ValueOf(element).Type().Field(1)
+			Expect(GetTagValueByName(testField, "name")).To(Equal("favorite_food"))
+		})
+
+		It("skips json tag -", func() {
+			element := Element{Color: "green"}
+			testField := reflect.ValueOf(element).Type().Field(2)
+			Expect(GetTagValueByName(testField, "name")).To(Equal(""))
 		})
 	})
 })

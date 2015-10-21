@@ -86,7 +86,16 @@ func Singularize(word string) string {
 func GetTagValueByName(tfield reflect.StructField, name string) string {
 	str := tfield.Tag.Get("jsonapi")
 	if str == "" {
-		return ""
+		str = tfield.Tag.Get("json")
+		if str == "" || str == "-" {
+			return ""
+		}
+
+		if idx := strings.Index(str, ","); idx != -1 {
+			return str[:idx]
+		}
+		return str
+
 	}
 
 	tags := strings.Split(str, ";")
