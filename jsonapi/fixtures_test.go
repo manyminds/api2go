@@ -345,6 +345,7 @@ type SQLNullPost struct {
 	Likes  zero.Int
 	Rating zero.Float
 	IsCool zero.Bool
+	Today  zero.Time
 }
 
 func (s SQLNullPost) GetID() string {
