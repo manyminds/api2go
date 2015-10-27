@@ -842,7 +842,7 @@ var _ = Describe("Marshalling", func() {
 	Context("SQL Null-Types", func() {
 		var nullPost SQLNullPost
 
-		BeforeEach(func() {
+		It("correctly marshalls String, Int64, Float64, Bool and Time", func() {
 			nullPost = SQLNullPost{
 				ID:     "theID",
 				Title:  zero.StringFrom("Test"),
@@ -850,9 +850,6 @@ var _ = Describe("Marshalling", func() {
 				Rating: zero.FloatFrom(66.66),
 				IsCool: zero.BoolFrom(true),
 			}
-		})
-
-		It("correctly marshalls String, Int64, Float64 and Bool", func() {
 			result, err := MarshalToJSON(nullPost)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(result).To(MatchJSON(`
@@ -864,11 +861,41 @@ var _ = Describe("Marshalling", func() {
 							"title": "Test",
 							"likes": 666,
 							"rating": 66.66,
-							"isCool": true
+							"isCool": true,
+							"today": "0001-01-01T00:00:00Z"
 						}
 					}
 				}
 			`))
 		})
+
+		It("correctly marshalls Null String, Int64, Float64, Bool and Time", func() {
+			nullPost = SQLNullPost{
+				ID:     "theID",
+				Title:  zero.StringFromPtr(nil),
+				Likes:  zero.IntFromPtr(nil),
+				Rating: zero.FloatFromPtr(nil),
+				IsCool: zero.BoolFromPtr(nil),
+				Today:  zero.TimeFromPtr(nil),
+			}
+			result, err := MarshalToJSON(nullPost)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(MatchJSON(`
+				{
+					"data": {
+						"id": "theID",
+						"type": "sqlNullPosts",
+						"attributes": {
+							"title": "",
+							"likes": 0,
+							"rating": 0,
+							"isCool": false,
+							"today": "0001-01-01T00:00:00Z"
+						}
+					}
+				}
+			`))
+		})
+
 	})
 })
