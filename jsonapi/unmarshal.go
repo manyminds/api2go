@@ -267,10 +267,11 @@ func UnmarshalInto(input map[string]interface{}, targetStructType reflect.Type, 
 
 					value := reflect.ValueOf(attributeValue)
 
+					if !field.CanInterface() {
+						return fmt.Errorf("field not exported. Expected field with name %s to exist", fieldName)
+					}
+
 					if value.IsValid() {
-						if !field.CanInterface() {
-							return fmt.Errorf("field not exported. Expected field with name %s to exist", fieldName)
-						}
 
 						plainValue := reflect.ValueOf(attributeValue)
 
@@ -298,6 +299,15 @@ func UnmarshalInto(input map[string]interface{}, targetStructType reflect.Type, 
 									return fmt.Errorf("Could not set field '%s'. %s", fieldName, err.Error())
 								}
 							}
+						}
+					} else {
+						// Set the field to its zero value if its type is from the zero or null package.
+						if extType := field.Type(); extType != nil && extType.Kind().String() == "struct" {
+							fieldSource := extType.Field(0).Name
+							if strings.HasPrefix(fieldSource, "Null") || strings.HasPrefix(fieldSource, "Zero") || strings.HasPrefix(fieldSource, "Time") {
+								field.Set(reflect.Zero(field.Type()))
+							}
+
 						}
 					}
 

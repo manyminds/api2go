@@ -2,7 +2,9 @@ package jsonapi
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
+	"reflect"
 	"time"
 
 	"gopkg.in/guregu/null.v2/zero"
@@ -658,16 +660,17 @@ var _ = Describe("Unmarshal", func() {
 		})
 
 		It("overwrites existing data with nulls when marshaling", func() {
-			now := zero.TimeFrom(time.Now().UTC())
 			target := SQLNullPost{
-				ID:    "newID",
-				Title: zero.StringFrom("TestTitle"),
-				Likes: zero.IntFrom(11), Today: now,
+				ID:     "newID",
+				Title:  zero.StringFrom("TestTitle"),
+				Likes:  zero.IntFrom(11),
 				IsCool: zero.BoolFrom(true),
-				Rating: zero.FloatFrom(0.0)}
+				Rating: zero.FloatFrom(4.5),
+				Today:  zero.TimeFrom(time.Now().UTC())}
 			nullPosts = append(nullPosts, target)
 			Expect(nullPosts).To(HaveLen(1))
-			err := UnmarshalFromJSON([]byte(`
+			ctx := map[string]interface{}{}
+			err := json.Unmarshal([]byte(`
 				{
 					"data": {
 						"id": "newID",
@@ -681,10 +684,16 @@ var _ = Describe("Unmarshal", func() {
 						}
 					}
 				}
-				`), &nullPosts[0])
+				`), &ctx)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(nullPosts).To(HaveLen(1))
-			Expect(nullPosts[0]).To(Equal(SQLNullPost{
+			// This follows the technique used in api.go
+			updatingObjs := reflect.MakeSlice(reflect.SliceOf(reflect.TypeOf(target)), 1, 1)
+			updatingObjs.Index(0).Set(reflect.ValueOf(target))
+			err = UnmarshalInto(ctx, reflect.TypeOf(target), &updatingObjs)
+			Expect(err).ToNot(HaveOccurred())
+			updatingObj := updatingObjs.Index(0).Interface()
+			Expect(updatingObjs.Len()).To(Equal(1))
+			Expect(updatingObj).To(Equal(SQLNullPost{
 				ID:     "newID",
 				Title:  zero.StringFromPtr(nil),
 				Likes:  zero.IntFromPtr(nil),
