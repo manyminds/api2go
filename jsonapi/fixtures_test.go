@@ -11,7 +11,7 @@ import (
 )
 
 type Magic struct {
-	ID MagicID `jsonapi:"-"`
+	ID MagicID `jsonapi:"-" json:"-"`
 }
 
 func (m Magic) GetID() string {
@@ -25,8 +25,8 @@ func (m MagicID) String() string {
 }
 
 type Comment struct {
-	ID   int `jsonapi:"-"`
-	Text string
+	ID   int    `jsonapi:"-" json:"-"`
+	Text string `json:"text"`
 }
 
 func (c Comment) GetID() string {
@@ -45,9 +45,9 @@ func (c *Comment) SetID(stringID string) error {
 }
 
 type User struct {
-	ID       int `jsonapi:"-"`
-	Name     string
-	Password string `jsonapi:"-"`
+	ID       int    `jsonapi:"-" json:"-"`
+	Name     string `json:"name"`
+	Password string `jsonapi:"-" json:"-"`
 }
 
 func (u User) GetID() string {
@@ -66,13 +66,14 @@ func (u *User) SetID(stringID string) error {
 }
 
 type SimplePost struct {
-	ID          string `jsonapi:"-"`
-	Title, Text string
-	Internal    string `jsonapi:"-"`
-	Size        int
-	Created     time.Time `jsonapi:"name=create-date"`
-	Updated     time.Time `jsonapi:"name=updated-date"`
-	topSecret   string    `jsonapi:"name=top-secret"`
+	ID        string    `jsonapi:"-" json:"-"`
+	Title     string    `json:"title"`
+	Text      string    `json:"text"`
+	Internal  string    `jsonapi:"-" json:"-"`
+	Size      int       `json:"size"`
+	Created   time.Time `jsonapi:"name=created-date" json:"created-date"`
+	Updated   time.Time `jsonapi:"name=updated-date" json:"updated-date"`
+	topSecret string    `jsonapi:"name=top-secret" json:"top-secret"`
 }
 
 func (s SimplePost) GetID() string {
@@ -86,14 +87,14 @@ func (s *SimplePost) SetID(ID string) error {
 }
 
 type Post struct {
-	ID            int `jsonapi:"-"`
-	Title         string
-	Comments      []Comment     `jsonapi:"-"`
-	CommentsIDs   []int         `jsonapi:"-"`
-	CommentsEmpty bool          `jsonapi:"-"`
-	Author        *User         `jsonapi:"-"`
-	AuthorID      sql.NullInt64 `jsonapi:"-"`
-	AuthorEmpty   bool          `jsonapi:"-"`
+	ID            int           `jsonapi:"-" json:"-"`
+	Title         string        `json:"title"`
+	Comments      []Comment     `jsonapi:"-" json:"-"`
+	CommentsIDs   []int         `jsonapi:"-" json:"-"`
+	CommentsEmpty bool          `jsonapi:"-" json:"-"`
+	Author        *User         `jsonapi:"-" json:"-"`
+	AuthorID      sql.NullInt64 `jsonapi:"-" json:"-"`
+	AuthorEmpty   bool          `jsonapi:"-" json:"-"`
 }
 
 func (c Post) GetID() string {
@@ -216,9 +217,9 @@ func (c *Post) SetReferencedStructs(references []UnmarshalIdentifier) error {
 }
 
 type AnotherPost struct {
-	ID       int   `jsonapi:"-"`
-	AuthorID int   `jsonapi:"-"`
-	Author   *User `jsonapi:"-"`
+	ID       int   `jsonapi:"-" json:"-"`
+	AuthorID int   `jsonapi:"-" json:"-"`
+	Author   *User `jsonapi:"-" json:"-"`
 }
 
 func (p AnotherPost) GetID() string {
@@ -245,9 +246,9 @@ func (p AnotherPost) GetReferencedIDs() []ReferenceID {
 }
 
 type ZeroPost struct {
-	ID    string `jsonapi:"-"`
-	Title string
-	Value zero.Float
+	ID    string     `jsonapi:"-" json:"-"`
+	Title string     `json:"title"`
+	Value zero.Float `json:"value"`
 }
 
 func (z ZeroPost) GetID() string {
@@ -255,9 +256,9 @@ func (z ZeroPost) GetID() string {
 }
 
 type ZeroPostPointer struct {
-	ID    string `jsonapi:"-"`
-	Title string
-	Value *zero.Float
+	ID    string      `jsonapi:"-" json:"-"`
+	Title string      `json:"title"`
+	Value *zero.Float `json:"value"`
 }
 
 func (z ZeroPostPointer) GetID() string {
@@ -265,10 +266,10 @@ func (z ZeroPostPointer) GetID() string {
 }
 
 type Question struct {
-	ID                  string `jsonapi:"-"`
-	Text                string
-	InspiringQuestionID sql.NullString `jsonapi:"-"`
-	InspiringQuestion   *Question      `jsonapi:"-"`
+	ID                  string         `jsonapi:"-" json:"-"`
+	Text                string         `json:"text"`
+	InspiringQuestionID sql.NullString `jsonapi:"-" json:"-"`
+	InspiringQuestion   *Question      `jsonapi:"-" json:"-"`
 }
 
 func (q Question) GetID() string {
@@ -340,12 +341,12 @@ func (n *NumberPost) SetID(ID string) error {
 }
 
 type SQLNullPost struct {
-	ID     string `jsonapi:"-"`
-	Title  zero.String
-	Likes  zero.Int
-	Rating zero.Float
-	IsCool zero.Bool
-	Today  zero.Time
+	ID     string      `jsonapi:"-" json:"-"`
+	Title  zero.String `json:"title"`
+	Likes  zero.Int    `json:"likes"`
+	Rating zero.Float  `json:"rating"`
+	IsCool zero.Bool   `json:"isCool"`
+	Today  zero.Time   `json:"today"`
 }
 
 func (s SQLNullPost) GetID() string {

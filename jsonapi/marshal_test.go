@@ -2,6 +2,7 @@ package jsonapi
 
 import (
 	"database/sql"
+	"encoding/json"
 	"time"
 
 	"gopkg.in/guregu/null.v2/zero"
@@ -13,44 +14,33 @@ import (
 var _ = Describe("Marshalling", func() {
 	Context("When marshaling simple objects", func() {
 		var (
-			firstPost, secondPost                     SimplePost
-			firstUserMap, firstPostMap, secondPostMap map[string]interface{}
-			created                                   time.Time
+			firstPost, secondPost                        SimplePost
+			firstPostData, secondPostData, firstUserData Data
+			created                                      time.Time
 		)
 
 		BeforeEach(func() {
 			created, _ = time.Parse(time.RFC3339, "2014-11-10T16:30:48.823Z")
 			firstPost = SimplePost{ID: "first", Title: "First Post", Text: "Lipsum", Created: created}
-			firstPostMap = map[string]interface{}{
-				"type": "simplePosts",
-				"id":   "first",
-				"attributes": map[string]interface{}{
-					"title":       firstPost.Title,
-					"text":        firstPost.Text,
-					"size":        0,
-					"create-date": created,
-				},
+			firstPostJSON, _ := json.Marshal(firstPost)
+			firstPostData = Data{
+				Type:       "simplePosts",
+				ID:         "first",
+				Attributes: firstPostJSON,
 			}
 
 			secondPost = SimplePost{ID: "second", Title: "Second Post", Text: "Getting more advanced!", Created: created, Updated: created}
-			secondPostMap = map[string]interface{}{
-				"type": "simplePosts",
-				"id":   "second",
-				"attributes": map[string]interface{}{
-					"title":        secondPost.Title,
-					"text":         secondPost.Text,
-					"size":         0,
-					"create-date":  created,
-					"updated-date": created,
-				},
+			secondPostJSON, _ := json.Marshal(secondPost)
+			secondPostData = Data{
+				Type:       "simplePosts",
+				ID:         "second",
+				Attributes: secondPostJSON,
 			}
 
-			firstUserMap = map[string]interface{}{
-				"type": "users",
-				"id":   "100",
-				"attributes": map[string]interface{}{
-					"name": "Nino",
-				},
+			firstUserData = Data{
+				Type:       "users",
+				ID:         "100",
+				Attributes: []byte(`{"name":"Nino"}`),
 			}
 		})
 
@@ -58,43 +48,70 @@ var _ = Describe("Marshalling", func() {
 			user := User{ID: 100, Name: "Nino", Password: "babymaus"}
 			i, err := Marshal(user)
 			Expect(err).To(BeNil())
-			Expect(i).To(Equal(map[string]interface{}{
-				"data": firstUserMap,
-			}))
+			Expect(i).To(MatchJSON(`
+			{
+				"data": {
+					"type": "users",
+					"id": "100",
+					"attributes": {
+						"name": "Nino"
+					}
+				}
+			}
+			`))
 		})
 
 		It("marshals single object without relationships as pointer", func() {
 			user := User{ID: 100, Name: "Nino", Password: "babymaus"}
 			i, err := Marshal(&user)
 			Expect(err).To(BeNil())
-			Expect(i).To(Equal(map[string]interface{}{
-				"data": firstUserMap,
-			}))
+			Expect(i).To(MatchJSON(`
+			{
+				"data": {
+					"type": "users",
+					"id": "100",
+					"attributes": {
+						"name": "Nino"
+					}
+				}
+			}
+			`))
 		})
 
 		It("marshals single object", func() {
 			i, err := Marshal(firstPost)
 			Expect(err).To(BeNil())
-			Expect(i).To(Equal(map[string]interface{}{
-				"data": firstPostMap,
-			}))
+			Expect(i).To(MatchJSON(`
+			{
+				"data": {
+					"type": "simplePosts",
+					"id": "first",
+					"attributes": {
+						"title": "First Post",
+						"text": "Lipsum",
+						"created-date": "2014-11-10T16:30:48.823Z",
+						"updated-date": "0001-01-01T00:00:00Z",
+						"size": 0
+					}
+				}
+			}
+			`))
 		})
 
 		It("should prefer fmt.Stringer().String() over string contents", func() {
 			m := Magic{}
 			m.ID = "This should be only internal"
 
-			expected := map[string]interface{}{
-				"data": map[string]interface{}{
-					"type":       "magics",
-					"id":         "This should be visible",
-					"attributes": map[string]interface{}{},
-				},
-			}
-
 			v, e := Marshal(m)
 			Expect(e).ToNot(HaveOccurred())
-			Expect(v).To(Equal(expected))
+			Expect(v).To(MatchJSON(`
+			{
+				"data": {
+					"type": "magics",
+					"id": "This should be visible",
+					"attributes": {}
+				}
+			}`))
 		})
 
 		It("marshal nil value", func() {
@@ -105,48 +122,102 @@ var _ = Describe("Marshalling", func() {
 		It("marshals collections object", func() {
 			i, err := Marshal([]SimplePost{firstPost, secondPost})
 			Expect(err).To(BeNil())
-			Expect(i).To(Equal(map[string]interface{}{
-				"data": []map[string]interface{}{
-					firstPostMap,
-					secondPostMap,
+			Expect(i).To(MatchJSON(`
+			{
+				"data": [
+				{
+					"type": "simplePosts",
+					"id": "first",
+					"attributes": {
+						"title": "First Post",
+						"text": "Lipsum",
+						"size": 0,
+						"created-date": "2014-11-10T16:30:48.823Z",
+						"updated-date": "0001-01-01T00:00:00Z"
+					}
 				},
-			}))
+				{
+					"type": "simplePosts",
+					"id": "second",
+					"attributes": {
+						"title": "Second Post",
+						"text": "Getting more advanced!",
+						"size": 0,
+						"created-date": "2014-11-10T16:30:48.823Z",
+						"updated-date": "2014-11-10T16:30:48.823Z"
+					}
+				}
+				]
+			}`))
 		})
 
 		It("marshals empty collections", func() {
 			i, err := Marshal([]SimplePost{})
 			Expect(err).To(BeNil())
-			Expect(i).To(Equal(map[string]interface{}{
-				"data": []map[string]interface{}{},
-			}))
+			Expect(i).To(MatchJSON(`
+			{
+				"data": []
+			}`))
 		})
 
 		It("marshals slices of interface with one struct", func() {
 			i, err := Marshal([]interface{}{firstPost})
 			Expect(err).ToNot(HaveOccurred())
-			Expect(i).To(Equal(map[string]interface{}{
-				"data": []map[string]interface{}{
-					firstPostMap,
-				},
-			}))
+			Expect(i).To(MatchJSON(`
+			{
+				"data": [
+				{
+					"type": "simplePosts",
+					"id": "first",
+					"attributes": {
+						"title": "First Post",
+						"text": "Lipsum",
+						"size": 0,
+						"created-date": "2014-11-10T16:30:48.823Z",
+						"updated-date": "0001-01-01T00:00:00Z"
+					}
+				}
+				]
+			}`))
 		})
 
 		It("marshals slices of interface with structs", func() {
 			i, err := Marshal([]interface{}{firstPost, secondPost, User{ID: 1337, Name: "Nino", Password: "God"}})
 			Expect(err).ToNot(HaveOccurred())
-			Expect(i).To(Equal(map[string]interface{}{
-				"data": []map[string]interface{}{
-					firstPostMap,
-					secondPostMap,
-					{
-						"id":   "1337",
-						"type": "users",
-						"attributes": map[string]interface{}{
-							"name": "Nino",
-						},
-					},
+			Expect(i).To(MatchJSON(`
+			{
+				"data": [
+				{
+					"type": "simplePosts",
+					"id": "first",
+					"attributes": {
+						"title": "First Post",
+						"text": "Lipsum",
+						"size": 0,
+						"created-date": "2014-11-10T16:30:48.823Z",
+						"updated-date": "0001-01-01T00:00:00Z"
+					}
 				},
-			}))
+				{
+					"type": "simplePosts",
+					"id": "second",
+					"attributes": {
+						"title": "Second Post",
+						"text": "Getting more advanced!",
+						"size": 0,
+						"created-date": "2014-11-10T16:30:48.823Z",
+						"updated-date": "2014-11-10T16:30:48.823Z"
+					}
+				},
+				{
+					"type": "users",
+					"id": "1337",
+					"attributes": {
+						"name": "Nino"
+					}
+				}
+				]
+			}`))
 		})
 
 		It("returns an error when passing an empty string", func() {
@@ -168,142 +239,146 @@ var _ = Describe("Marshalling", func() {
 			i, err := MarshalWithURLs(posts, CompleteServerInformation{})
 			Expect(err).To(BeNil())
 
-			expected := map[string]interface{}{
-				"data": []map[string]interface{}{
-					{
-						"id": "1",
-						"relationships": map[string]map[string]interface{}{
-							"comments": {
-								"links": map[string]string{
-									"self":    completePrefix + "/posts/1/relationships/comments",
-									"related": completePrefix + "/posts/1/comments",
-								},
-								"data": []map[string]interface{}{
-									{
-										"id":   "1",
-										"type": "comments",
-									},
-									{
-										"id":   "2",
-										"type": "comments",
-									},
-								},
-							},
-							"author": {
-								"links": map[string]string{
-									"self":    completePrefix + "/posts/1/relationships/author",
-									"related": completePrefix + "/posts/1/author",
-								},
-								"data": map[string]interface{}{
-									"id":   "1",
-									"type": "users",
-								},
-							},
-						},
-						"type": "posts",
-						"attributes": map[string]interface{}{
-							"title": "Foobar",
-						},
+			expected := `
+			{
+				"data": [
+				{
+					"type": "posts",
+					"id": "1",
+					"attributes": {
+						"title": "Foobar"
 					},
-					{
-						"id": "2",
-						"relationships": map[string]map[string]interface{}{
-							"comments": {
-								"links": map[string]string{
-									"self":    completePrefix + "/posts/2/relationships/comments",
-									"related": completePrefix + "/posts/2/comments",
-								},
-								"data": []map[string]interface{}{
-									{
-										"id":   "1",
-										"type": "comments",
-									},
-									{
-										"id":   "2",
-										"type": "comments",
-									},
-								},
+					"relationships": {
+						"author": {
+							"links": {
+								"self": "http://my.domain/v1/posts/1/relationships/author",
+								"related": "http://my.domain/v1/posts/1/author"
 							},
-							"author": {
-								"links": map[string]string{
-									"self":    completePrefix + "/posts/2/relationships/author",
-									"related": completePrefix + "/posts/2/author",
-								},
-								"data": map[string]interface{}{
-									"id":   "1",
-									"type": "users",
-								},
+							"data": {
+								"type": "users",
+								"id": "1"
+							}
+						},
+						"comments": {
+							"links": {
+								"self": "http://my.domain/v1/posts/1/relationships/comments",
+								"related": "http://my.domain/v1/posts/1/comments"
 							},
-						},
-						"type": "posts",
-						"attributes": map[string]interface{}{
-							"title": "Foobarbarbar",
-						},
-					},
+							"data": [
+							{
+								"type": "comments",
+								"id": "1"
+							},
+							{
+								"type": "comments",
+								"id": "2"
+							}
+							]
+						}
+					}
 				},
-				"included": []map[string]interface{}{
-					{
-						"id":   "1",
-						"type": "users",
-						"attributes": map[string]interface{}{
-							"name": "Test Author",
-						},
+				{
+					"type": "posts",
+					"id": "2",
+					"attributes": {
+						"title": "Foobarbarbar"
 					},
-					{
-						"id":   "1",
-						"type": "comments",
-						"attributes": map[string]interface{}{
-							"text": "First!",
+					"relationships": {
+						"author": {
+							"links": {
+								"self": "http://my.domain/v1/posts/2/relationships/author",
+								"related": "http://my.domain/v1/posts/2/author"
+							},
+							"data": {
+								"type": "users",
+								"id": "1"
+							}
 						},
-					},
-					{
-						"id":   "2",
-						"type": "comments",
-						"attributes": map[string]interface{}{
-							"text": "Second!",
-						},
-					},
+						"comments": {
+							"links": {
+								"self": "http://my.domain/v1/posts/2/relationships/comments",
+								"related": "http://my.domain/v1/posts/2/comments"
+							},
+							"data": [
+							{
+								"type": "comments",
+								"id": "1"
+							},
+							{
+								"type": "comments",
+								"id": "2"
+							}
+							]
+						}
+					}
+				}
+				],
+				"included": [
+				{
+					"type": "users",
+					"id": "1",
+					"attributes": {
+						"name": "Test Author"
+					}
 				},
+				{
+					"type": "comments",
+					"id": "1",
+					"attributes": {
+						"text": "First!"
+					}
+				},
+				{
+					"type": "comments",
+					"id": "2",
+					"attributes": {
+						"text": "Second!"
+					}
+				}
+				]
 			}
-
-			Expect(i).To(Equal(expected))
+			`
+			Expect(i).To(MatchJSON(expected))
 		})
 
 		It("adds IDs", func() {
 			post := Post{ID: 1, Comments: []Comment{}, CommentsIDs: []int{1}}
 			i, err := MarshalWithURLs(post, CompleteServerInformation{})
-			expected := map[string]interface{}{
-				"data": map[string]interface{}{
-					"id":   "1",
+			expected := `
+			{
+				"data": {
 					"type": "posts",
-					"attributes": map[string]interface{}{
-						"title": "",
+					"id": "1",
+					"attributes": {
+						"title": ""
 					},
-					"relationships": map[string]map[string]interface{}{
-						"comments": {
-							"links": map[string]string{
-								"self":    completePrefix + "/posts/1/relationships/comments",
-								"related": completePrefix + "/posts/1/comments",
-							},
-							"data": []map[string]interface{}{
-								{
-									"id":   "1",
-									"type": "comments",
-								},
-							},
-						},
+					"relationships": {
 						"author": {
-							"data": nil,
-							"links": map[string]string{
-								"self":    completePrefix + "/posts/1/relationships/author",
-								"related": completePrefix + "/posts/1/author",
+							"links": {
+								"self": "http://my.domain/v1/posts/1/relationships/author",
+								"related": "http://my.domain/v1/posts/1/author"
 							},
+							"data": null
 						},
-					},
-				},
+						"comments": {
+							"links": {
+								"self": "http://my.domain/v1/posts/1/relationships/comments",
+								"related": "http://my.domain/v1/posts/1/comments"
+							},
+							"data": [
+							{
+								"type": "comments",
+								"id": "1"
+							}
+							]
+						}
+					}
+				}
 			}
+			`
+
 			Expect(err).To(BeNil())
-			Expect(i).To(Equal(expected))
+			Expect(i).To(MatchJSON(expected))
 		})
 
 		It("prefers nested structs when given both, structs and IDs", func() {
@@ -312,68 +387,72 @@ var _ = Describe("Marshalling", func() {
 			post := Post{ID: 1, Comments: []Comment{comment}, CommentsIDs: []int{2}, Author: &author, AuthorID: sql.NullInt64{Int64: 1337}}
 			i, err := Marshal(post)
 			Expect(err).To(BeNil())
-			Expect(i).To(Equal(map[string]interface{}{
-				"data": map[string]interface{}{
-					"id":   "1",
+			Expect(i).To(MatchJSON(`
+			{
+				"data": {
 					"type": "posts",
-					"attributes": map[string]interface{}{
-						"title": "",
+					"id": "1",
+					"attributes": {
+						"title": ""
 					},
-					"relationships": map[string]map[string]interface{}{
-						"comments": {
-							"data": []map[string]interface{}{
-								{
-									"id":   "1",
-									"type": "comments",
-								},
-							},
-						},
+					"relationships": {
 						"author": {
-							"data": map[string]interface{}{
-								"id":   "1",
+							"data": {
 								"type": "users",
-							},
+								"id": "1"
+							}
 						},
-					},
+						"comments": {
+							"data": [
+							{
+								"type": "comments",
+								"id": "1"
+							}
+							]
+						}
+					}
 				},
-				"included": []map[string]interface{}{
+				"included": [
 					{
-						"id":   "1",
 						"type": "users",
-						"attributes": map[string]interface{}{
-							"name": "Tester",
-						},
+						"id": "1",
+						"attributes": {
+							"name": "Tester"
+						}
 					},
 					{
-						"id":   "1",
 						"type": "comments",
-						"attributes": map[string]interface{}{
-							"text": "",
-						},
-					},
-				},
-			}))
+						"id": "1",
+						"attributes": {
+							"text": ""
+						}
+					}
+				]
+			}
+			`))
 		})
 
 		It("uses ID field if MarshalLinkedRelations is implemented", func() {
 			anotherPost := AnotherPost{ID: 1, AuthorID: 1}
 			i, err := Marshal(anotherPost)
 			Expect(err).To(BeNil())
-			Expect(i).To(Equal(map[string]interface{}{
-				"data": map[string]interface{}{
-					"id":         "1",
-					"type":       "anotherPosts",
-					"attributes": map[string]interface{}{},
-					"relationships": map[string]map[string]interface{}{
+			Expect(i).To(MatchJSON(`
+			{
+				"data": {
+					"type": "anotherPosts",
+					"id": "1",
+					"attributes": {},
+					"relationships": {
 						"author": {
-							"data": map[string]interface{}{
-								"id":   "1",
+							"data": {
 								"type": "users",
-							},
-						},
-					},
-				},
-			}))
+								"id": "1"
+							}
+						}
+					}
+				}
+			}
+			`))
 		})
 	})
 
@@ -385,30 +464,33 @@ var _ = Describe("Marshalling", func() {
 			// violated, because you at least need a data, links, or meta field
 			i, err := MarshalWithURLs(post, CompleteServerInformation{})
 			Expect(err).ToNot(HaveOccurred())
-			Expect(i).To(Equal(map[string]interface{}{
-				"data": map[string]interface{}{
-					"id":   "123",
+			Expect(i).To(MatchJSON(`
+			{
+				"data": {
 					"type": "posts",
-					"attributes": map[string]interface{}{
-						"title": "Test",
+					"id": "123",
+					"attributes": {
+						"title": "Test"
 					},
-					"relationships": map[string]map[string]interface{}{
+					"relationships": {
 						"author": {
-							"links": map[string]string{
-								"self":    "http://my.domain/v1/posts/123/relationships/author",
-								"related": "http://my.domain/v1/posts/123/author",
-							},
+							"links": {
+								"self": "http://my.domain/v1/posts/123/relationships/author",
+								"related": "http://my.domain/v1/posts/123/author"
+							}
 						},
 						"comments": {
-							"links": map[string]string{
-								"self":    "http://my.domain/v1/posts/123/relationships/comments",
-								"related": "http://my.domain/v1/posts/123/comments",
-							},
-						},
-					},
-				},
-			}))
+							"links": {
+								"self": "http://my.domain/v1/posts/123/relationships/comments",
+								"related": "http://my.domain/v1/posts/123/comments"
+							}
+						}
+					}
+				}
+			}
+			`))
 		})
+
 		It("skips data field for not loaded author relation", func() {
 			post := Post{ID: 123, Title: "Test", AuthorEmpty: true}
 
@@ -416,31 +498,34 @@ var _ = Describe("Marshalling", func() {
 			// violated, because you at least need a data, links, or meta field
 			i, err := MarshalWithURLs(post, CompleteServerInformation{})
 			Expect(err).ToNot(HaveOccurred())
-			Expect(i).To(Equal(map[string]interface{}{
-				"data": map[string]interface{}{
-					"id":   "123",
+			Expect(i).To(MatchJSON(`
+			{
+				"data": {
 					"type": "posts",
-					"attributes": map[string]interface{}{
-						"title": "Test",
+					"id": "123",
+					"attributes": {
+						"title": "Test"
 					},
-					"relationships": map[string]map[string]interface{}{
+					"relationships": {
 						"author": {
-							"links": map[string]string{
-								"self":    "http://my.domain/v1/posts/123/relationships/author",
-								"related": "http://my.domain/v1/posts/123/author",
-							},
+							"links": {
+								"self": "http://my.domain/v1/posts/123/relationships/author",
+								"related": "http://my.domain/v1/posts/123/author"
+							}
 						},
 						"comments": {
-							"data": []interface{}{},
-							"links": map[string]string{
-								"self":    "http://my.domain/v1/posts/123/relationships/comments",
-								"related": "http://my.domain/v1/posts/123/comments",
+							"links": {
+								"self": "http://my.domain/v1/posts/123/relationships/comments",
+								"related": "http://my.domain/v1/posts/123/comments"
 							},
-						},
-					},
-				},
-			}))
+							"data": []
+						}
+					}
+				}
+			}
+			`))
 		})
+
 		It("skips data field for not loaded comments", func() {
 			post := Post{ID: 123, Title: "Test", CommentsEmpty: true}
 
@@ -448,30 +533,32 @@ var _ = Describe("Marshalling", func() {
 			// violated, because you at least need a data, links, or meta field
 			i, err := MarshalWithURLs(post, CompleteServerInformation{})
 			Expect(err).ToNot(HaveOccurred())
-			Expect(i).To(Equal(map[string]interface{}{
-				"data": map[string]interface{}{
-					"id":   "123",
+			Expect(i).To(MatchJSON(`
+			{
+				"data": {
 					"type": "posts",
-					"attributes": map[string]interface{}{
-						"title": "Test",
+					"id": "123",
+					"attributes": {
+						"title": "Test"
 					},
-					"relationships": map[string]map[string]interface{}{
+					"relationships": {
 						"author": {
-							"data": nil,
-							"links": map[string]string{
-								"self":    "http://my.domain/v1/posts/123/relationships/author",
-								"related": "http://my.domain/v1/posts/123/author",
+							"links": {
+								"self": "http://my.domain/v1/posts/123/relationships/author",
+								"related": "http://my.domain/v1/posts/123/author"
 							},
+							"data": null
 						},
 						"comments": {
-							"links": map[string]string{
-								"self":    "http://my.domain/v1/posts/123/relationships/comments",
-								"related": "http://my.domain/v1/posts/123/comments",
-							},
-						},
-					},
-				},
-			}))
+							"links": {
+								"self": "http://my.domain/v1/posts/123/relationships/comments",
+								"related": "http://my.domain/v1/posts/123/comments"
+							}
+						}
+					}
+				}
+			}
+			`))
 		})
 	})
 
@@ -481,73 +568,39 @@ var _ = Describe("Marshalling", func() {
 		pointerPost := ZeroPostPointer{ID: "1", Title: "test", Value: &theFloat}
 
 		It("correctly unmarshals driver values", func() {
-			postMap := map[string]interface{}{
-				"data": map[string]interface{}{
-					"id":   "1",
-					"type": "zeroPosts",
-					"attributes": map[string]interface{}{
-						"title": "test",
-						"value": theFloat,
-					},
-				},
-			}
-
 			marshalled, err := Marshal(post)
 
 			Expect(err).To(BeNil())
-			Expect(marshalled).To(Equal(postMap))
-		})
-
-		It("correctly unmarshals into json", func() {
-			expectedJSON := []byte(`
-				{"data":{
-					"id":"1",
-					"type":"zeroPosts",
+			Expect(marshalled).To(MatchJSON(`
+			{
+				"data": {
+					"type": "zeroPosts",
+					"id": "1",
 					"attributes": {
-						"title":"test",
-						"value":2.3
+						"title": "test",
+						"value": 2.3
 					}
-				}}
-			`)
-
-			json, err := MarshalToJSON(post)
-			Expect(err).To(BeNil())
-			Expect(json).To(MatchJSON(expectedJSON))
+				}
+			}
+			`))
 		})
 
 		It("correctly unmarshals driver values with pointer", func() {
-			postMap := map[string]interface{}{
-				"data": map[string]interface{}{
-					"id":   "1",
-					"type": "zeroPostPointers",
-					"attributes": map[string]interface{}{
-						"title": "test",
-						"value": &theFloat,
-					},
-				},
-			}
-
 			marshalled, err := Marshal(pointerPost)
 
 			Expect(err).To(BeNil())
-			Expect(marshalled).To(BeEquivalentTo(postMap))
-		})
-
-		It("correctly unmarshals with pointer into json", func() {
-			expectedJSON := []byte(`
-				{"data":{
-					"id":"1",
-					"type":"zeroPostPointers",
+			Expect(marshalled).To(MatchJSON(`
+			{
+				"data": {
+					"type": "zeroPostPointers",
+					"id": "1",
 					"attributes": {
-						"title":"test",
-						"value":2.3
+						"title": "test",
+						"value": 2.3
 					}
-				}}
-			`)
-
-			json, err := MarshalToJSON(pointerPost)
-			Expect(err).To(BeNil())
-			Expect(json).To(MatchJSON(expectedJSON))
+				}
+			}
+			`))
 		})
 	})
 
@@ -558,135 +611,136 @@ var _ = Describe("Marshalling", func() {
 		question3 := Question{ID: "3", Text: "It works now", InspiringQuestionID: sql.NullString{String: "1", Valid: true}, InspiringQuestion: &question1Duplicate}
 
 		It("Correctly marshalls question2 and sets question1 into included", func() {
-			expected := map[string]interface{}{
-				"data": map[string]interface{}{
-					"id":   "2",
-					"type": "questions",
-					"attributes": map[string]interface{}{
-						"text": "Will it ever work?",
-					},
-					"relationships": map[string]map[string]interface{}{
-						"inspiringQuestion": {
-							"data": map[string]interface{}{
-								"id":   "1",
-								"type": "questions",
-							},
-						},
-					},
-				},
-				"included": []map[string]interface{}{
-					{
-						"id":   "1",
-						"type": "questions",
-						"attributes": map[string]interface{}{
-							"text": "Does this test work?",
-						},
-						"relationships": map[string]map[string]interface{}{
-							"inspiringQuestion": {
-								"data": nil,
-							},
-						},
-					},
-				},
-			}
-
 			marshalled, err := Marshal(question2)
 			Expect(err).To(BeNil())
-			Expect(marshalled).To(Equal(expected))
+			Expect(marshalled).To(MatchJSON(`
+			{
+				"data": {
+					"type": "questions",
+					"id": "2",
+					"attributes": {
+						"text": "Will it ever work?"
+					},
+					"relationships": {
+						"inspiringQuestion": {
+							"data": {
+								"type": "questions",
+								"id": "1"
+							}
+						}
+					}
+				},
+				"included": [
+				{
+					"type": "questions",
+					"id": "1",
+					"attributes": {
+						"text": "Does this test work?"
+					},
+					"relationships": {
+						"inspiringQuestion": {
+							"data": null
+						}
+					}
+				}
+				]
+			}
+			`))
 		})
 
 		It("Does not marshall same dependencies multiple times", func() {
-			expected := map[string]interface{}{
-				"data": []map[string]interface{}{
-					{
-						"id":   "3",
-						"type": "questions",
-						"attributes": map[string]interface{}{
-							"text": "It works now",
-						},
-						"relationships": map[string]map[string]interface{}{
-							"inspiringQuestion": {
-								"data": map[string]interface{}{
-									"id":   "1",
-									"type": "questions",
-								},
-							},
-						},
-					},
-					{
-						"id":   "2",
-						"type": "questions",
-						"attributes": map[string]interface{}{
-							"text": "Will it ever work?",
-						},
-						"relationships": map[string]map[string]interface{}{
-							"inspiringQuestion": {
-								"data": map[string]interface{}{
-									"id":   "1",
-									"type": "questions",
-								},
-							},
-						},
-					},
-				},
-				"included": []map[string]interface{}{
-					{
-						"id":   "1",
-						"type": "questions",
-						"attributes": map[string]interface{}{
-							"text": "Does this test work?",
-						},
-						"relationships": map[string]map[string]interface{}{
-							"inspiringQuestion": {
-								"data": nil,
-							},
-						},
-					},
-				},
-			}
-
 			marshalled, err := Marshal([]Question{question3, question2})
 			Expect(err).To(BeNil())
-			Expect(marshalled).To(BeEquivalentTo(expected))
+			Expect(marshalled).To(MatchJSON(`
+			{
+				"data": [
+				{
+					"type": "questions",
+					"id": "3",
+					"attributes": {
+						"text": "It works now"
+					},
+					"relationships": {
+						"inspiringQuestion": {
+							"data": {
+								"type": "questions",
+								"id": "1"
+							}
+						}
+					}
+				},
+				{
+					"type": "questions",
+					"id": "2",
+					"attributes": {
+						"text": "Will it ever work?"
+					},
+					"relationships": {
+						"inspiringQuestion": {
+							"data": {
+								"type": "questions",
+								"id": "1"
+							}
+						}
+					}
+				}
+				],
+				"included": [
+				{
+					"type": "questions",
+					"id": "1",
+					"attributes": {
+						"text": "Does this test work?"
+					},
+					"relationships": {
+						"inspiringQuestion": {
+							"data": null
+						}
+					}
+				}
+				]
+			}
+			`))
 		})
 	})
 
 	Context("Slice fields", func() {
 		It("Marshalls the slice field correctly", func() {
-			expected := map[string]interface{}{
-				"data": map[string]interface{}{
-					"id":   "1234",
-					"type": "identities",
-					"attributes": map[string]interface{}{
-						"scopes": []string{
-							"user_global",
-						},
-					},
-				},
-			}
-
 			marshalled, err := Marshal(Identity{1234, []string{"user_global"}})
 			Expect(err).To(BeNil())
-			Expect(marshalled).To(BeEquivalentTo(expected))
+			Expect(marshalled).To(MatchJSON(`
+			{
+				"data": {
+					"type": "identities",
+					"id": "1234",
+					"attributes": {
+						"ID": 1234,
+						"scopes": [
+						"user_global"
+						]
+					}
+				}
+			}
+			`))
 		})
 
 		It("Marshalls correctly without an ID field", func() {
-			expected := map[string]interface{}{
-				"data": map[string]interface{}{
-					"id":   "magicalUnicorn",
-					"type": "unicorns",
-					"attributes": map[string]interface{}{
-						"scopes": []string{
-							"user_global",
-						},
-						"unicornID": int64(1234),
-					},
-				},
-			}
-
 			marshalled, err := Marshal(Unicorn{1234, []string{"user_global"}})
 			Expect(err).To(BeNil())
-			Expect(marshalled).To(Equal(expected))
+			Expect(marshalled).To(MatchJSON(`
+			{
+				"data": {
+					"type": "unicorns",
+					"id": "magicalUnicorn",
+					"attributes": {
+						"unicorn_id": 1234,
+						"scopes": [
+						"user_global"
+						]
+					}
+				}
+			}
+			`))
 		})
 	})
 
@@ -737,21 +791,25 @@ var _ = Describe("Marshalling", func() {
 
 		It("Generates to-one relationships correctly", func() {
 			links := getStructRelationships(post, serverInformationNil)
-			Expect(links["author"]).To(Equal(map[string]interface{}{
-				"data": map[string]interface{}{
-					"id":   "1",
-					"type": "users",
+			Expect((*links)["author"]).To(Equal(Relationship{
+				Data: &RelationshipDataContainer{
+					DataObject: &RelationshipData{
+						ID:   "1",
+						Type: "users",
+					},
 				},
 			}))
 		})
 
 		It("Generates to-many relationships correctly", func() {
 			links := getStructRelationships(post, serverInformationNil)
-			Expect(links["comments"]).To(Equal(map[string]interface{}{
-				"data": []map[string]interface{}{
-					{
-						"id":   "1",
-						"type": "comments",
+			Expect((*links)["comments"]).To(Equal(Relationship{
+				Data: &RelationshipDataContainer{
+					DataArray: []RelationshipData{
+						{
+							ID:   "1",
+							Type: "comments",
+						},
 					},
 				},
 			}))
@@ -759,42 +817,48 @@ var _ = Describe("Marshalling", func() {
 
 		It("Generates self/related URLs with baseURL and prefix correctly", func() {
 			links := getStructRelationships(post, CompleteServerInformation{})
-			Expect(links["author"]).To(Equal(map[string]interface{}{
-				"data": map[string]interface{}{
-					"id":   "1",
-					"type": "users",
+			Expect((*links)["author"]).To(Equal(Relationship{
+				Data: &RelationshipDataContainer{
+					DataObject: &RelationshipData{
+						ID:   "1",
+						Type: "users",
+					},
 				},
-				"links": map[string]string{
-					"self":    "http://my.domain/v1/posts/1/relationships/author",
-					"related": "http://my.domain/v1/posts/1/author",
+				Links: &Links{
+					Self:    "http://my.domain/v1/posts/1/relationships/author",
+					Related: "http://my.domain/v1/posts/1/author",
 				},
 			}))
 		})
 
 		It("Generates self/related URLs with baseURL correctly", func() {
 			links := getStructRelationships(post, BaseURLServerInformation{})
-			Expect(links["author"]).To(Equal(map[string]interface{}{
-				"data": map[string]interface{}{
-					"id":   "1",
-					"type": "users",
+			Expect((*links)["author"]).To(Equal(Relationship{
+				Data: &RelationshipDataContainer{
+					DataObject: &RelationshipData{
+						ID:   "1",
+						Type: "users",
+					},
 				},
-				"links": map[string]string{
-					"self":    "http://my.domain/posts/1/relationships/author",
-					"related": "http://my.domain/posts/1/author",
+				Links: &Links{
+					Self:    "http://my.domain/posts/1/relationships/author",
+					Related: "http://my.domain/posts/1/author",
 				},
 			}))
 		})
 
 		It("Generates self/related URLs with prefix correctly", func() {
 			links := getStructRelationships(post, PrefixServerInformation{})
-			Expect(links["author"]).To(Equal(map[string]interface{}{
-				"data": map[string]interface{}{
-					"id":   "1",
-					"type": "users",
+			Expect((*links)["author"]).To(Equal(Relationship{
+				Data: &RelationshipDataContainer{
+					DataObject: &RelationshipData{
+						ID:   "1",
+						Type: "users",
+					},
 				},
-				"links": map[string]string{
-					"self":    "/v1/posts/1/relationships/author",
-					"related": "/v1/posts/1/author",
+				Links: &Links{
+					Self:    "/v1/posts/1/relationships/author",
+					Related: "/v1/posts/1/author",
 				},
 			}))
 		})
@@ -812,6 +876,7 @@ var _ = Describe("Marshalling", func() {
 			User{ID: 2, Name: "User2Kopie"},
 		}
 
+		// this is the wrong format but hey, it's just used to count the length :P
 		expected := []map[string]interface{}{
 			{"id": 314, "name": "User314", "type": "users"},
 			{"text": "", "id": 314, "type": "comments"},
@@ -820,20 +885,20 @@ var _ = Describe("Marshalling", func() {
 			{"name": "User2", "id": 2, "type": "users"},
 		}
 
-		dummyFunc := func(m MarshalIdentifier, i ServerInformation) (map[string]interface{}, error) {
-			return map[string]interface{}{"blub": m}, nil
+		dummyFunc := func(m MarshalIdentifier, i ServerInformation) (*Data, error) {
+			return &Data{}, nil
 		}
 
 		It("should work with default marshalData", func() {
 			actual, err := reduceDuplicates(input, serverInformationNil, marshalData)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(len(actual)).To(Equal(len(expected)))
+			Expect(len(*actual)).To(Equal(len(expected)))
 		})
 
 		It("should work with dummy marshalData", func() {
 			actual, err := reduceDuplicates(input, serverInformationNil, dummyFunc)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(len(actual)).To(Equal(len(expected)))
+			Expect(len(*actual)).To(Equal(len(expected)))
 		})
 	})
 
@@ -850,7 +915,7 @@ var _ = Describe("Marshalling", func() {
 				Rating: zero.FloatFrom(66.66),
 				IsCool: zero.BoolFrom(true),
 			}
-			result, err := MarshalToJSON(nullPost)
+			result, err := Marshal(nullPost)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(result).To(MatchJSON(`
 				{

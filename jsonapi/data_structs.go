@@ -8,15 +8,14 @@ import (
 
 // Document represents a JSONAPI document like specified: http://jsonapi.org
 type Document struct {
-	Links    Links         `json:"links,omitempty"`
-	Data     DataContainer `json:"data"`
-	Included []Data        `json:"included,omitempty"`
+	Links    *Links         `json:"links,omitempty"`
+	Data     *DataContainer `json:"data"`
+	Included []Data         `json:"included,omitempty"`
 }
 
 // DataContainer is needed to either keep "data" contents as array or object.
 type DataContainer struct {
-	IsArray    bool
-	DataObject Data
+	DataObject *Data
 	DataArray  []Data
 }
 
@@ -30,11 +29,18 @@ func (c *DataContainer) UnmarshalJSON(payload []byte) error {
 
 	if bytes.HasPrefix(payload, []byte("[")) {
 		// payload is an array
-		c.IsArray = true
 		return json.Unmarshal(payload, &c.DataArray)
 	}
 
 	return errors.New("Invalid json for data array/object")
+}
+
+// MarshalJSON either Marshals an array or object of data
+func (c *DataContainer) MarshalJSON() ([]byte, error) {
+	if c.DataArray != nil {
+		return json.Marshal(c.DataArray)
+	}
+	return json.Marshal(c.DataObject)
 }
 
 // Links is general links struct for top level and relationships
@@ -53,19 +59,18 @@ type Data struct {
 	ID            string                  `json:"id"`
 	Attributes    json.RawMessage         `json:"attributes"`
 	Relationships map[string]Relationship `json:"relationships,omitempty"`
-	Links         Links                   `json:"links,omitempty"`
+	Links         *Links                  `json:"links,omitempty"`
 }
 
 // Relationship contains reference IDs to the related structs
 type Relationship struct {
-	Links Links                     `json:"links,omitempty"`
-	Data  RelationshipDataContainer `json:"data,omitempty"`
+	Links *Links                     `json:"links,omitempty"`
+	Data  *RelationshipDataContainer `json:"data,omitempty"`
 }
 
 // RelationshipDataContainer is needed to either keep relationship "data" contents as array or object.
 type RelationshipDataContainer struct {
-	IsArray    bool
-	DataObject RelationshipData
+	DataObject *RelationshipData
 	DataArray  []RelationshipData
 }
 
@@ -78,11 +83,18 @@ func (c *RelationshipDataContainer) UnmarshalJSON(payload []byte) error {
 
 	if bytes.HasPrefix(payload, []byte("[")) {
 		// payload is an array
-		c.IsArray = true
 		return json.Unmarshal(payload, &c.DataArray)
 	}
 
 	return errors.New("Invalid json for relationship data array/object")
+}
+
+// MarshalJSON either Marshals an array or object of relationship data
+func (c *RelationshipDataContainer) MarshalJSON() ([]byte, error) {
+	if c.DataArray != nil {
+		return json.Marshal(c.DataArray)
+	}
+	return json.Marshal(c.DataObject)
 }
 
 // RelationshipData represents one specific reference ID
