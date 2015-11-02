@@ -846,6 +846,15 @@ var _ = Describe("RestHandler", func() {
 				Expect(target.Value).To(Equal(null.FloatFrom(2)))
 			})
 
+			It("UPDATEs correctly using null.* values", func() {
+				target := source.posts["1"]
+				target.Value = null.FloatFrom(2)
+				doRequest(`{"data": {"id": "1", "attributes": {"title": "New Title", "value": null}, "type": "posts"}}`, "/v1/posts/1", "PATCH")
+				Expect(source.posts["1"].Title).To(Equal("New Title"))
+				Expect(target.Title).To(Equal("New Title"))
+				Expect(target.Value).To(Equal(null.FloatFromPtr(nil)))
+			})
+
 			It("Patch updates to-one relationships", func() {
 				target := source.posts["1"]
 				doRequest(`{

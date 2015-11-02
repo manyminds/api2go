@@ -693,6 +693,7 @@ func (res *resource) handleUpdate(c APIContexter, w http.ResponseWriter, r *http
 	}
 
 	err = jsonapi.UnmarshalInto(ctx, structType, &updatingObjs)
+
 	if err != nil {
 		return err
 	}
