@@ -762,20 +762,6 @@ var _ = Describe("Marshalling", func() {
 		})
 	})
 
-	Context("test getStructFields method", func() {
-		comment := Comment{ID: 100, Text: "some text"}
-		expected := map[string]interface{}{"text": "some text"}
-		It("should work with normal value", func() {
-			result := getStructFields(comment)
-			Expect(result).To(Equal(expected))
-		})
-
-		It("should work with pointer to value", func() {
-			result := getStructFields(&comment)
-			Expect(result).To(Equal(expected))
-		})
-	})
-
 	Context("test getStructLinks", func() {
 		var (
 			post    Post

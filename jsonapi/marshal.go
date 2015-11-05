@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
-	"time"
 )
 
 // MarshalIdentifier interface is necessary to give an element
@@ -366,7 +365,7 @@ func marshalStruct(data MarshalIdentifier, information ServerInformation) (Docum
 	return result, nil
 }
 
-func getStructType(data MarshalIdentifier) string {
+func getStructType(data interface{}) string {
 	entityName, ok := data.(EntityNamer)
 	if ok {
 		return entityName.GetName()
@@ -378,54 +377,4 @@ func getStructType(data MarshalIdentifier) string {
 	}
 
 	return Pluralize(Jsonify(reflectType.Name()))
-}
-
-func getStructFields(data MarshalIdentifier) map[string]interface{} {
-	result := make(map[string]interface{})
-	val := reflect.ValueOf(data)
-	if val.Kind() == reflect.Ptr {
-		val = val.Elem()
-	}
-	valType := val.Type()
-	for i := 0; i < val.NumField(); i++ {
-		tag := valType.Field(i).Tag.Get("jsonapi")
-		if tag == "-" {
-			continue
-		}
-
-		field := val.Field(i)
-
-		// skip private fields
-		if !field.CanInterface() {
-			continue
-		}
-		if field.Type() == reflect.TypeOf(time.Time{}) {
-			checkDate := field.Interface().(time.Time)
-			if checkDate.IsZero() {
-				continue
-			}
-		}
-
-		// check for embedded structs and also extract all fields of them into result
-		if embeddedStruct, ok := field.Interface().(MarshalIdentifier); ok {
-			embeddedFields := getStructFields(embeddedStruct)
-			for k, v := range embeddedFields {
-				result[k] = v
-			}
-
-			// skip embedded struct itself
-			continue
-		}
-
-		keyName := Jsonify(valType.Field(i).Name)
-
-		name := GetTagValueByName(valType.Field(i), "name")
-		if name != "" {
-			keyName = name
-		}
-
-		result[keyName] = field.Interface()
-	}
-
-	return result
 }

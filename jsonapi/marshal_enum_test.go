@@ -75,16 +75,18 @@ var _ = Describe("Custom enum types", func() {
 	statusValue := "published"
 	singleJSON := []byte(`{"data":{"id": "1", "type": "enumPosts", "attributes": {"title":"First Post","status":"published"}}}`)
 	firstPost := EnumPost{ID: "1", Title: "First Post", Status: StatusPublished}
-	singlePostMap := map[string]interface{}{
-		"data": map[string]interface{}{
-			"id":   "1",
-			"type": "enumPosts",
-			"attributes": map[string]interface{}{
-				"title":  firstPost.Title,
-				"status": StatusPublished,
-			},
-		},
-	}
+	/*
+	 *singlePostMap := map[string]interface{}{
+	 *    "data": map[string]interface{}{
+	 *        "id":   "1",
+	 *        "type": "enumPosts",
+	 *        "attributes": map[string]interface{}{
+	 *            "title":  firstPost.Title,
+	 *            "status": StatusPublished,
+	 *        },
+	 *    },
+	 *}
+	 */
 
 	Context("When marshaling objects including enumes", func() {
 		singlePost := EnumPost{
@@ -110,7 +112,7 @@ var _ = Describe("Custom enum types", func() {
 
 		It("unmarshals single objects into a struct", func() {
 			var post EnumPost
-			err := Unmarshal(singlePostMap, &post)
+			err := Unmarshal([]byte("{}"), &post)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(post).To(Equal(firstPost))
 		})

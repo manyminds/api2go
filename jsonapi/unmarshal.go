@@ -74,61 +74,121 @@ type EditToManyRelations interface {
 	DeleteToManyIDs(name string, IDs []string) error
 }
 
-// Unmarshal reads a JSONAPI map to a model struct
+var (
+	errInterface         = errors.New("target must implement UnmarshalIdentifier interface")
+	errAttributesMissing = errors.New("missing mandatory attributes object")
+)
+
+// Unmarshal reads a jsonapi compatible JSON as []byte
 // target must at least implement the `UnmarshalIdentifier` interface.
-func Unmarshal(input map[string]interface{}, target interface{}) error {
-	var (
-		structType reflect.Type
-		sliceVal   reflect.Value
-		isStruct   bool
-	)
-
-	typeError := errors.New("You must pass a pointer to a UnmarshalIdentifier or slice of it to Unmarshal()")
-
-	// Check that target is a *[]Model
-	ptrVal := reflect.ValueOf(target)
-	if ptrVal.Kind() != reflect.Ptr || ptrVal.IsNil() {
-		return typeError
-	}
-	targetType := reflect.TypeOf(target).Elem()
-
-	if targetType.Kind() != reflect.Slice {
-		// check for a struct or pointer to struct which are also allowed to unmarshal into
-		if targetType.Kind() == reflect.Struct {
-			structType = targetType
-		} else if targetType.Kind() == reflect.Ptr {
-			structType = targetType.Elem()
-		} else {
-			return typeError
-		}
-		sliceVal = reflect.New(reflect.SliceOf(targetType)).Elem()
-		isStruct = true
-	} else {
-		sliceVal = ptrVal.Elem()
-		structType = targetType.Elem()
-		if structType.Kind() == reflect.Ptr {
-			structType = structType.Elem()
-		}
-	}
-
-	if structType.Kind() != reflect.Struct {
-		return typeError
-	}
-
-	// Copy the value, then write into the new variable.
-	// Later Set() the actual value of the pointee.
-	val := sliceVal
-	err := UnmarshalInto(input, structType, &val)
+func Unmarshal(data []byte, target interface{}) error {
+	ctx := &Document{}
+	err := json.Unmarshal(data, ctx)
 	if err != nil {
 		return err
 	}
 
-	// if target is a struct, the first unmarshalled entry of a slice of its type will be set into it
-	if isStruct {
-		ptrVal.Elem().Set(val.Index(0))
-	} else {
-		sliceVal.Set(val)
+	if ctx.Data.DataObject != nil {
+		return setDataIntoTarget(ctx.Data.DataObject, target)
 	}
+
+	if ctx.Data.DataArray != nil {
+		targetType := reflect.TypeOf(target).Elem().Elem()
+		targetPointer := reflect.ValueOf(target)
+		targetValue := targetPointer.Elem()
+
+		for _, record := range ctx.Data.DataArray {
+			// check if there already is an entry with the same id in target slice, otherwise
+			// create a new target and append
+			var targetRecord, emptyValue reflect.Value
+			for i := 0; i < targetValue.Len(); i++ {
+				marshalCasted, ok := targetValue.Index(i).Interface().(MarshalIdentifier)
+				if !ok {
+					return errors.New("existing structs must implement interface MarshalIdentifier")
+				}
+				if record.ID == marshalCasted.GetID() {
+					targetRecord = targetValue.Index(i).Addr()
+					break
+				}
+			}
+
+			if targetRecord == emptyValue || targetRecord.IsNil() {
+				targetRecord = reflect.New(targetType)
+				err := setDataIntoTarget(&record, targetRecord.Interface())
+				if err != nil {
+					return err
+				}
+				targetValue = reflect.Append(targetValue, targetRecord.Elem())
+			} else {
+				err := setDataIntoTarget(&record, targetRecord.Interface())
+				if err != nil {
+					return err
+				}
+			}
+		}
+
+		targetPointer.Elem().Set(targetValue)
+	}
+
+	return nil
+}
+
+func setDataIntoTarget(data *Data, target interface{}) error {
+	castedTarget, ok := target.(UnmarshalIdentifier)
+	if !ok {
+		return errInterface
+	}
+
+	err := checkType(data.Type, castedTarget)
+	if err != nil {
+		return err
+	}
+
+	if data.Attributes == nil {
+		return errAttributesMissing
+	}
+
+	err = json.Unmarshal(data.Attributes, castedTarget)
+	if err != nil {
+		return err
+	}
+	castedTarget.SetID(data.ID)
+	return setRelationshipIDs(data.Relationships, castedTarget)
+}
+
+// extracts all found relationships and set's them via SetToOneReferenceID or SetToManyReferenceIDs
+func setRelationshipIDs(relationships map[string]Relationship, target UnmarshalIdentifier) error {
+	for key, rel := range relationships {
+		if rel.Data.DataObject != nil {
+			castedToOne, ok := target.(UnmarshalToOneRelations)
+			if !ok {
+				return errors.New("struct <name> does not implement UnmarshalToOneRelations")
+			}
+			castedToOne.SetToOneReferenceID(key, rel.Data.DataObject.ID)
+		}
+
+		if rel.Data.DataArray != nil {
+			castedToMany, ok := target.(UnmarshalToManyRelations)
+			if !ok {
+				return errors.New("struct <name> does not implement UnmarshalToManyRelations")
+			}
+			IDs := make([]string, len(rel.Data.DataArray))
+			for index, relData := range rel.Data.DataArray {
+				IDs[index] = relData.ID
+			}
+			castedToMany.SetToManyReferenceIDs(key, IDs)
+		}
+	}
+
+	return nil
+}
+
+func checkType(incomingType string, target UnmarshalIdentifier) error {
+	actualType := getStructType(target)
+	if incomingType != actualType {
+		return fmt.Errorf("Type %s in JSON does not match target struct type %s", incomingType, actualType)
+	}
+
 	return nil
 }
 
@@ -140,7 +200,7 @@ func UnmarshalFromJSON(data []byte, target interface{}) error {
 	if err != nil {
 		return err
 	}
-	return Unmarshal(ctx, target)
+	return Unmarshal([]byte("{}"), target)
 }
 
 // UnmarshalInto reads input params for one struct from `input` and marshals it into `targetSliceVal`,
