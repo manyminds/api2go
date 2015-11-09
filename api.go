@@ -403,10 +403,11 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD) *r
 	})
 
 	api.router.Handle("PATCH", baseURL+"/:id", func(w http.ResponseWriter, r *http.Request, params map[string]string) {
+		info := requestInfo(r, api)
 		c := api.contextPool.Get().(APIContexter)
 		c.Reset()
 		api.middlewareChain(c, w, r)
-		err := res.handleUpdate(c, w, r, params)
+		err := res.handleUpdate(c, w, r, params, *info)
 		api.contextPool.Put(c)
 		if err != nil {
 			api.handleError(err, w, r)
@@ -619,7 +620,7 @@ func (res *resource) handleCreate(c APIContexter, w http.ResponseWriter, r *http
 	}
 }
 
-func (res *resource) handleUpdate(c APIContexter, w http.ResponseWriter, r *http.Request, params map[string]string) error {
+func (res *resource) handleUpdate(c APIContexter, w http.ResponseWriter, r *http.Request, params map[string]string, info information) error {
 	id := params["id"]
 	obj, err := res.source.FindOne(id, buildRequest(c, r))
 	if err != nil {
@@ -667,7 +668,7 @@ func (res *resource) handleUpdate(c APIContexter, w http.ResponseWriter, r *http
 			response = internalResponse
 		}
 
-		return res.respondWith(response, information{}, http.StatusOK, w, r)
+		return res.respondWith(response, info, http.StatusOK, w, r)
 	case http.StatusAccepted:
 		w.WriteHeader(http.StatusAccepted)
 		return nil
