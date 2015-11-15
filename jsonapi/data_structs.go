@@ -8,9 +8,10 @@ import (
 
 // Document represents a JSONAPI document like specified: http://jsonapi.org
 type Document struct {
-	Links    *Links         `json:"links,omitempty"`
-	Data     *DataContainer `json:"data"`
-	Included []Data         `json:"included,omitempty"`
+	Links    *Links                 `json:"links,omitempty"`
+	Data     *DataContainer         `json:"data"`
+	Included []Data                 `json:"included,omitempty"`
+	Meta     map[string]interface{} `json:"meta,omitempty"`
 }
 
 // DataContainer is needed to either keep "data" contents as array or object.
@@ -48,7 +49,7 @@ type Links struct {
 	Self     string `json:"self,omitempty"`
 	Related  string `json:"related,omitempty"`
 	First    string `json:"first,omitempty"`
-	Previous string `json:"previous,omitempty"`
+	Previous string `json:"prev,omitempty"`
 	Next     string `json:"next,omitempty"`
 	Last     string `json:"last,omitempty"`
 }
@@ -66,6 +67,7 @@ type Data struct {
 type Relationship struct {
 	Links *Links                     `json:"links,omitempty"`
 	Data  *RelationshipDataContainer `json:"data,omitempty"`
+	Meta  map[string]interface{}     `json:"meta,omitempty"`
 }
 
 // RelationshipDataContainer is needed to either keep relationship "data" contents as array or object.

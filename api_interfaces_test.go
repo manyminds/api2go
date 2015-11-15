@@ -13,9 +13,9 @@ import (
 )
 
 type SomeData struct {
-	ID         string `jsonapi:"-"`
-	Data       string
-	CustomerID string `jsonapi:"name=customerId"`
+	ID         string `json:"-"`
+	Data       string `json:"data"`
+	CustomerID string `json:"customerId"`
 }
 
 func (s SomeData) GetID() string {
@@ -106,7 +106,7 @@ var _ = Describe("Test interface api type casting", func() {
 	})
 
 	It("Post works with lowercase renaming", func() {
-		reqBody := strings.NewReader(`{"data": [{"attributes":{"customerId": "2" }, "type": "someDatas"}]}`)
+		reqBody := strings.NewReader(`{"data": {"attributes":{"customerId": "2" }, "type": "someDatas"}}`)
 		req, err := http.NewRequest("POST", "/v1/someDatas", reqBody)
 		Expect(err).To(BeNil())
 		api.Handler().ServeHTTP(rec, req)
@@ -131,7 +131,7 @@ var _ = Describe("Test return code behavior", func() {
 
 	Context("Create", func() {
 		post := func(payload SomeData) {
-			m, err := jsonapi.MarshalToJSON(payload)
+			m, err := jsonapi.Marshal(payload)
 			Expect(err).ToNot(HaveOccurred())
 			req, err := http.NewRequest("POST", "/v1/someDatas", strings.NewReader(string(m)))
 			Expect(err).ToNot(HaveOccurred())
@@ -142,7 +142,7 @@ var _ = Describe("Test return code behavior", func() {
 			post(payload)
 			Expect(rec.Code).To(Equal(http.StatusCreated))
 			var actual SomeData
-			err := jsonapi.UnmarshalFromJSON(rec.Body.Bytes(), &actual)
+			err := jsonapi.Unmarshal(rec.Body.Bytes(), &actual)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(payloadID).To(Equal(actual))
 		})
@@ -188,7 +188,7 @@ var _ = Describe("Test return code behavior", func() {
 
 	Context("Update", func() {
 		patch := func(payload SomeData) {
-			m, err := jsonapi.MarshalToJSON(payload)
+			m, err := jsonapi.Marshal(payload)
 			Expect(err).ToNot(HaveOccurred())
 			req, err := http.NewRequest("PATCH", "/v1/someDatas/12345", strings.NewReader(string(m)))
 			Expect(err).ToNot(HaveOccurred())
@@ -199,7 +199,7 @@ var _ = Describe("Test return code behavior", func() {
 			patch(SomeData{ID: "12345", Data: "override me"})
 			Expect(rec.Code).To(Equal(http.StatusOK))
 			var actual SomeData
-			err := jsonapi.UnmarshalFromJSON(rec.Body.Bytes(), &actual)
+			err := jsonapi.Unmarshal(rec.Body.Bytes(), &actual)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(payloadID).To(Equal(actual))
 		})

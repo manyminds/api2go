@@ -1,6 +1,7 @@
 package api2go
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -87,8 +88,8 @@ func (p paginationQueryParams) isValid() bool {
 	return false
 }
 
-func (p paginationQueryParams) getLinks(r *http.Request, count uint, info information) (result map[string]string, err error) {
-	result = make(map[string]string)
+func (p paginationQueryParams) getLinks(r *http.Request, count uint, info information) (result jsonapi.Links, err error) {
+	result = jsonapi.Links{}
 
 	params := r.URL.Query()
 	prefix := ""
@@ -109,11 +110,11 @@ func (p paginationQueryParams) getLinks(r *http.Request, count uint, info inform
 		if p.number != "1" {
 			params.Set("page[number]", "1")
 			query, _ := url.QueryUnescape(params.Encode())
-			result["first"] = fmt.Sprintf("%s?%s", requestURL, query)
+			result.First = fmt.Sprintf("%s?%s", requestURL, query)
 
 			params.Set("page[number]", strconv.FormatUint(number-1, 10))
 			query, _ = url.QueryUnescape(params.Encode())
-			result["prev"] = fmt.Sprintf("%s?%s", requestURL, query)
+			result.Previous = fmt.Sprintf("%s?%s", requestURL, query)
 		}
 
 		// calculate last page number
@@ -131,11 +132,11 @@ func (p paginationQueryParams) getLinks(r *http.Request, count uint, info inform
 		if number != totalPages {
 			params.Set("page[number]", strconv.FormatUint(number+1, 10))
 			query, _ := url.QueryUnescape(params.Encode())
-			result["next"] = fmt.Sprintf("%s?%s", requestURL, query)
+			result.Next = fmt.Sprintf("%s?%s", requestURL, query)
 
 			params.Set("page[number]", strconv.FormatUint(totalPages, 10))
 			query, _ = url.QueryUnescape(params.Encode())
-			result["last"] = fmt.Sprintf("%s?%s", requestURL, query)
+			result.Last = fmt.Sprintf("%s?%s", requestURL, query)
 		}
 	} else {
 		// we have offset & limit params
@@ -152,7 +153,7 @@ func (p paginationQueryParams) getLinks(r *http.Request, count uint, info inform
 		if p.offset != "0" {
 			params.Set("page[offset]", "0")
 			query, _ := url.QueryUnescape(params.Encode())
-			result["first"] = fmt.Sprintf("%s?%s", requestURL, query)
+			result.First = fmt.Sprintf("%s?%s", requestURL, query)
 
 			var prevOffset uint64
 			if limit > offset {
@@ -162,18 +163,18 @@ func (p paginationQueryParams) getLinks(r *http.Request, count uint, info inform
 			}
 			params.Set("page[offset]", strconv.FormatUint(prevOffset, 10))
 			query, _ = url.QueryUnescape(params.Encode())
-			result["prev"] = fmt.Sprintf("%s?%s", requestURL, query)
+			result.Previous = fmt.Sprintf("%s?%s", requestURL, query)
 		}
 
 		// check if there are more entries to be loaded
 		if (offset + limit) < uint64(count) {
 			params.Set("page[offset]", strconv.FormatUint(offset+limit, 10))
 			query, _ := url.QueryUnescape(params.Encode())
-			result["next"] = fmt.Sprintf("%s?%s", requestURL, query)
+			result.Next = fmt.Sprintf("%s?%s", requestURL, query)
 
 			params.Set("page[offset]", strconv.FormatUint(uint64(count)-limit, 10))
 			query, _ = url.QueryUnescape(params.Encode())
-			result["last"] = fmt.Sprintf("%s?%s", requestURL, query)
+			result.Last = fmt.Sprintf("%s?%s", requestURL, query)
 		}
 	}
 
@@ -483,51 +484,22 @@ func (res *resource) handleReadRelation(c APIContexter, w http.ResponseWriter, r
 		return err
 	}
 
-	internalError := NewHTTPError(nil, "Internal server error, invalid object structure", http.StatusInternalServerError)
-
-	marshalled, err := jsonapi.MarshalWithURLs(obj.Result(), info)
-	data, ok := marshalled["data"]
-	if !ok {
-		return internalError
-	}
-	relationships, ok := data.(map[string]interface{})["relationships"]
-	if !ok {
-		return internalError
+	document, err := jsonapi.MarshalToStruct(obj.Result(), info)
+	if err != nil {
+		return err
 	}
 
-	rel, ok := relationships.(map[string]map[string]interface{})[relation.Name]
+	rel, ok := document.Data.DataObject.Relationships[relation.Name]
 	if !ok {
 		return NewHTTPError(nil, fmt.Sprintf("There is no relation with the name %s", relation.Name), http.StatusNotFound)
 	}
-	links, ok := rel["links"].(map[string]string)
-	if !ok {
-		return internalError
-	}
-	self, ok := links["self"]
-	if !ok {
-		return internalError
-	}
-	related, ok := links["related"]
-	if !ok {
-		return internalError
-	}
-	relationData, ok := rel["data"]
-	if !ok {
-		return internalError
-	}
 
-	result := map[string]interface{}{}
-	result["links"] = map[string]interface{}{
-		"self":    self,
-		"related": related,
-	}
-	result["data"] = relationData
 	meta := obj.Metadata()
 	if len(meta) > 0 {
-		result["meta"] = meta
+		rel.Meta = meta
 	}
 
-	return marshalResponse(result, w, http.StatusOK, r, res.marshalers)
+	return marshalResponse(rel, w, http.StatusOK, r, res.marshalers)
 }
 
 // try to find the referenced resource and call the findAll Method with referencing resource id as param
@@ -574,16 +546,11 @@ func (res *resource) handleLinked(c APIContexter, api *API, w http.ResponseWrite
 		}
 	}
 
-	err := Error{
-		Status: string(http.StatusNotFound),
-		Title:  "Not Found",
-		Detail: "No resource handler is registered to handle the linked resource " + linked.Name,
-	}
-
-	answ := response{Data: err, Status: http.StatusNotFound}
-
-	return respondWith(answ, info, http.StatusNotFound, w, r, res.marshalers)
-
+	return NewHTTPError(
+		errors.New("Not Found"),
+		"No resource handler is registered to handle the linked resource "+linked.Name,
+		http.StatusNotFound,
+	)
 }
 
 func (res *resource) handleCreate(c APIContexter, w http.ResponseWriter, r *http.Request, prefix string, info information) error {
@@ -591,25 +558,28 @@ func (res *resource) handleCreate(c APIContexter, w http.ResponseWriter, r *http
 	if err != nil {
 		return err
 	}
-	newObjs := reflect.MakeSlice(reflect.SliceOf(res.resourceType), 0, 0)
 
-	structType := res.resourceType
-	if structType.Kind() == reflect.Ptr {
-		structType = structType.Elem()
+	// Ok this is weird again, but reflect.New produces a pointer, so we need the pure type without pointer,
+	// otherwise we would have a pointer pointer type that we don't want.
+	resourceType := res.resourceType
+	if resourceType.Kind() == reflect.Ptr {
+		resourceType = resourceType.Elem()
 	}
+	newObj := reflect.New(resourceType).Interface()
 
-	err = jsonapi.UnmarshalInto(ctx, structType, &newObjs)
+	err = jsonapi.Unmarshal(ctx, newObj)
 	if err != nil {
 		return err
 	}
-	if newObjs.Len() != 1 {
-		return errors.New("expected one object in POST")
+
+	var response Responder
+
+	if res.resourceType.Kind() == reflect.Struct {
+		// we have to dereference the pointer if user wants to use non pointer values
+		response, err = res.source.Create(reflect.ValueOf(newObj).Elem().Interface(), buildRequest(c, r))
+	} else {
+		response, err = res.source.Create(newObj, buildRequest(c, r))
 	}
-
-	//TODO create multiple objects not only one.
-	newObj := newObjs.Index(0).Interface()
-
-	response, err := res.source.Create(newObj, buildRequest(c, r))
 	if err != nil {
 		return err
 	}
@@ -649,61 +619,21 @@ func (res *resource) handleUpdate(c APIContexter, w http.ResponseWriter, r *http
 		return err
 	}
 
-	data, ok := ctx["data"]
-
-	if !ok {
-		return NewHTTPError(
-			errors.New("Forbidden"),
-			"missing mandatory data key.",
-			http.StatusForbidden,
-		)
+	// we have to make the Result to a pointer to unmarshal into it
+	updatingObj := reflect.ValueOf(obj.Result())
+	if updatingObj.Kind() == reflect.Struct {
+		updatingObjPtr := reflect.New(reflect.TypeOf(obj.Result()))
+		updatingObjPtr.Elem().Set(updatingObj)
+		err = jsonapi.Unmarshal(ctx, updatingObjPtr.Interface())
+		updatingObj = updatingObjPtr.Elem()
+	} else {
+		err = jsonapi.Unmarshal(ctx, updatingObj.Interface())
 	}
-
-	check, ok := data.(map[string]interface{})
-	if !ok {
-		return NewHTTPError(
-			errors.New("Forbidden"),
-			"data must contain an object.",
-			http.StatusForbidden,
-		)
-	}
-
-	if _, ok := check["id"]; !ok {
-		return NewHTTPError(
-			errors.New("Forbidden"),
-			"missing mandatory id key.",
-			http.StatusForbidden,
-		)
-	}
-
-	if _, ok := check["type"]; !ok {
-		return NewHTTPError(
-			errors.New("Forbidden"),
-			"missing mandatory type key.",
-			http.StatusForbidden,
-		)
-	}
-
-	updatingObjs := reflect.MakeSlice(reflect.SliceOf(res.resourceType), 1, 1)
-	updatingObjs.Index(0).Set(reflect.ValueOf(obj.Result()))
-
-	structType := res.resourceType
-	if structType.Kind() == reflect.Ptr {
-		structType = structType.Elem()
-	}
-
-	err = jsonapi.UnmarshalInto(ctx, structType, &updatingObjs)
-
 	if err != nil {
-		return err
-	}
-	if updatingObjs.Len() != 1 {
-		return errors.New("expected one object")
+		return NewHTTPError(nil, err.Error(), http.StatusNotAcceptable)
 	}
 
-	updatingObj := updatingObjs.Index(0).Interface()
-
-	response, err := res.source.Update(updatingObj, buildRequest(c, r))
+	response, err := res.source.Update(updatingObj.Interface(), buildRequest(c, r))
 
 	if err != nil {
 		return err
@@ -750,11 +680,16 @@ func (res *resource) handleReplaceRelation(c APIContexter, w http.ResponseWriter
 		return err
 	}
 
-	inc, err := unmarshalRequest(r, res.marshalers)
+	body, err := unmarshalRequest(r, res.marshalers)
 	if err != nil {
 		return err
 	}
 
+	inc := map[string]interface{}{}
+	err = json.Unmarshal(body, &inc)
+	if err != nil {
+		return err
+	}
 	data, ok := inc["data"]
 	if !ok {
 		return errors.New("Invalid object. Need a \"data\" object")
@@ -795,7 +730,12 @@ func (res *resource) handleAddToManyRelation(c APIContexter, w http.ResponseWrit
 		return err
 	}
 
-	inc, err := unmarshalRequest(r, res.marshalers)
+	body, err := unmarshalRequest(r, res.marshalers)
+	if err != nil {
+		return err
+	}
+	inc := map[string]interface{}{}
+	err = json.Unmarshal(body, &inc)
 	if err != nil {
 		return err
 	}
@@ -862,7 +802,13 @@ func (res *resource) handleDeleteToManyRelation(c APIContexter, w http.ResponseW
 		return err
 	}
 
-	inc, err := unmarshalRequest(r, res.marshalers)
+	body, err := unmarshalRequest(r, res.marshalers)
+	if err != nil {
+		return err
+	}
+
+	inc := map[string]interface{}{}
+	err = json.Unmarshal(body, &inc)
 	if err != nil {
 		return err
 	}
@@ -956,47 +902,48 @@ func writeResult(w http.ResponseWriter, data []byte, status int, contentType str
 }
 
 func respondWith(obj Responder, info information, status int, w http.ResponseWriter, r *http.Request, marshalers map[string]ContentMarshaler) error {
-	data, err := jsonapi.MarshalWithURLs(obj.Result(), info)
+	data, err := jsonapi.MarshalToStruct(obj.Result(), info)
 	if err != nil {
 		return err
 	}
 
 	meta := obj.Metadata()
 	if len(meta) > 0 {
-		data["meta"] = meta
+		data.Meta = meta
 	}
 
 	return marshalResponse(data, w, status, r, marshalers)
 }
 
-func respondWithPagination(obj Responder, info information, status int, links map[string]string, w http.ResponseWriter, r *http.Request, marshalers map[string]ContentMarshaler) error {
-	data, err := jsonapi.MarshalWithURLs(obj.Result(), info)
+func respondWithPagination(obj Responder, info information, status int, links jsonapi.Links, w http.ResponseWriter, r *http.Request, marshalers map[string]ContentMarshaler) error {
+	data, err := jsonapi.MarshalToStruct(obj.Result(), info)
 	if err != nil {
 		return err
 	}
 
-	data["links"] = links
+	data.Links = &links
 	meta := obj.Metadata()
 	if len(meta) > 0 {
-		data["meta"] = meta
+		data.Meta = meta
 	}
 
 	return marshalResponse(data, w, status, r, marshalers)
 }
 
-func unmarshalRequest(r *http.Request, marshalers map[string]ContentMarshaler) (map[string]interface{}, error) {
+func unmarshalRequest(r *http.Request, marshalers map[string]ContentMarshaler) ([]byte, error) {
 	defer r.Body.Close()
 	data, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		return nil, err
 	}
-	result := map[string]interface{}{}
-	marshaler, _ := selectContentMarshaler(r, marshalers)
-	err = marshaler.Unmarshal(data, &result)
-	if err != nil {
-		return nil, err
-	}
-	return result, nil
+	// Todo: custom content unmarshaler is broken atm
+	//result := map[string]interface{}{}
+	//marshaler, _ := selectContentMarshaler(r, marshalers)
+	//err = marshaler.Unmarshal(data, &result)
+	//if err != nil {
+	//return nil, err
+	//}
+	return data, nil
 }
 
 func marshalResponse(resp interface{}, w http.ResponseWriter, status int, r *http.Request, marshalers map[string]ContentMarshaler) error {
@@ -1020,37 +967,35 @@ func filterSparseFields(resp interface{}, r *http.Request) (interface{}, error) 
 		return resp, nil
 	}
 
-	if content, ok := resp.(map[string]interface{}); ok {
+	if document, ok := resp.(jsonapi.Document); ok {
 		wrongFields := map[string][]string{}
 
 		// single entry in data
-		if data, ok := content["data"].(map[string]interface{}); ok {
-			errors := replaceAttributes(&queryParams, &data)
+		data := document.Data.DataObject
+		if data != nil {
+			errors := replaceAttributes(&queryParams, data)
 			for t, v := range errors {
 				wrongFields[t] = v
 			}
 		}
 
 		// data can be a slice too
-		if datas, ok := content["data"].([]map[string]interface{}); ok {
-			for index, data := range datas {
-				errors := replaceAttributes(&queryParams, &data)
-				for t, v := range errors {
-					wrongFields[t] = v
-				}
-				datas[index] = data
+		datas := document.Data.DataArray
+		for index, data := range datas {
+			errors := replaceAttributes(&queryParams, &data)
+			for t, v := range errors {
+				wrongFields[t] = v
 			}
+			datas[index] = data
 		}
 
 		// included slice
-		if included, ok := content["included"].([]map[string]interface{}); ok {
-			for index, include := range included {
-				errors := replaceAttributes(&queryParams, &include)
-				for t, v := range errors {
-					wrongFields[t] = v
-				}
-				included[index] = include
+		for index, include := range document.Included {
+			errors := replaceAttributes(&queryParams, &include)
+			for t, v := range errors {
+				wrongFields[t] = v
 			}
+			document.Included[index] = include
 		}
 
 		if len(wrongFields) > 0 {
@@ -1102,19 +1047,21 @@ func filterAttributes(attributes map[string]interface{}, fields []string) (filte
 	return
 }
 
-func replaceAttributes(query *map[string][]string, entry *map[string]interface{}) map[string][]string {
-	fieldType := (*entry)["type"].(string)
+func replaceAttributes(query *map[string][]string, entry *jsonapi.Data) map[string][]string {
+	fieldType := entry.Type
+	attributes := map[string]interface{}{}
+	_ = json.Unmarshal(entry.Attributes, &attributes)
 	fields := (*query)[fieldType]
 	if len(fields) > 0 {
-		if attributes, ok := (*entry)["attributes"]; ok {
-			var wrongFields []string
-			(*entry)["attributes"], wrongFields = filterAttributes(attributes.(map[string]interface{}), fields)
-			if len(wrongFields) > 0 {
-				return map[string][]string{
-					fieldType: wrongFields,
-				}
+		var wrongFields []string
+		attributes, wrongFields = filterAttributes(attributes, fields)
+		if len(wrongFields) > 0 {
+			return map[string][]string{
+				fieldType: wrongFields,
 			}
 		}
+		bytes, _ := json.Marshal(attributes)
+		entry.Attributes = bytes
 	}
 
 	return nil

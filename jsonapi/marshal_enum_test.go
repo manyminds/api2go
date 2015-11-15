@@ -55,9 +55,9 @@ func (s *PublishStatus) UnmarshalJSON(data []byte) error {
 }
 
 type EnumPost struct {
-	ID     string `jsonapi:"-"`
-	Title  string
-	Status PublishStatus
+	ID     string        `jsonapi:"-" json:"-"`
+	Title  string        `json:"title"`
+	Status PublishStatus `json:"status"`
 }
 
 func (e EnumPost) GetID() string {
@@ -75,18 +75,6 @@ var _ = Describe("Custom enum types", func() {
 	statusValue := "published"
 	singleJSON := []byte(`{"data":{"id": "1", "type": "enumPosts", "attributes": {"title":"First Post","status":"published"}}}`)
 	firstPost := EnumPost{ID: "1", Title: "First Post", Status: StatusPublished}
-	/*
-	 *singlePostMap := map[string]interface{}{
-	 *    "data": map[string]interface{}{
-	 *        "id":   "1",
-	 *        "type": "enumPosts",
-	 *        "attributes": map[string]interface{}{
-	 *            "title":  firstPost.Title,
-	 *            "status": StatusPublished,
-	 *        },
-	 *    },
-	 *}
-	 */
 
 	Context("When marshaling objects including enumes", func() {
 		singlePost := EnumPost{
@@ -96,14 +84,13 @@ var _ = Describe("Custom enum types", func() {
 		}
 
 		It("marshals JSON", func() {
-			result, err := MarshalToJSON(singlePost)
+			result, err := Marshal(singlePost)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(result).To(MatchJSON(singleJSON))
 		})
 	})
 
 	Context("When unmarshaling objects including enums", func() {
-
 		It("unmarshals status string values to int enum type", func() {
 			var result PublishStatus
 			result.UnmarshalText([]byte(statusValue))
@@ -111,17 +98,18 @@ var _ = Describe("Custom enum types", func() {
 		})
 
 		It("unmarshals single objects into a struct", func() {
+			// Todo: Hm, what was that test for? I don't remember, maybe delete it, but now it checks empty jsons and
+			// raises an error which is also a good thing
 			var post EnumPost
 			err := Unmarshal([]byte("{}"), &post)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(post).To(Equal(firstPost))
+			Expect(err).To(HaveOccurred())
 		})
 
 		It("unmarshals JSON", func() {
-			var posts []EnumPost
-			err := UnmarshalFromJSON(singleJSON, &posts)
+			var post EnumPost
+			err := Unmarshal(singleJSON, &post)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(posts).To(Equal([]EnumPost{firstPost}))
+			Expect(post).To(Equal(firstPost))
 		})
 	})
 })

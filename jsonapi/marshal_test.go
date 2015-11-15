@@ -929,7 +929,7 @@ var _ = Describe("Marshalling", func() {
 				IsCool: zero.BoolFromPtr(nil),
 				Today:  zero.TimeFromPtr(nil),
 			}
-			result, err := MarshalToJSON(nullPost)
+			result, err := Marshal(nullPost)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(result).To(MatchJSON(`
 				{
