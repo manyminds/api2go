@@ -1,7 +1,6 @@
 package jsonapi
 
 import (
-	"reflect"
 	"strings"
 	"unicode"
 
@@ -45,19 +44,6 @@ var commonInitialisms = map[string]bool{
 	"JWT":   true,
 }
 
-// Dejsonify returns a go struct key name from a JSON key name
-func Dejsonify(s string) string {
-	if s == "" {
-		return ""
-	}
-	if upper := strings.ToUpper(s); commonInitialisms[upper] {
-		return upper
-	}
-	rs := []rune(s)
-	rs[0] = unicode.ToUpper(rs[0])
-	return string(rs)
-}
-
 // Jsonify returns a JSON formatted key name from a go struct field name
 func Jsonify(s string) string {
 	if s == "" {
@@ -74,32 +60,4 @@ func Jsonify(s string) string {
 // Pluralize a noun
 func Pluralize(word string) string {
 	return inflector.Pluralize(word)
-}
-
-// Singularize a noun
-func Singularize(word string) string {
-	return inflector.Singularize(word)
-}
-
-// GetTagValueByName returns one api2go setting.
-// settings must be of the format `jsonapi:"name=newName,body=newbody"
-func GetTagValueByName(tfield reflect.StructField, name string) string {
-	str := tfield.Tag.Get("jsonapi")
-	if str == "" {
-		return ""
-	}
-
-	tags := strings.Split(str, ";")
-	setting := map[string]string{}
-	for _, value := range tags {
-		v := strings.Split(value, "=")
-		k := strings.TrimSpace(strings.ToLower(v[0]))
-		if len(v) == 2 {
-			setting[k] = v[1]
-		} else {
-			setting[k] = k
-		}
-	}
-
-	return setting[strings.ToLower(name)]
 }
