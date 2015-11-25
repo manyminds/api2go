@@ -97,4 +97,47 @@ var _ = Describe("JSONAPI Struct tests", func() {
 			Expect(target.Data.DataArray).To(Equal([]Data{expectedData}))
 		})
 	})
+
+	It("creates an empty slice for empty to-many relationships and nil for empty toOne", func() {
+		sampleJSON := `
+			{
+				"data": [
+					{
+						"type": "test",
+						"id": "1",
+						"attributes": {"foo": "bar"},
+						"relationships": {
+							"comments": {
+								"data": []
+							},
+							"author": {
+								"data": null
+							}
+						}
+					}
+				]
+			}
+`
+		expectedData := Data{
+			Type:       "test",
+			ID:         "1",
+			Attributes: json.RawMessage([]byte(`{"foo": "bar"}`)),
+			Relationships: map[string]Relationship{
+				"comments": {
+					Data: &RelationshipDataContainer{
+						DataArray: []RelationshipData{},
+					},
+				},
+				"author": {
+					Data: nil,
+				},
+			},
+		}
+
+		target := Document{}
+
+		err := json.Unmarshal([]byte(sampleJSON), &target)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(target.Data.DataArray).To(Equal([]Data{expectedData}))
+	})
 })

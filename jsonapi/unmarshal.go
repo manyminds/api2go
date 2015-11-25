@@ -170,18 +170,8 @@ func setRelationshipIDs(relationships map[string]Relationship, target UnmarshalI
 	toManyError := fmt.Errorf("struct %s does not implement UnmarshalToManyRelations", reflect.TypeOf(target))
 
 	for name, rel := range relationships {
-		// relationship is empty case
+		// if Data is nil, it means that we have an empty toOne relationship
 		if rel.Data == nil {
-			if Pluralize(name) == name {
-				castedToMany, ok := target.(UnmarshalToManyRelations)
-				if !ok {
-					return toManyError
-				}
-
-				castedToMany.SetToManyReferenceIDs(name, []string{})
-				break
-			}
-
 			castedToOne, ok := target.(UnmarshalToOneRelations)
 			if !ok {
 				return toOneError
