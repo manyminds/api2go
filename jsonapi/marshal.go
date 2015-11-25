@@ -245,7 +245,6 @@ func getStructRelationships(relationer MarshalLinkedRelations, information Serve
 	}
 
 	for name, referenceIDs := range sortedResults {
-		referenceType := referenceIDs[0].Type
 		relationships[name] = map[string]interface{}{}
 		// if referenceType is plural, we need to use an array for data, otherwise it's just an object
 		if Pluralize(name) == name {
@@ -254,7 +253,7 @@ func getStructRelationships(relationer MarshalLinkedRelations, information Serve
 
 			for _, referenceID := range referenceIDs {
 				data = append(data, map[string]interface{}{
-					"type": referenceType,
+					"type": referenceID.Type,
 					"id":   referenceID.ID,
 				})
 			}
@@ -263,7 +262,7 @@ func getStructRelationships(relationer MarshalLinkedRelations, information Serve
 		} else {
 			relationships[name] = map[string]interface{}{
 				"data": map[string]interface{}{
-					"type": referenceType,
+					"type": referenceIDs[0].Type,
 					"id":   referenceIDs[0].ID,
 				},
 			}
