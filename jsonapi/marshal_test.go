@@ -224,6 +224,31 @@ var _ = Describe("Marshalling", func() {
 			_, err := Marshal("")
 			Expect(err).To(HaveOccurred())
 		})
+
+		It("MarshalWithURLs catches MarshalToStruct error", func() {
+			_, err := MarshalWithURLs("blubb", CompleteServerInformation{})
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("returns an error if not every element implements MarshalIdentifier", func() {
+			_, err := Marshal([]interface{}{Comment{ID: 1, Text: "Blubb"}, "invalid"})
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(Equal("all elements within the slice must implement api2go.MarshalIdentifier"))
+		})
+
+		It("return an error if MarshalIdentifier was nil slice", func() {
+			var comment *Comment
+			_, err := Marshal([]interface{}{comment})
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(Equal("MarshalIdentifier must not be nil"))
+		})
+
+		It("return an error if MarshalIdentifier struct was nil", func() {
+			var comment *Comment
+			_, err := Marshal(comment)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(Equal("MarshalIdentifier must not be nil"))
+		})
 	})
 
 	Context("When marshaling compound objects", func() {
@@ -876,14 +901,12 @@ var _ = Describe("Marshalling", func() {
 		}
 
 		It("should work with default marshalData", func() {
-			actual, err := reduceDuplicates(input, serverInformationNil, marshalData)
-			Expect(err).ToNot(HaveOccurred())
+			actual := reduceDuplicates(input, serverInformationNil, marshalData)
 			Expect(len(*actual)).To(Equal(len(expected)))
 		})
 
 		It("should work with dummy marshalData", func() {
-			actual, err := reduceDuplicates(input, serverInformationNil, dummyFunc)
-			Expect(err).ToNot(HaveOccurred())
+			actual := reduceDuplicates(input, serverInformationNil, dummyFunc)
 			Expect(len(*actual)).To(Equal(len(expected)))
 		})
 	})
@@ -947,6 +970,5 @@ var _ = Describe("Marshalling", func() {
 				}
 			`))
 		})
-
 	})
 })

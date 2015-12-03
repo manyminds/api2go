@@ -80,6 +80,14 @@ var (
 // Unmarshal reads a jsonapi compatible JSON as []byte
 // target must at least implement the `UnmarshalIdentifier` interface.
 func Unmarshal(data []byte, target interface{}) error {
+	if target == nil {
+		return errors.New("target must not be nil")
+	}
+
+	if reflect.TypeOf(target).Kind() != reflect.Ptr {
+		return errors.New("target must be a ptr")
+	}
+
 	ctx := &Document{}
 	err := json.Unmarshal(data, ctx)
 	if err != nil {
@@ -95,9 +103,6 @@ func Unmarshal(data []byte, target interface{}) error {
 	}
 
 	if ctx.Data.DataArray != nil {
-		if reflect.TypeOf(target).Elem().Kind() != reflect.Slice {
-			return errors.New("Source JSON contained an array, but single record was expected")
-		}
 		targetType := reflect.TypeOf(target).Elem().Elem()
 		targetPointer := reflect.ValueOf(target)
 		targetValue := targetPointer.Elem()
@@ -139,9 +144,6 @@ func Unmarshal(data []byte, target interface{}) error {
 }
 
 func setDataIntoTarget(data *Data, target interface{}) error {
-	if reflect.ValueOf(target).Kind() == reflect.Struct {
-		target = reflect.ValueOf(target).Addr().Interface()
-	}
 	castedTarget, ok := target.(UnmarshalIdentifier)
 	if !ok {
 		return errInterface
@@ -217,91 +219,6 @@ func checkType(incomingType string, target UnmarshalIdentifier) error {
 	actualType := getStructType(target)
 	if incomingType != actualType {
 		return fmt.Errorf("Type %s in JSON does not match target struct type %s", incomingType, actualType)
-	}
-
-	return nil
-}
-
-// UnmarshalRelationshipsData is used by api2go.API to only unmarshal references inside a data object.
-// The target interface must implement UnmarshalToOneRelations or UnmarshalToManyRelations interface.
-// The linksMap is the content of the data object from the json
-func UnmarshalRelationshipsData(target interface{}, name string, links interface{}) error {
-	return processRelationshipsData(links, name, target)
-}
-
-func unmarshalRelationships(val reflect.Value, relationshipsMap map[string]interface{}) error {
-	for relationshipName, relationships := range relationshipsMap {
-		relationships, ok := relationships.(map[string]interface{})
-		if !ok {
-			return fmt.Errorf("link field for %s has invalid format, must be map[string]interface{}", relationshipName)
-		}
-		_, ok = relationships["data"]
-		if !ok {
-			return fmt.Errorf("Missing data field for %s", relationshipName)
-		}
-
-		if val.CanAddr() {
-			val = val.Addr()
-		}
-
-		err := processRelationshipsData(relationships["data"], relationshipName, val.Interface())
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func processRelationshipsData(data interface{}, linkName string, target interface{}) error {
-	hasOne, ok := data.(map[string]interface{})
-	if ok {
-		hasOneID, ok := hasOne["id"].(string)
-		if !ok {
-			return fmt.Errorf("data object must have a field id for %s", linkName)
-		}
-
-		target, ok := target.(UnmarshalToOneRelations)
-		if !ok {
-			return errors.New("target struct must implement interface UnmarshalToOneRelations")
-		}
-
-		target.SetToOneReferenceID(linkName, hasOneID)
-	} else if data == nil {
-		// this means that a to-one relationship must be deleted
-		target, ok := target.(UnmarshalToOneRelations)
-		if !ok {
-			return errors.New("target struct must implement interface UnmarshalToOneRelations")
-		}
-
-		target.SetToOneReferenceID(linkName, "")
-	} else {
-		hasMany, ok := data.([]interface{})
-		if !ok {
-			return fmt.Errorf("invalid data object or array, must be an object with \"id\" and \"type\" field for %s", linkName)
-		}
-
-		target, ok := target.(UnmarshalToManyRelations)
-		if !ok {
-			return errors.New("target struct must implement interface UnmarshalToManyRelations")
-		}
-
-		hasManyIDs := []string{}
-
-		for _, entry := range hasMany {
-			data, ok := entry.(map[string]interface{})
-			if !ok {
-				return fmt.Errorf("entry in data array must be an object for %s", linkName)
-			}
-			dataID, ok := data["id"].(string)
-			if !ok {
-				return fmt.Errorf("all data objects must have a field id for %s", linkName)
-			}
-
-			hasManyIDs = append(hasManyIDs, dataID)
-		}
-
-		target.SetToManyReferenceIDs(linkName, hasManyIDs)
 	}
 
 	return nil

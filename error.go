@@ -29,11 +29,6 @@ type Error struct {
 	Meta   interface{}  `json:"meta,omitempty"`
 }
 
-// GetID returns the ID
-func (e Error) GetID() string {
-	return e.ID
-}
-
 // ErrorLinks is used to provide an About URL that leads to
 // further details about the particular occurrence of the problem.
 //

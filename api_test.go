@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/manyminds/api2go/jsonapi"
+	"github.com/manyminds/api2go/routing"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"gopkg.in/guregu/null.v2"
@@ -620,6 +621,10 @@ var _ = Describe("RestHandler", func() {
 			rec = httptest.NewRecorder()
 		})
 
+		It("Router() returns a HTTPRouter instance", func() {
+			Expect(api.Router()).To(BeAssignableToTypeOf(&routing.HTTPRouter{}))
+		})
+
 		It("GETs collections", func() {
 			req, err := http.NewRequest("GET", "/v1/posts", nil)
 			Expect(err).To(BeNil())
@@ -758,7 +763,8 @@ var _ = Describe("RestHandler", func() {
 			reqBody := strings.NewReader(`{"data": [{"title": "New Post", "type": "posts"}]}`)
 			req, err := http.NewRequest("POST", "/v1/posts/", reqBody)
 			Expect(err).To(BeNil())
-			api.SetRedirectTrailingSlash(true)
+			router := api.Router().(*routing.HTTPRouter)
+			router.SetRedirectTrailingSlash(true)
 			api.Handler().ServeHTTP(rec, req)
 			Expect(rec.Code).To(Equal(http.StatusTemporaryRedirect))
 		})
@@ -775,7 +781,8 @@ var _ = Describe("RestHandler", func() {
 			reqBody := strings.NewReader(`{"data": [{"title": "New Post", "type": "posts"}]}`)
 			req, err := http.NewRequest("POST", "/v1/posts/", reqBody)
 			Expect(err).To(BeNil())
-			api.SetRedirectTrailingSlash(false)
+			router := api.Router().(*routing.HTTPRouter)
+			router.SetRedirectTrailingSlash(false)
 			api.Handler().ServeHTTP(rec, req)
 			Expect(rec.Code).To(Equal(http.StatusNotFound))
 		})

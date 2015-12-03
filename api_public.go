@@ -59,23 +59,6 @@ func (api *API) UseMiddleware(middleware ...HandlerFunc) {
 	api.middlewares = append(api.middlewares, middleware...)
 }
 
-// SetRedirectTrailingSlash enables 307 redirects on urls ending with /
-// when disabled, an URL ending with / will 404
-// this will and should work only if using the default router
-// DEPRECATED
-func (api *API) SetRedirectTrailingSlash(enabled bool) {
-	if api.router == nil {
-		panic("router must not be nil")
-	}
-
-	httpRouter, ok := api.router.(*routing.HTTPRouter)
-	if !ok {
-		panic("can not set redirectTrailingSlashes if not using the internal httpRouter")
-	}
-
-	httpRouter.SetRedirectTrailingSlash(enabled)
-}
-
 // NewAPIWithMarshalling does the same as NewAPIWithBaseURL with the addition
 // of a set of marshalers that provide a way to interact with clients that
 // use a serialization format other than JSON. The marshalers map is indexed

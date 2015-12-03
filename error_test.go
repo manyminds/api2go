@@ -2,10 +2,24 @@ package api2go
 
 import (
 	"errors"
+	"net/http"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
+
+type ErrorMarshaler struct{}
+
+func (e ErrorMarshaler) Marshal(i interface{}) ([]byte, error) {
+	return []byte{}, errors.New("this will always fail")
+}
+func (e ErrorMarshaler) Unmarshal(data []byte, i interface{}) error {
+	return nil
+}
+
+func (e ErrorMarshaler) MarshalError(error) string {
+	return ""
+}
 
 var _ = Describe("Errors test", func() {
 	Context("validate error logic", func() {
@@ -84,6 +98,14 @@ var _ = Describe("Errors test", func() {
 			result := m.MarshalError(httpErr)
 			expected := `{"errors":[{"id":"001","status":"500","code":"001","title":"Title must not be empty","detail":"Never occures in real life","meta":{"creator":"api2go"}}]}`
 			Expect(result).To(Equal(expected))
+		})
+
+		It("logs a Marshal error and returns an empty json array", func() {
+			Expect(
+				marshalHTTPError(
+					NewHTTPError(nil, "test", http.StatusInternalServerError),
+					ErrorMarshaler{}),
+			).To(Equal("{}"))
 		})
 	})
 })

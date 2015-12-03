@@ -107,10 +107,6 @@ func marshalSlice(data interface{}, information ServerInformation) (Document, er
 	result := Document{}
 
 	val := reflect.ValueOf(data)
-	if val.Kind() != reflect.Slice {
-		return result, errors.New("data must be a slice")
-	}
-
 	dataElements := []Data{}
 	var referencedStructs []MarshalIdentifier
 
@@ -134,10 +130,7 @@ func marshalSlice(data interface{}, information ServerInformation) (Document, er
 		}
 	}
 
-	includedElements, err := reduceDuplicates(referencedStructs, information, marshalData)
-	if err != nil {
-		return result, err
-	}
+	includedElements := reduceDuplicates(referencedStructs, information, marshalData)
 
 	//data key is always present
 	result.Data = &DataContainer{
@@ -155,38 +148,28 @@ func reduceDuplicates(
 	input []MarshalIdentifier,
 	information ServerInformation,
 	method func(MarshalIdentifier, ServerInformation) (*Data, error),
-) (
-	*[]Data,
-	error,
-) {
+) *[]Data {
 	alreadyIncluded := map[string]map[string]bool{}
 	includedElements := []Data{}
 
 	for _, referencedStruct := range input {
-		if referencedStruct == nil {
-			continue
-		}
-
 		structType := getStructType(referencedStruct)
 		if alreadyIncluded[structType] == nil {
 			alreadyIncluded[structType] = make(map[string]bool)
 		}
 
 		if !alreadyIncluded[structType][referencedStruct.GetID()] {
-			marshalled, err := method(referencedStruct, information)
-			if err != nil {
-				return &includedElements, err
-			}
-
+			marshalled, _ := method(referencedStruct, information)
 			includedElements = append(includedElements, *marshalled)
 			alreadyIncluded[structType][referencedStruct.GetID()] = true
 		}
 	}
 
-	return &includedElements, nil
+	return &includedElements
 }
 
 func marshalData(element MarshalIdentifier, information ServerInformation) (*Data, error) {
+	var err error
 	result := &Data{}
 
 	refValue := reflect.ValueOf(element)
@@ -194,12 +177,8 @@ func marshalData(element MarshalIdentifier, information ServerInformation) (*Dat
 		return result, errors.New("MarshalIdentifier must not be nil")
 	}
 
-	j, err := json.Marshal(element)
-	if err != nil {
-		return nil, err
-	}
-
-	result.Attributes = j
+	attributes, err := json.Marshal(element)
+	result.Attributes = attributes
 	result.ID = element.GetID()
 	result.Type = getStructType(element)
 
@@ -209,7 +188,7 @@ func marshalData(element MarshalIdentifier, information ServerInformation) (*Dat
 		result.Relationships = *getStructRelationships(references, information)
 	}
 
-	return result, nil
+	return result, err
 }
 
 // getStructRelationships returns the relationships struct with ids

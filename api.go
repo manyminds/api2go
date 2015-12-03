@@ -702,7 +702,7 @@ func (res *resource) handleReplaceRelation(c APIContexter, w http.ResponseWriter
 		editObj = response.Result()
 	}
 
-	err = jsonapi.UnmarshalRelationshipsData(editObj, relation.Name, data)
+	err = processRelationshipsData(data, relation.Name, editObj)
 	if err != nil {
 		return err
 	}
@@ -1100,4 +1100,58 @@ func handleError(err error, w http.ResponseWriter, r *http.Request, marshalers m
 	}
 
 	writeResult(w, []byte(marshaler.MarshalError(err)), http.StatusInternalServerError, contentType)
+}
+
+func processRelationshipsData(data interface{}, linkName string, target interface{}) error {
+	hasOne, ok := data.(map[string]interface{})
+	if ok {
+		hasOneID, ok := hasOne["id"].(string)
+		if !ok {
+			return fmt.Errorf("data object must have a field id for %s", linkName)
+		}
+
+		target, ok := target.(jsonapi.UnmarshalToOneRelations)
+		if !ok {
+			return errors.New("target struct must implement interface UnmarshalToOneRelations")
+		}
+
+		target.SetToOneReferenceID(linkName, hasOneID)
+	} else if data == nil {
+		// this means that a to-one relationship must be deleted
+		target, ok := target.(jsonapi.UnmarshalToOneRelations)
+		if !ok {
+			return errors.New("target struct must implement interface UnmarshalToOneRelations")
+		}
+
+		target.SetToOneReferenceID(linkName, "")
+	} else {
+		hasMany, ok := data.([]interface{})
+		if !ok {
+			return fmt.Errorf("invalid data object or array, must be an object with \"id\" and \"type\" field for %s", linkName)
+		}
+
+		target, ok := target.(jsonapi.UnmarshalToManyRelations)
+		if !ok {
+			return errors.New("target struct must implement interface UnmarshalToManyRelations")
+		}
+
+		hasManyIDs := []string{}
+
+		for _, entry := range hasMany {
+			data, ok := entry.(map[string]interface{})
+			if !ok {
+				return fmt.Errorf("entry in data array must be an object for %s", linkName)
+			}
+			dataID, ok := data["id"].(string)
+			if !ok {
+				return fmt.Errorf("all data objects must have a field id for %s", linkName)
+			}
+
+			hasManyIDs = append(hasManyIDs, dataID)
+		}
+
+		target.SetToManyReferenceIDs(linkName, hasManyIDs)
+	}
+
+	return nil
 }

@@ -421,3 +421,39 @@ func (i PrefixServerInformation) GetBaseURL() string {
 func (i PrefixServerInformation) GetPrefix() string {
 	return prefix
 }
+
+type NoRelationshipPosts struct{}
+
+func (n NoRelationshipPosts) GetID() string {
+	return "someID"
+}
+
+func (n *NoRelationshipPosts) SetID(ID string) error {
+	return nil
+}
+
+func (n NoRelationshipPosts) GetName() string {
+	return "posts"
+}
+
+type ErrorRelationshipPosts struct{}
+
+func (e ErrorRelationshipPosts) GetID() string {
+	return "errorID"
+}
+
+func (e *ErrorRelationshipPosts) SetID(ID string) error {
+	return nil
+}
+
+func (e ErrorRelationshipPosts) GetName() string {
+	return "posts"
+}
+
+func (e ErrorRelationshipPosts) SetToOneReferenceID(name, ID string) error {
+	return errors.New("this never works")
+}
+
+func (e ErrorRelationshipPosts) SetToManyReferenceIDs(name string, IDs []string) error {
+	return errors.New("this also never works")
+}

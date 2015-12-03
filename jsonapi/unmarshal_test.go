@@ -75,6 +75,14 @@ var _ = Describe("Unmarshal", func() {
 			Expect(posts).To(Equal([]SimplePost{firstPost, secondPost}))
 		})
 
+		It("errors on existing record that does not implement MarshalIdentifier", func() {
+			type invalid struct{}
+			invalids := []interface{}{invalid{}}
+			err := Unmarshal(multiplePostJSON, &invalids)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(Equal("existing structs must implement interface MarshalIdentifier"))
+		})
+
 		It("errors on invalid param nil", func() {
 			err := Unmarshal(singlePostJSON, nil)
 			Expect(err).Should(HaveOccurred())
@@ -163,6 +171,39 @@ var _ = Describe("Unmarshal", func() {
 			err = Unmarshal(faultyPostMap, &post)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("parsing time"))
+		})
+
+		It("errors if data array entries have no attributes", func() {
+			faultyPostMap := []byte(`
+			{
+				"data": [{
+					"type": "simplePosts"
+				}]
+			}`)
+			var posts []SimplePost
+
+			err := Unmarshal(faultyPostMap, &posts)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(Equal("missing mandatory attributes object"))
+
+			morePosts := []SimplePost{{}}
+			err = Unmarshal(faultyPostMap, &morePosts)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(Equal("missing mandatory attributes object"))
+		})
+
+		It("errors if target is no pointer", func() {
+			json := []byte(`
+			{
+				"data": {
+					"type": "simplePosts"
+				}
+			}
+			`)
+
+			err := Unmarshal(json, SimplePost{})
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(Equal("target must be a ptr"))
 		})
 
 		Context("slice fields", func() {
@@ -300,9 +341,7 @@ var _ = Describe("Unmarshal", func() {
 			Expect(err).To(BeNil())
 			Expect(posts).To(Equal([]Post{post}))
 		})
-	})
 
-	Context("when unmarshaling objects with relations", func() {
 		It("unmarshal to-one and to-many relations", func() {
 			expectedPost := Post{ID: 3, Title: "Test", AuthorID: sql.NullInt64{Valid: true, Int64: 1}, Author: nil, CommentsIDs: []int{1, 2}}
 			postJSON := []byte(`
@@ -342,8 +381,131 @@ var _ = Describe("Unmarshal", func() {
 			Expect(post).To(Equal(expectedPost))
 		})
 
-		It("check if type field matches target struct", func() {
+		It("unmarshals empty relationships", func() {
+			expectedPost := Post{ID: 3, Title: "Test", AuthorID: sql.NullInt64{Valid: false, Int64: 0}, Author: nil, CommentsIDs: []int{}}
 			postJSON := []byte(`
+			{
+				"data": {
+					"id":   "3",
+					"type": "posts",
+					"attributes": {
+						"title": "Test"
+					},
+					"relationships": {
+						"author": {
+							"data": null
+						},
+						"comments": {
+							"data": []
+						}
+					}
+				}
+			}
+			`)
+			post := Post{CommentsIDs: []int{}}
+			err := Unmarshal(postJSON, &post)
+			Expect(err).To(BeNil())
+			Expect(post).To(Equal(expectedPost))
+		})
+
+		It("errors if target does not implement UnmarshalToOneRelations for empty relationship", func() {
+			postJSON := []byte(`
+			{
+				"data": {
+					"id":   "3",
+					"type": "posts",
+					"attributes": {
+						"title": "Test"
+					},
+					"relationships": {
+						"author": {
+							"data": null
+						}
+					}
+				}
+			}
+			`)
+			post := NoRelationshipPosts{}
+			err := Unmarshal(postJSON, &post)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(Equal("struct *jsonapi.NoRelationshipPosts does not implement UnmarshalToOneRelations"))
+		})
+
+		Context("UnmarshalToOneRelations error handling", func() {
+			postJSON := []byte(`
+			{
+				"data": {
+					"id":   "3",
+					"type": "posts",
+					"attributes": {
+						"title": "Test"
+					},
+					"relationships": {
+						"author": {
+							"data": {
+								"id": "1",
+								"type": "users"
+							}
+						}
+					}
+				}
+			}
+			`)
+
+			It("errors if target does not implement UnmarshalToOneRelations", func() {
+				post := NoRelationshipPosts{}
+				err := Unmarshal(postJSON, &post)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(Equal("struct *jsonapi.NoRelationshipPosts does not implement UnmarshalToOneRelations"))
+			})
+
+			It("returns an error if SetToOneReferenceID returned an error", func() {
+				post := ErrorRelationshipPosts{}
+				err := Unmarshal(postJSON, &post)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(Equal("this never works"))
+			})
+		})
+
+		Context("UnmarshalToManyRelations error handling", func() {
+			postJSON := []byte(`
+			{
+				"data": {
+					"id":   "3",
+					"type": "posts",
+					"attributes": {
+						"title": "Test"
+					},
+					"relationships": {
+						"comments": {
+							"data": [{
+								"id": "1",
+								"type": "comments"
+							}]
+						}
+					}
+				}
+			}
+			`)
+
+			It("errors if target does not implement UnmarshalToManyRelations", func() {
+				post := NoRelationshipPosts{}
+				err := Unmarshal(postJSON, &post)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(Equal("struct *jsonapi.NoRelationshipPosts does not implement UnmarshalToManyRelations"))
+			})
+
+			It("returns an error if SetTOManyReferenceIDs returned an error", func() {
+				post := ErrorRelationshipPosts{}
+				err := Unmarshal(postJSON, &post)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(Equal("this also never works"))
+			})
+		})
+	})
+
+	It("check if type field matches target struct", func() {
+		postJSON := []byte(`
 			{
 				"data": {
 					"id":    "1",
@@ -353,10 +515,9 @@ var _ = Describe("Unmarshal", func() {
 					}
 				}
 			}`)
-			var post Post
-			err := Unmarshal(postJSON, &post)
-			Expect(err).To(HaveOccurred())
-		})
+		var post Post
+		err := Unmarshal(postJSON, &post)
+		Expect(err).To(HaveOccurred())
 	})
 
 	Context("when unmarshaling into an existing slice", func() {
