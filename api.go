@@ -1102,6 +1102,7 @@ func handleError(err error, w http.ResponseWriter, r *http.Request, marshalers m
 	writeResult(w, []byte(marshaler.MarshalError(err)), http.StatusInternalServerError, contentType)
 }
 
+// TODO: this can also be replaced with a struct into that we directly json.Unmarshal
 func processRelationshipsData(data interface{}, linkName string, target interface{}) error {
 	hasOne, ok := data.(map[string]interface{})
 	if ok {
