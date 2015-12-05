@@ -217,7 +217,7 @@ fields which are only used internally to manage relations or data that needs to 
 ## Manual marshaling / unmarshaling
 Please keep in mind that this only works if you implemented the previously mentioned interfaces. Manual marshalling and
 unmarshalling makes sense, if you do not want to use our API that automatically generates all the necessary routes for you. You
-can directly use our sub-package `github.com/manyminds/api2go/jsonapi`
+can directly use our sub-package `gopkg.in/manyminds/api2go.v0/jsonapi`
 
 ```go
 comment1 = Comment{ID: 1, Text: "First!"}
