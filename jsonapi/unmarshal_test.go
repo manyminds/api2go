@@ -15,9 +15,6 @@ import (
 var _ = Describe("Unmarshal", func() {
 	Context("When unmarshaling simple objects", func() {
 		t, _ := time.Parse(time.RFC3339, "2014-11-10T16:30:48.823Z")
-		/*
-		 *singleJSON := []byte(`{"data":{"id": "1", "type": "simplePosts", "attributes": {"title":"First Post","text":"Lipsum", "Created": "2014-11-10T16:30:48.823Z"}}}`)
-		 */
 		firstPost := SimplePost{ID: "1", Title: "First Post", Text: "Lipsum", Created: t}
 		secondPost := SimplePost{ID: "2", Title: "Second Post", Text: "Foobar!", Created: t, Updated: t}
 

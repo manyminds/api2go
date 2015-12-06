@@ -739,7 +739,6 @@ var _ = Describe("Marshalling", func() {
 					"type": "identities",
 					"id": "1234",
 					"attributes": {
-						"ID": 1234,
 						"scopes": [
 						"user_global"
 						]
