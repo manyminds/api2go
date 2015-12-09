@@ -42,7 +42,6 @@ Remove a sweet
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -54,32 +53,9 @@ import (
 	"github.com/manyminds/api2go/examples/storage"
 )
 
-// PrettyJSONContentMarshaler for JSON in a human readable format
-type PrettyJSONContentMarshaler struct{}
-
-// Marshal marshals to pretty JSON
-func (m PrettyJSONContentMarshaler) Marshal(i interface{}) ([]byte, error) {
-	return json.MarshalIndent(i, "", "    ")
-}
-
-// Unmarshal the JSON
-func (m PrettyJSONContentMarshaler) Unmarshal(data []byte, i interface{}) error {
-	return json.Unmarshal(data, i)
-}
-
-// MarshalError to configure error marshaling
-func (m PrettyJSONContentMarshaler) MarshalError(err error) string {
-	jsonmarshaler := api2go.JSONContentMarshaler{}
-	return jsonmarshaler.MarshalError(err)
-}
-
 func main() {
-	marshalers := map[string]api2go.ContentMarshaler{
-		"application/vnd.api+json": PrettyJSONContentMarshaler{},
-	}
-
 	port := 31415
-	api := api2go.NewAPIWithMarshalling("v0", &resolver.RequestURL{Port: port}, marshalers)
+	api := api2go.NewAPIWithResolver("v0", &resolver.RequestURL{Port: port})
 	userStorage := storage.NewUserStorage()
 	chocStorage := storage.NewChocolateStorage()
 	api.AddResource(model.User{}, resource.UserResource{ChocStorage: chocStorage, UserStorage: userStorage})

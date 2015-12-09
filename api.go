@@ -13,7 +13,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/golang/gddo/httputil"
 	"github.com/manyminds/api2go/jsonapi"
 	"github.com/manyminds/api2go/routing"
 )
@@ -182,20 +181,20 @@ func (p paginationQueryParams) getLinks(r *http.Request, count uint, info inform
 }
 
 type notAllowedHandler struct {
-	marshalers map[string]ContentMarshaler
+	API *API
 }
 
 func (n notAllowedHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	err := NewHTTPError(nil, "Method Not Allowed", http.StatusMethodNotAllowed)
 	w.WriteHeader(http.StatusMethodNotAllowed)
-	handleError(err, w, r, n.marshalers)
+	n.API.handleError(err, w, r)
 }
 
 type resource struct {
 	resourceType reflect.Type
 	source       CRUD
 	name         string
-	marshalers   map[string]ContentMarshaler
+	api          *API
 }
 
 // middlewareChain executes the middleeware chain setup
@@ -210,7 +209,7 @@ func (api *API) allocateDefaultContext() APIContexter {
 	return &APIContext{}
 }
 
-func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD, marshalers map[string]ContentMarshaler) *resource {
+func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD) *resource {
 	resourceType := reflect.TypeOf(prototype)
 	if resourceType.Kind() != reflect.Struct && resourceType.Kind() != reflect.Ptr {
 		panic("pass an empty resource struct or a struct pointer to AddResource!")
@@ -239,7 +238,7 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD, ma
 		resourceType: resourceType,
 		name:         name,
 		source:       source,
-		marshalers:   marshalers,
+		api:          api,
 	}
 
 	requestInfo := func(r *http.Request, api *API) *information {
@@ -287,7 +286,7 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD, ma
 		err := res.handleIndex(c, w, r, *info)
 		api.contextPool.Put(c)
 		if err != nil {
-			handleError(err, w, r, marshalers)
+			api.handleError(err, w, r)
 		}
 	})
 
@@ -299,7 +298,7 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD, ma
 		err := res.handleRead(c, w, r, params, *info)
 		api.contextPool.Put(c)
 		if err != nil {
-			handleError(err, w, r, marshalers)
+			api.handleError(err, w, r)
 		}
 	})
 
@@ -317,7 +316,7 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD, ma
 					err := res.handleReadRelation(c, w, r, params, *info, relation)
 					api.contextPool.Put(c)
 					if err != nil {
-						handleError(err, w, r, marshalers)
+						api.handleError(err, w, r)
 					}
 				}
 			}(relation))
@@ -331,7 +330,7 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD, ma
 					err := res.handleLinked(c, api, w, r, params, relation, *info)
 					api.contextPool.Put(c)
 					if err != nil {
-						handleError(err, w, r, marshalers)
+						api.handleError(err, w, r)
 					}
 				}
 			}(relation))
@@ -344,7 +343,7 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD, ma
 					err := res.handleReplaceRelation(c, w, r, params, relation)
 					api.contextPool.Put(c)
 					if err != nil {
-						handleError(err, w, r, marshalers)
+						api.handleError(err, w, r)
 					}
 				}
 			}(relation))
@@ -359,7 +358,7 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD, ma
 						err := res.handleAddToManyRelation(c, w, r, params, relation)
 						api.contextPool.Put(c)
 						if err != nil {
-							handleError(err, w, r, marshalers)
+							api.handleError(err, w, r)
 						}
 					}
 				}(relation))
@@ -372,7 +371,7 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD, ma
 						err := res.handleDeleteToManyRelation(c, w, r, params, relation)
 						api.contextPool.Put(c)
 						if err != nil {
-							handleError(err, w, r, marshalers)
+							api.handleError(err, w, r)
 						}
 					}
 				}(relation))
@@ -388,7 +387,7 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD, ma
 		err := res.handleCreate(c, w, r, info.prefix, *info)
 		api.contextPool.Put(c)
 		if err != nil {
-			handleError(err, w, r, marshalers)
+			api.handleError(err, w, r)
 		}
 	})
 
@@ -399,7 +398,7 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD, ma
 		err := res.handleDelete(c, w, r, params)
 		api.contextPool.Put(c)
 		if err != nil {
-			handleError(err, w, r, marshalers)
+			api.handleError(err, w, r)
 		}
 	})
 
@@ -410,7 +409,7 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD, ma
 		err := res.handleUpdate(c, w, r, params)
 		api.contextPool.Put(c)
 		if err != nil {
-			handleError(err, w, r, marshalers)
+			api.handleError(err, w, r)
 		}
 	})
 
@@ -431,6 +430,19 @@ func buildRequest(c APIContexter, r *http.Request) Request {
 	return req
 }
 
+func (res *resource) marshalResponse(resp interface{}, w http.ResponseWriter, status int, r *http.Request) error {
+	filtered, err := filterSparseFields(resp, r)
+	if err != nil {
+		return err
+	}
+	result, err := json.Marshal(filtered)
+	if err != nil {
+		return err
+	}
+	writeResult(w, result, status, res.api.ContentType)
+	return nil
+}
+
 func (res *resource) handleIndex(c APIContexter, w http.ResponseWriter, r *http.Request, info information) error {
 	pagination := newPaginationQueryParams(r)
 	if pagination.isValid() {
@@ -449,7 +461,7 @@ func (res *resource) handleIndex(c APIContexter, w http.ResponseWriter, r *http.
 			return err
 		}
 
-		return respondWithPagination(response, info, http.StatusOK, paginationLinks, w, r, res.marshalers)
+		return res.respondWithPagination(response, info, http.StatusOK, paginationLinks, w, r)
 	}
 	source, ok := res.source.(FindAll)
 	if !ok {
@@ -461,7 +473,7 @@ func (res *resource) handleIndex(c APIContexter, w http.ResponseWriter, r *http.
 		return err
 	}
 
-	return respondWith(response, info, http.StatusOK, w, r, res.marshalers)
+	return res.respondWith(response, info, http.StatusOK, w, r)
 }
 
 func (res *resource) handleRead(c APIContexter, w http.ResponseWriter, r *http.Request, params map[string]string, info information) error {
@@ -473,7 +485,7 @@ func (res *resource) handleRead(c APIContexter, w http.ResponseWriter, r *http.R
 		return err
 	}
 
-	return respondWith(response, info, http.StatusOK, w, r, res.marshalers)
+	return res.respondWith(response, info, http.StatusOK, w, r)
 }
 
 func (res *resource) handleReadRelation(c APIContexter, w http.ResponseWriter, r *http.Request, params map[string]string, info information, relation jsonapi.Reference) error {
@@ -499,7 +511,7 @@ func (res *resource) handleReadRelation(c APIContexter, w http.ResponseWriter, r
 		rel.Meta = meta
 	}
 
-	return marshalResponse(rel, w, http.StatusOK, r, res.marshalers)
+	return res.marshalResponse(rel, w, http.StatusOK, r)
 }
 
 // try to find the referenced resource and call the findAll Method with referencing resource id as param
@@ -530,7 +542,7 @@ func (res *resource) handleLinked(c APIContexter, api *API, w http.ResponseWrite
 					return err
 				}
 
-				return respondWithPagination(response, info, http.StatusOK, paginationLinks, w, r, res.marshalers)
+				return res.respondWithPagination(response, info, http.StatusOK, paginationLinks, w, r)
 			}
 
 			source, ok := resource.source.(FindAll)
@@ -542,7 +554,7 @@ func (res *resource) handleLinked(c APIContexter, api *API, w http.ResponseWrite
 			if err != nil {
 				return err
 			}
-			return respondWith(obj, info, http.StatusOK, w, r, res.marshalers)
+			return res.respondWith(obj, info, http.StatusOK, w, r)
 		}
 	}
 
@@ -554,7 +566,7 @@ func (res *resource) handleLinked(c APIContexter, api *API, w http.ResponseWrite
 }
 
 func (res *resource) handleCreate(c APIContexter, w http.ResponseWriter, r *http.Request, prefix string, info information) error {
-	ctx, err := unmarshalRequest(r, res.marshalers)
+	ctx, err := unmarshalRequest(r)
 	if err != nil {
 		return err
 	}
@@ -595,7 +607,7 @@ func (res *resource) handleCreate(c APIContexter, w http.ResponseWriter, r *http
 	// handle 200 status codes
 	switch response.StatusCode() {
 	case http.StatusCreated:
-		return respondWith(response, info, http.StatusCreated, w, r, res.marshalers)
+		return res.respondWith(response, info, http.StatusCreated, w, r)
 	case http.StatusNoContent:
 		w.WriteHeader(response.StatusCode())
 		return nil
@@ -614,7 +626,7 @@ func (res *resource) handleUpdate(c APIContexter, w http.ResponseWriter, r *http
 		return err
 	}
 
-	ctx, err := unmarshalRequest(r, res.marshalers)
+	ctx, err := unmarshalRequest(r)
 	if err != nil {
 		return err
 	}
@@ -655,7 +667,7 @@ func (res *resource) handleUpdate(c APIContexter, w http.ResponseWriter, r *http
 			response = internalResponse
 		}
 
-		return respondWith(response, information{}, http.StatusOK, w, r, res.marshalers)
+		return res.respondWith(response, information{}, http.StatusOK, w, r)
 	case http.StatusAccepted:
 		w.WriteHeader(http.StatusAccepted)
 		return nil
@@ -680,7 +692,7 @@ func (res *resource) handleReplaceRelation(c APIContexter, w http.ResponseWriter
 		return err
 	}
 
-	body, err := unmarshalRequest(r, res.marshalers)
+	body, err := unmarshalRequest(r)
 	if err != nil {
 		return err
 	}
@@ -730,7 +742,7 @@ func (res *resource) handleAddToManyRelation(c APIContexter, w http.ResponseWrit
 		return err
 	}
 
-	body, err := unmarshalRequest(r, res.marshalers)
+	body, err := unmarshalRequest(r)
 	if err != nil {
 		return err
 	}
@@ -802,7 +814,7 @@ func (res *resource) handleDeleteToManyRelation(c APIContexter, w http.ResponseW
 		return err
 	}
 
-	body, err := unmarshalRequest(r, res.marshalers)
+	body, err := unmarshalRequest(r)
 	if err != nil {
 		return err
 	}
@@ -883,7 +895,7 @@ func (res *resource) handleDelete(c APIContexter, w http.ResponseWriter, r *http
 			"meta": response.Metadata(),
 		}
 
-		return marshalResponse(data, w, http.StatusOK, r, res.marshalers)
+		return res.marshalResponse(data, w, http.StatusOK, r)
 	case http.StatusAccepted:
 		w.WriteHeader(http.StatusAccepted)
 		return nil
@@ -901,7 +913,7 @@ func writeResult(w http.ResponseWriter, data []byte, status int, contentType str
 	w.Write(data)
 }
 
-func respondWith(obj Responder, info information, status int, w http.ResponseWriter, r *http.Request, marshalers map[string]ContentMarshaler) error {
+func (res *resource) respondWith(obj Responder, info information, status int, w http.ResponseWriter, r *http.Request) error {
 	data, err := jsonapi.MarshalToStruct(obj.Result(), info)
 	if err != nil {
 		return err
@@ -912,10 +924,10 @@ func respondWith(obj Responder, info information, status int, w http.ResponseWri
 		data.Meta = meta
 	}
 
-	return marshalResponse(data, w, status, r, marshalers)
+	return res.marshalResponse(data, w, status, r)
 }
 
-func respondWithPagination(obj Responder, info information, status int, links jsonapi.Links, w http.ResponseWriter, r *http.Request, marshalers map[string]ContentMarshaler) error {
+func (res *resource) respondWithPagination(obj Responder, info information, status int, links jsonapi.Links, w http.ResponseWriter, r *http.Request) error {
 	data, err := jsonapi.MarshalToStruct(obj.Result(), info)
 	if err != nil {
 		return err
@@ -927,37 +939,16 @@ func respondWithPagination(obj Responder, info information, status int, links js
 		data.Meta = meta
 	}
 
-	return marshalResponse(data, w, status, r, marshalers)
+	return res.marshalResponse(data, w, status, r)
 }
 
-func unmarshalRequest(r *http.Request, marshalers map[string]ContentMarshaler) ([]byte, error) {
+func unmarshalRequest(r *http.Request) ([]byte, error) {
 	defer r.Body.Close()
 	data, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		return nil, err
 	}
-	// Todo: custom content unmarshaler is broken atm
-	//result := map[string]interface{}{}
-	//marshaler, _ := selectContentMarshaler(r, marshalers)
-	//err = marshaler.Unmarshal(data, &result)
-	//if err != nil {
-	//return nil, err
-	//}
 	return data, nil
-}
-
-func marshalResponse(resp interface{}, w http.ResponseWriter, status int, r *http.Request, marshalers map[string]ContentMarshaler) error {
-	marshaler, contentType := selectContentMarshaler(r, marshalers)
-	filtered, err := filterSparseFields(resp, r)
-	if err != nil {
-		return err
-	}
-	result, err := marshaler.Marshal(filtered)
-	if err != nil {
-		return err
-	}
-	writeResult(w, result, status, contentType)
-	return nil
 }
 
 func filterSparseFields(resp interface{}, r *http.Request) (interface{}, error) {
@@ -1067,39 +1058,16 @@ func replaceAttributes(query *map[string][]string, entry *jsonapi.Data) map[stri
 	return nil
 }
 
-func selectContentMarshaler(r *http.Request, marshalers map[string]ContentMarshaler) (marshaler ContentMarshaler, contentType string) {
-	if _, found := r.Header["Accept"]; found {
-		var contentTypes []string
-		for ct := range marshalers {
-			contentTypes = append(contentTypes, ct)
-		}
-
-		contentType = httputil.NegotiateContentType(r, contentTypes, defaultContentTypHeader)
-		marshaler = marshalers[contentType]
-	} else if contentTypes, found := r.Header["Content-Type"]; found {
-		contentType = contentTypes[0]
-		marshaler = marshalers[contentType]
-	}
-
-	if marshaler == nil {
-		contentType = defaultContentTypHeader
-		marshaler = JSONContentMarshaler{}
-	}
-
-	return
-}
-
-func handleError(err error, w http.ResponseWriter, r *http.Request, marshalers map[string]ContentMarshaler) {
-	marshaler, contentType := selectContentMarshaler(r, marshalers)
-
+func (api *API) handleError(err error, w http.ResponseWriter, r *http.Request) {
 	log.Println(err)
 	if e, ok := err.(HTTPError); ok {
-		writeResult(w, []byte(marshaler.MarshalError(err)), e.status, contentType)
+		writeResult(w, []byte(marshalHTTPError(e)), e.status, api.ContentType)
 		return
 
 	}
 
-	writeResult(w, []byte(marshaler.MarshalError(err)), http.StatusInternalServerError, contentType)
+	e := NewHTTPError(err, err.Error(), http.StatusInternalServerError)
+	writeResult(w, []byte(marshalHTTPError(e)), http.StatusInternalServerError, api.ContentType)
 }
 
 // TODO: this can also be replaced with a struct into that we directly json.Unmarshal

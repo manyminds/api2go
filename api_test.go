@@ -433,22 +433,6 @@ func (s *commentSource) Update(obj interface{}, req Request) (Responder, error) 
 	return &Response{}, NewHTTPError(nil, "comment not found", http.StatusNotFound)
 }
 
-type prettyJSONContentMarshaler struct {
-}
-
-func (m prettyJSONContentMarshaler) Marshal(i interface{}) ([]byte, error) {
-	return json.MarshalIndent(i, "", "    ")
-}
-
-func (m prettyJSONContentMarshaler) Unmarshal(data []byte, i interface{}) error {
-	return json.Unmarshal(data, i)
-}
-
-func (m prettyJSONContentMarshaler) MarshalError(err error) string {
-	jsonmarshaler := JSONContentMarshaler{}
-	return jsonmarshaler.MarshalError(err)
-}
-
 var _ = Describe("RestHandler", func() {
 
 	var usePointerResources bool
@@ -1028,121 +1012,6 @@ var _ = Describe("RestHandler", func() {
 		})
 	})
 
-	Context("use content marshalers correctly", func() {
-		var (
-			source         *fixtureSource
-			api            *API
-			rec            *httptest.ResponseRecorder
-			jsonResponse   string
-			prettyResponse string
-		)
-
-		BeforeEach(func() {
-			source = &fixtureSource{map[string]*Post{
-				"1": {ID: "1", Title: "Hello, World!"},
-			}, false}
-
-			jsonResponse = `{"data":{"attributes":{"title":"Hello, World!","value":null},"id":"1","relationships":{"author":{"data":null,"links":{"related":"/posts/1/author","self":"/posts/1/relationships/author"}},"bananas":{"data":[],"links":{"related":"/posts/1/bananas","self":"/posts/1/relationships/bananas"}},"comments":{"data":[],"links":{"related":"/posts/1/comments","self":"/posts/1/relationships/comments"}}},"type":"posts"}}`
-			prettyResponse = `{
-    "data": {
-        "attributes": {
-            "title": "Hello, World!",
-            "value": null
-        },
-        "id": "1",
-        "relationships": {
-            "author": {
-                "data": null,
-                "links": {
-                    "related": "/posts/1/author",
-                    "self": "/posts/1/relationships/author"
-                }
-            },
-            "bananas": {
-                "data": [],
-                "links": {
-                    "related": "/posts/1/bananas",
-                    "self": "/posts/1/relationships/bananas"
-                }
-            },
-            "comments": {
-                "data": [],
-                "links": {
-                    "related": "/posts/1/comments",
-                    "self": "/posts/1/relationships/comments"
-                }
-            }
-        },
-        "type": "posts"
-    }
-}`
-
-			marshalers := map[string]ContentMarshaler{
-				`application/vnd.api+json`:       JSONContentMarshaler{},
-				`application/vnd.api+prettyjson`: prettyJSONContentMarshaler{},
-			}
-
-			api = NewAPIWithMarshalers("", "", marshalers)
-			api.AddResource(Post{}, source)
-
-			rec = httptest.NewRecorder()
-		})
-
-		It("Selects the default content marshaler when no Content-Type or Accept request header is present", func() {
-			req, err := http.NewRequest("GET", "/posts/1", nil)
-			Expect(err).To(BeNil())
-			api.Handler().ServeHTTP(rec, req)
-			Expect(rec.Code).To(Equal(http.StatusOK))
-			Expect(rec.HeaderMap["Content-Type"][0]).To(Equal("application/vnd.api+json"))
-			actual := strings.TrimSpace(string(rec.Body.Bytes()))
-			Expect(actual).To(MatchJSON(jsonResponse))
-		})
-
-		It("Selects the default content marshaler when Content-Type doesn't specify a known content type", func() {
-			req, err := http.NewRequest("GET", "/posts/1", nil)
-			Expect(err).To(BeNil())
-			req.Header.Set("Content-Type", "application/json")
-			api.Handler().ServeHTTP(rec, req)
-			Expect(rec.Code).To(Equal(http.StatusOK))
-			Expect(rec.HeaderMap["Content-Type"][0]).To(Equal("application/vnd.api+json"))
-			actual := strings.TrimSpace(string(rec.Body.Bytes()))
-			Expect(actual).To(MatchJSON(jsonResponse))
-		})
-
-		It("Selects the default content marshaler when Accept doesn't specify a known content type", func() {
-			req, err := http.NewRequest("GET", "/posts/1", nil)
-			Expect(err).To(BeNil())
-			req.Header.Set("Accept", "text/html,application/xml;q=0.9")
-			api.Handler().ServeHTTP(rec, req)
-			Expect(rec.Code).To(Equal(http.StatusOK))
-			Expect(rec.HeaderMap["Content-Type"][0]).To(Equal("application/vnd.api+json"))
-			actual := strings.TrimSpace(string(rec.Body.Bytes()))
-			Expect(actual).To(MatchJSON(jsonResponse))
-		})
-
-		It("Selects the correct content marshaler when Content-Type specifies a known content type", func() {
-			req, err := http.NewRequest("GET", "/posts/1", nil)
-			Expect(err).To(BeNil())
-			req.Header.Set("Content-Type", `application/vnd.api+prettyjson`)
-			api.Handler().ServeHTTP(rec, req)
-			Expect(rec.Code).To(Equal(http.StatusOK))
-			Expect(rec.HeaderMap["Content-Type"][0]).To(Equal(`application/vnd.api+prettyjson`))
-			actual := strings.TrimSpace(string(rec.Body.Bytes()))
-			Expect(actual).To(MatchJSON(prettyResponse))
-		})
-
-		It("Selects the correct content marshaler when Accept specifies a known content type", func() {
-			req, err := http.NewRequest("GET", "/posts/1", nil)
-			Expect(err).To(BeNil())
-			req.Header.Set("Accept", `text/html,application/xml;q=0.9,application/vnd.api+prettyjson;q=0.5`)
-			api.Handler().ServeHTTP(rec, req)
-			Expect(rec.Code).To(Equal(http.StatusOK))
-			Expect(rec.HeaderMap["Content-Type"][0]).To(Equal(`application/vnd.api+prettyjson`))
-			actual := strings.TrimSpace(string(rec.Body.Bytes()))
-			Expect(actual).To(MatchJSON(prettyResponse))
-		})
-	})
-
 	Context("Extracting query parameters with complete BaseURL API", func() {
 		var (
 			source    *fixtureSource
@@ -1563,11 +1432,7 @@ var _ = Describe("RestHandler", func() {
 				"1": {ID: "1", Title: "Hello, World!"},
 			}, false}
 
-			marshalers := map[string]ContentMarshaler{
-				`application/vnd.api+json`: JSONContentMarshaler{},
-			}
-
-			api = NewAPIWithMarshalling("/secret/", &requestURLResolver{}, marshalers)
+			api = NewAPIWithResolver("/secret/", &requestURLResolver{})
 			api.AddResource(Post{}, source)
 			rec = httptest.NewRecorder()
 		})

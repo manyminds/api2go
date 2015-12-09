@@ -12,19 +12,12 @@ import (
 // HandlerFunc for api2go middlewares
 type HandlerFunc func(APIContexter, http.ResponseWriter, *http.Request)
 
-// DefaultContentMarshalers is the default set of content marshalers for an API.
-// Currently this means handling application/vnd.api+json content type bodies
-// using the standard encoding/json package.
-var DefaultContentMarshalers = map[string]ContentMarshaler{
-	defaultContentTypHeader: JSONContentMarshaler{},
-}
-
 // API is a REST JSONAPI.
 type API struct {
+	ContentType      string
 	router           routing.Routeable
 	info             information
 	resources        []resource
-	marshalers       map[string]ContentMarshaler
 	middlewares      []HandlerFunc
 	contextPool      sync.Pool
 	contextAllocator APIContextAllocatorFunc
@@ -50,7 +43,7 @@ func (api *API) SetContextAllocator(allocator APIContextAllocatorFunc) {
 // `resource` should be either an empty struct instance such as `Post{}` or a pointer to
 // a struct such as `&Post{}`. The same type will be used for constructing new elements.
 func (api *API) AddResource(prototype jsonapi.MarshalIdentifier, source CRUD) {
-	api.addResource(prototype, source, api.marshalers)
+	api.addResource(prototype, source)
 }
 
 // UseMiddleware registers middlewares that implement the api2go.HandlerFunc
@@ -59,29 +52,36 @@ func (api *API) UseMiddleware(middleware ...HandlerFunc) {
 	api.middlewares = append(api.middlewares, middleware...)
 }
 
-// NewAPIWithMarshalling does the same as NewAPIWithBaseURL with the addition
-// of a set of marshalers that provide a way to interact with clients that
-// use a serialization format other than JSON. The marshalers map is indexed
-// by the MIME content type to use for a given request-response pair. If the
-// client provides an Accept header the server will respond using the client's
-// preferred content type, otherwise it will respond using whatever content
-// type the client provided in its Content-Type request header.
-func NewAPIWithMarshalling(prefix string, resolver URLResolver, marshalers map[string]ContentMarshaler) *API {
-	r := routing.NewHTTPRouter(prefix, notAllowedHandler{marshalers: marshalers})
-	return newAPI(prefix, resolver, marshalers, r)
+// NewAPIWithResolver can be used to create an API with a custom URL resolver.
+func NewAPIWithResolver(prefix string, resolver URLResolver) *API {
+	handler := notAllowedHandler{}
+	r := routing.NewHTTPRouter(prefix, &handler)
+	api := newAPI(prefix, resolver, r)
+	handler.API = api
+	return api
 }
 
 // NewAPIWithBaseURL does the same as NewAPI with the addition of
 // a baseURL which get's added in front of all generated URLs.
 // For example http://localhost/v1/myResource/abc instead of /v1/myResource/abc
 func NewAPIWithBaseURL(prefix string, baseURL string) *API {
-	return NewAPIWithMarshalers(prefix, baseURL, DefaultContentMarshalers)
+	handler := notAllowedHandler{}
+	staticResolver := NewStaticResolver(baseURL)
+	r := routing.NewHTTPRouter(prefix, &handler)
+	api := newAPI(prefix, staticResolver, r)
+	handler.API = api
+	return api
 }
 
 // NewAPI returns an initialized API instance
 // `prefix` is added in front of all endpoints.
 func NewAPI(prefix string) *API {
-	return NewAPIWithMarshalers(prefix, "", DefaultContentMarshalers)
+	handler := notAllowedHandler{}
+	staticResolver := NewStaticResolver("")
+	r := routing.NewHTTPRouter(prefix, &handler)
+	api := newAPI(prefix, staticResolver, r)
+	handler.API = api
+	return api
 }
 
 // NewAPIWithRouting allows you to use a custom URLResolver, marshalers and custom routing
@@ -94,16 +94,12 @@ func NewAPI(prefix string) *API {
 // if your api only answers to one url you can use a NewStaticResolver() as  `resolver`
 //
 // if you have no specific marshalling needs, use `DefaultContentMarshalers`
-func NewAPIWithRouting(prefix string, resolver URLResolver, marshalers map[string]ContentMarshaler, router routing.Routeable) *API {
-	return newAPI(prefix, resolver, marshalers, router)
+func NewAPIWithRouting(prefix string, resolver URLResolver, router routing.Routeable) *API {
+	return newAPI(prefix, resolver, router)
 }
 
 // newAPI is now an internal method that can be changed if params are changing
-func newAPI(prefix string, resolver URLResolver, marshalers map[string]ContentMarshaler, router routing.Routeable) *API {
-	if len(marshalers) == 0 {
-		panic("marshaler map must not be empty")
-	}
-
+func newAPI(prefix string, resolver URLResolver, router routing.Routeable) *API {
 	// Add initial and trailing slash to prefix
 	prefixSlashes := strings.Trim(prefix, "/")
 	if len(prefixSlashes) > 0 {
@@ -115,9 +111,9 @@ func newAPI(prefix string, resolver URLResolver, marshalers map[string]ContentMa
 	info := information{prefix: prefix, resolver: resolver}
 
 	api := &API{
+		ContentType:      defaultContentTypHeader,
 		router:           router,
 		info:             info,
-		marshalers:       marshalers,
 		middlewares:      make([]HandlerFunc, 0),
 		contextAllocator: nil,
 	}
@@ -130,11 +126,4 @@ func newAPI(prefix string, resolver URLResolver, marshalers map[string]ContentMa
 	}
 
 	return api
-}
-
-// NewAPIWithMarshalers is DEPRECATED
-// use NewApiWithMarshalling instead
-func NewAPIWithMarshalers(prefix string, baseURL string, marshalers map[string]ContentMarshaler) *API {
-	staticResolver := NewStaticResolver(baseURL)
-	return NewAPIWithMarshalling(prefix, staticResolver, marshalers)
 }
