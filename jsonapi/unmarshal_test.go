@@ -203,6 +203,23 @@ var _ = Describe("Unmarshal", func() {
 			Expect(err.Error()).To(Equal("target must be a ptr"))
 		})
 
+		It("errors if json array cannot be unmarshaled into a struct", func() {
+			json := []byte(`
+			{
+				"data": [{
+					"type": "simplePosts",
+					"attributes": {
+						"title": "something"
+					}
+				}]
+			}
+			`)
+			var post SimplePost
+			err := Unmarshal(json, &post)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(Equal("Cannot unmarshal array to struct target jsonapi.SimplePost"))
+		})
+
 		Context("slice fields", func() {
 			It("unmarshal slice fields with single entry correctly", func() {
 				sliceJSON := []byte(`

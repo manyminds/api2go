@@ -103,7 +103,11 @@ func Unmarshal(data []byte, target interface{}) error {
 	}
 
 	if ctx.Data.DataArray != nil {
-		targetType := reflect.TypeOf(target).Elem().Elem()
+		targetSlice := reflect.TypeOf(target).Elem()
+		if targetSlice.Kind() != reflect.Slice {
+			return fmt.Errorf("Cannot unmarshal array to struct target %s", targetSlice)
+		}
+		targetType := targetSlice.Elem()
 		targetPointer := reflect.ValueOf(target)
 		targetValue := targetPointer.Elem()
 

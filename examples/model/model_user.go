@@ -66,6 +66,7 @@ func (u User) GetReferencedStructs() []jsonapi.MarshalIdentifier {
 func (u *User) SetToManyReferenceIDs(name string, IDs []string) error {
 	if name == "sweets" {
 		u.ChocolatesIDs = IDs
+		return nil
 	}
 
 	return errors.New("There is no to-many relationship with the name " + name)
@@ -75,6 +76,7 @@ func (u *User) SetToManyReferenceIDs(name string, IDs []string) error {
 func (u *User) AddToManyIDs(name string, IDs []string) error {
 	if name == "sweets" {
 		u.ChocolatesIDs = append(u.ChocolatesIDs, IDs...)
+		return nil
 	}
 
 	return errors.New("There is no to-many relationship with the name " + name)
