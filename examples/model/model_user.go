@@ -8,12 +8,12 @@ import (
 
 // User is a generic database user
 type User struct {
-	ID string `jsonapi:"-"`
+	ID string `json:"-"`
 	//rename the username field to user-name.
-	Username      string       `jsonapi:"name=user-name"`
-	PasswordHash  string       `jsonapi:"-"`
-	Chocolates    []*Chocolate `jsonapi:"-"`
-	ChocolatesIDs []string     `jsonapi:"-"`
+	Username      string       `json:"user-name"`
+	PasswordHash  string       `json:"-"`
+	Chocolates    []*Chocolate `json:"-"`
+	ChocolatesIDs []string     `json:"-"`
 	exists        bool
 }
 
@@ -66,6 +66,7 @@ func (u User) GetReferencedStructs() []jsonapi.MarshalIdentifier {
 func (u *User) SetToManyReferenceIDs(name string, IDs []string) error {
 	if name == "sweets" {
 		u.ChocolatesIDs = IDs
+		return nil
 	}
 
 	return errors.New("There is no to-many relationship with the name " + name)
@@ -75,6 +76,7 @@ func (u *User) SetToManyReferenceIDs(name string, IDs []string) error {
 func (u *User) AddToManyIDs(name string, IDs []string) error {
 	if name == "sweets" {
 		u.ChocolatesIDs = append(u.ChocolatesIDs, IDs...)
+		return nil
 	}
 
 	return errors.New("There is no to-many relationship with the name " + name)

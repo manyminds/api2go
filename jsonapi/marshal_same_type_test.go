@@ -6,11 +6,11 @@ import (
 )
 
 type Node struct {
-	ID                string `jsonapi:"-"`
-	Content           string
-	MotherID          string   `jsonapi:"-"`
-	ChildIDs          []string `jsonapi:"-"`
-	AbandonedChildIDs []string `jsonapi:"-"`
+	ID                string   `json:"-"`
+	Content           string   `json:"content"`
+	MotherID          string   `json:"-"`
+	ChildIDs          []string `json:"-"`
+	AbandonedChildIDs []string `json:"-"`
 }
 
 func (n *Node) GetID() string {
@@ -53,9 +53,7 @@ func (n *Node) GetReferencedIDs() []ReferenceID {
 }
 
 var _ = Describe("Marshalling with the same reference type", func() {
-	var (
-		theNode Node
-	)
+	var theNode Node
 
 	BeforeEach(func() {
 		theNode = Node{
@@ -70,46 +68,48 @@ var _ = Describe("Marshalling with the same reference type", func() {
 	It("marshals all the relationships of the same type", func() {
 		i, err := Marshal(&theNode)
 		Expect(err).To(BeNil())
-		Expect(i).To(Equal(map[string]interface{}{
-			"data": map[string]interface{}{
-				"id":   "super",
+		Expect(i).To(MatchJSON(`
+		{
+			"data": {
 				"type": "nodes",
-				"attributes": map[string]interface{}{
-					"content": "I am the Super Node",
+				"id": "super",
+				"attributes": {
+					"content": "I am the Super Node"
 				},
-				"relationships": map[string]map[string]interface{}{
-					"mother-node": {
-						"data": map[string]interface{}{
+				"relationships": {
+					"abandoned-child-nodes": {
+						"data": [
+						{
 							"type": "nodes",
-							"id":   "1337",
+							"id": "2"
 						},
+						{
+							"type": "nodes",
+							"id": "1"
+						}
+						]
 					},
 					"child-nodes": {
-						"data": []map[string]interface{}{
-							{
-								"type": "nodes",
-								"id":   "666",
-							},
-							{
-								"type": "nodes",
-								"id":   "42",
-							},
+						"data": [
+						{
+							"type": "nodes",
+							"id": "666"
 						},
+						{
+							"type": "nodes",
+							"id": "42"
+						}
+						]
 					},
-					"abandoned-child-nodes": {
-						"data": []map[string]interface{}{
-							{
-								"type": "nodes",
-								"id":   "2",
-							},
-							{
-								"type": "nodes",
-								"id":   "1",
-							},
-						},
-					},
-				},
-			},
-		}))
+					"mother-node": {
+						"data": {
+							"type": "nodes",
+							"id": "1337"
+						}
+					}
+				}
+			}
+		}
+		`))
 	})
 })

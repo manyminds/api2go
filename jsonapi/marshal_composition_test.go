@@ -9,7 +9,7 @@ import (
 
 type TaggedPost struct {
 	SimplePost
-	Tag string
+	Tag string `json:"tag"`
 }
 
 var _ = Describe("Embedded struct types", func() {
@@ -18,25 +18,27 @@ var _ = Describe("Embedded struct types", func() {
 		SimplePost{ID: "first", Title: "First Post", Text: "Lipsum", Created: created},
 		"important",
 	}
-	postMap := map[string]interface{}{
-		"type": "taggedPosts",
-		"id":   "first",
-		"attributes": map[string]interface{}{
-			"title":       post.Title,
-			"text":        post.Text,
-			"size":        0,
-			"create-date": created,
-			"tag":         post.Tag,
-		},
-	}
 
 	Context("When marshaling objects with struct composition", func() {
 		It("marshals", func() {
 			i, err := Marshal(post)
 			Expect(err).To(BeNil())
-			Expect(i).To(Equal(map[string]interface{}{
-				"data": postMap,
-			}))
+			Expect(i).To(MatchJSON(`
+			{
+				"data": {
+					"type":"taggedPosts",
+					"id":"first",
+					"attributes": {
+						"title":"First Post",
+						"text":"Lipsum",
+						"size":0,
+						"created-date":"2014-11-10T16:30:48.823Z",
+						"updated-date":"0001-01-01T00:00:00Z",
+						"tag":"important"
+					}
+				}
+			}
+			`))
 		})
 	})
 
@@ -50,7 +52,7 @@ var _ = Describe("Embedded struct types", func() {
 						"title": "First Post",
 						"text":  "Lipsum",
 						"size": 0,
-						"create-date": "2014-11-10T16:30:48.823Z",
+						"created-date": "2014-11-10T16:30:48.823Z",
 						"tag": "important"
 					}
 				}
@@ -58,7 +60,7 @@ var _ = Describe("Embedded struct types", func() {
 		`
 		It("unmarshals", func() {
 			target := TaggedPost{}
-			err := UnmarshalFromJSON([]byte(postJSON), &target)
+			err := Unmarshal([]byte(postJSON), &target)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(target).To(Equal(post))
 		})

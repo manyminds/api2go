@@ -8,11 +8,11 @@ import (
 )
 
 type Book struct {
-	ID       string      `jsonapi:"-"`
-	Author   *StupidUser `jsonapi:"-"`
-	AuthorID string      `jsonapi:"-"`
-	Pages    []Page      `jsonapi:"-"`
-	PagesIDs []string    `jsonapi:"-"`
+	ID       string      `json:"-"`
+	Author   *StupidUser `json:"-"`
+	AuthorID string      `json:"-"`
+	Pages    []Page      `json:"-"`
+	PagesIDs []string    `json:"-"`
 }
 
 func (b Book) GetID() string {
@@ -84,8 +84,8 @@ func (b Book) GetReferencedStructs() []MarshalIdentifier {
 }
 
 type StupidUser struct {
-	ID   string `jsonapi:"-"`
-	Name string
+	ID   string `json:"-"`
+	Name string `json:"name"`
 }
 
 func (s StupidUser) GetID() string {
@@ -93,8 +93,8 @@ func (s StupidUser) GetID() string {
 }
 
 type Page struct {
-	ID      string `jsonapi:"-"`
-	Content string
+	ID      string `json:"-"`
+	Content string `json:"content"`
 }
 
 func (p Page) GetID() string {
@@ -191,6 +191,7 @@ var _ = Describe("Test for the public api of this package", func() {
 		"data":{
 			"id":"TheOneAndOnlyID",
 			"type":"books",
+			"attributes": {},
 			"relationships":{
 				"author":{
 					"data": {
@@ -219,21 +220,19 @@ var _ = Describe("Test for the public api of this package", func() {
 
 	Context("Marshal and Unmarshal data", func() {
 		It("Should be marshalled correctly", func() {
-			marshalResult, err := MarshalToJSON(testBook)
+			marshalResult, err := Marshal(testBook)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(marshalResult).To(MatchJSON(testResult))
 		})
 
 		It("Should be unmarshalled correctly", func() {
-			result := &[]Book{}
-			expected := []Book{
-				{
-					ID:       "TheOneAndOnlyID",
-					AuthorID: "A Magical UserID",
-					PagesIDs: []string{"Page 1", "Page 2", "Page 3"},
-				},
+			result := &Book{}
+			expected := Book{
+				ID:       "TheOneAndOnlyID",
+				AuthorID: "A Magical UserID",
+				PagesIDs: []string{"Page 1", "Page 2", "Page 3"},
 			}
-			err := UnmarshalFromJSON([]byte(testRequest), result)
+			err := Unmarshal([]byte(testRequest), result)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(*result).To(Equal(expected))
 		})

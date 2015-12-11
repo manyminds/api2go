@@ -10,8 +10,8 @@ import (
 )
 
 type BaguetteTaste struct {
-	ID    string `jsonapi:"-"`
-	Taste string
+	ID    string `json:"-"`
+	Taste string `json:"taste"`
 }
 
 func (s BaguetteTaste) GetID() string {

@@ -426,6 +426,32 @@ var _ = Describe("CrudExample", func() {
 			`))
 		})
 
+		It("Directly loading the sweets", func() {
+			req, err := http.NewRequest("GET", "/v0/users/1/sweets", nil)
+			Expect(err).ToNot(HaveOccurred())
+			api.Handler().ServeHTTP(rec, req)
+			Expect(rec.Code).To(Equal(http.StatusOK))
+			Expect(rec.Body.String()).To(MatchJSON(`
+			{
+				"meta": {
+					"author": "The api2go examples crew",
+					"license": "wtfpl",
+					"license-url": "http://www.wtfpl.net"
+				},
+				"data": [
+				{
+					"type": "chocolates",
+					"id": "1",
+					"attributes": {
+						"name": "Ritter Sport",
+						"taste": "Very Good"
+					}
+				}
+				]
+			}
+			`))
+		})
+
 		It("The relationship route works too", func() {
 			req, err := http.NewRequest("GET", "/v0/users/1/relationships/sweets", nil)
 			Expect(err).ToNot(HaveOccurred())

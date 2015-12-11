@@ -1,8 +1,9 @@
 package api2go
 
 import (
-	"golang.org/x/net/context"
 	"time"
+
+	"golang.org/x/net/context"
 )
 
 // APIContextAllocatorFunc to allow custom context implementations
@@ -72,7 +73,7 @@ var _ APIContexter = &APIContext{}
 // ContextQueryParams fetches the QueryParams if Set
 func ContextQueryParams(c *APIContext) map[string][]string {
 	qp, ok := c.Get("QueryParams")
-	if ok == true {
+	if ok == false {
 		qp = make(map[string][]string)
 		c.Set("QueryParams", qp)
 	}

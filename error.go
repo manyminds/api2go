@@ -1,6 +1,7 @@
 package api2go
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"strconv"
@@ -29,11 +30,6 @@ type Error struct {
 	Meta   interface{}  `json:"meta,omitempty"`
 }
 
-// GetID returns the ID
-func (e Error) GetID() string {
-	return e.ID
-}
-
 // ErrorLinks is used to provide an About URL that leads to
 // further details about the particular occurrence of the problem.
 //
@@ -54,26 +50,13 @@ type ErrorSource struct {
 	Parameter string `json:"parameter,omitempty"`
 }
 
-// MarshalError marshals errors recursively in json format.
-// it can make use of the jsonapi.HTTPError struct
-func (j JSONContentMarshaler) MarshalError(err error) string {
-	httpErr, ok := err.(HTTPError)
-	if ok {
-		return marshalHTTPError(httpErr, j)
-	}
-
-	httpErr = NewHTTPError(err, err.Error(), 500)
-
-	return marshalHTTPError(httpErr, j)
-}
-
 // marshalHTTPError marshals an internal httpError
-func marshalHTTPError(input HTTPError, marshaler ContentMarshaler) string {
+func marshalHTTPError(input HTTPError) string {
 	if len(input.Errors) == 0 {
 		input.Errors = []Error{{Title: input.msg, Status: strconv.Itoa(input.status)}}
 	}
 
-	data, err := marshaler.Marshal(input)
+	data, err := json.Marshal(input)
 
 	if err != nil {
 		log.Println(err)
