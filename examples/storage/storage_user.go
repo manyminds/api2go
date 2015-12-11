@@ -3,7 +3,7 @@ package storage
 import (
 	"fmt"
 
-	"github.com/manyminds/api2go/examples/model"
+	"gopkg.in/manyminds/api2go.v0/examples/model"
 )
 
 // NewUserStorage initializes the storage

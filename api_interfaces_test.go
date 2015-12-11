@@ -7,7 +7,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/manyminds/api2go/jsonapi"
+	"gopkg.in/manyminds/api2go.v0/jsonapi"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )

@@ -6,9 +6,9 @@ import (
 	"sort"
 	"strconv"
 
-	"github.com/manyminds/api2go"
-	"github.com/manyminds/api2go/examples/model"
-	"github.com/manyminds/api2go/examples/storage"
+	"gopkg.in/manyminds/api2go.v0"
+	"gopkg.in/manyminds/api2go.v0/examples/model"
+	"gopkg.in/manyminds/api2go.v0/examples/storage"
 )
 
 // UserResource for api2go routes

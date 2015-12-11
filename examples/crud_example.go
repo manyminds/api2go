@@ -46,12 +46,13 @@ import (
 	"fmt"
 	"net/http"
 
+	"gopkg.in/manyminds/api2go.v0"
+	"gopkg.in/manyminds/api2go.v0/examples/model"
+	"gopkg.in/manyminds/api2go.v0/examples/resolver"
+	"gopkg.in/manyminds/api2go.v0/examples/resource"
+	"gopkg.in/manyminds/api2go.v0/examples/storage"
+
 	"github.com/julienschmidt/httprouter"
-	"github.com/manyminds/api2go"
-	"github.com/manyminds/api2go/examples/model"
-	"github.com/manyminds/api2go/examples/resolver"
-	"github.com/manyminds/api2go/examples/resource"
-	"github.com/manyminds/api2go/examples/storage"
 )
 
 // PrettyJSONContentMarshaler for JSON in a human readable format

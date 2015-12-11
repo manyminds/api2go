@@ -10,10 +10,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/manyminds/api2go/jsonapi"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"gopkg.in/guregu/null.v2"
+	"gopkg.in/manyminds/api2go.v0/jsonapi"
 )
 
 type requestURLResolver struct {
