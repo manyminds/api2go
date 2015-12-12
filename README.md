@@ -19,7 +19,7 @@ But this has one major drawback, we cannot guarantee 100% backwards compatibily.
 
 In order to get updates in the future there are two ways to possible ways for you:
 - Update your import paths to use ```gopkg.in/manyminds/api2go.v0``` that way you will still get bugfixes for a given time.
-- Update your code to be able to handle ```gopkg.in/manyminds/api2go.v1```. If you did not use content marshalers before, you should only have to change the jsonapi tags.
+- Update your code to be able to handle ```github.com/manyminds/api2go```. If you did not use content marshalers before, you should only have to change the jsonapi tags.
 
 **We are sorry for the BC break but we are still going for api stability. This should be much easier to achieve now**
 
@@ -50,12 +50,12 @@ In order to get updates in the future there are two ways to possible ways for yo
 
 For the complete api2go package use:
 ```go
-go get gopkg.in/manyminds/api2go.v0
+go get github.com/manyminds/api2go
 ```
 
 If you only need marshalling and/or unmarshalling:
 ```
-go get gopkg.in/manyminds/api2go.v0/jsonapi 
+go get github.com/manyminds/api2go 
 ```
 
 ## Basic functionality
@@ -260,7 +260,7 @@ type UnmarshalToManyRelations interface {
 ## Manual marshaling / unmarshaling
 Please keep in mind that this only works if you implemented the previously mentioned interfaces. Manual marshalling and
 unmarshalling makes sense, if you do not want to use our API that automatically generates all the necessary routes for you. You
-can directly use our sub-package `gopkg.in/manyminds/api2go.v0/jsonapi`
+can directly use our sub-package `github.com/manyminds/api2go/jsonapi`
 
 ```go
 comment1 = Comment{ID: 1, Text: "First!"}
