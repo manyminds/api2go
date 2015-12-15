@@ -412,7 +412,6 @@ After that you can bootstrap api2go the following way:
     api := api2go.NewAPIWithRouting(
       "api",
       api2go.NewStaticResolver("/"),
-      api2go.DefaultContentMarshalers,
       gingonic.New(r),
     )
 
