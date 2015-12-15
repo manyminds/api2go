@@ -288,6 +288,11 @@ func (s *fixtureSource) PaginatedFindAll(req Request) (uint, Responder, error) {
 }
 
 func (s *fixtureSource) FindOne(id string, req Request) (Responder, error) {
+	// special test case for nil document
+	if id == "69" {
+		return &Response{Res: nil}, nil
+	}
+
 	if p, ok := s.posts[id]; ok {
 		if s.pointers {
 			return &Response{Res: p}, nil
@@ -633,6 +638,14 @@ var _ = Describe("RestHandler", func() {
 			})
 			Expect(err).ToNot(HaveOccurred())
 			Expect(rec.Body.Bytes()).To(MatchJSON(expected))
+		})
+
+		It("GETs single object that is not yet corresponding to a single resource", func() {
+			req, err := http.NewRequest("GET", "/v1/posts/69", nil)
+			Expect(err).To(BeNil())
+			api.Handler().ServeHTTP(rec, req)
+			Expect(rec.Code).To(Equal(http.StatusOK))
+			Expect(rec.Body.Bytes()).To(MatchJSON(`{"data": null}`))
 		})
 
 		It("GETs related struct from resource url", func() {

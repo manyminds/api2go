@@ -115,8 +115,9 @@ var _ = Describe("Marshalling", func() {
 		})
 
 		It("marshal nil value", func() {
-			_, err := Marshal(nil)
-			Expect(err).To(HaveOccurred())
+			res, err := Marshal(nil)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(res).To(MatchJSON(`{"data": null}`))
 		})
 
 		It("marshals collections object", func() {

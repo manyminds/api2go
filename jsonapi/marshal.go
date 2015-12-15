@@ -90,7 +90,7 @@ func Marshal(data interface{}) ([]byte, error) {
 // You should directly use Marshal to get a []byte with JSON in it.
 func MarshalToStruct(data interface{}, information ServerInformation) (Document, error) {
 	if data == nil {
-		return Document{}, errors.New("nil cannot be marshalled")
+		return Document{}, nil
 	}
 
 	switch reflect.TypeOf(data).Kind() {
