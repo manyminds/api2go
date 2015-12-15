@@ -24,24 +24,6 @@ const (
 
 var queryFieldsRegex = regexp.MustCompile(`^fields\[(\w+)\]$`)
 
-type response struct {
-	Meta   map[string]interface{}
-	Data   interface{}
-	Status int
-}
-
-func (r response) Metadata() map[string]interface{} {
-	return r.Meta
-}
-
-func (r response) Result() interface{} {
-	return r.Data
-}
-
-func (r response) StatusCode() int {
-	return r.Status
-}
-
 type information struct {
 	prefix   string
 	resolver URLResolver
