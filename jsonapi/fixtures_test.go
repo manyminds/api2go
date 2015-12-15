@@ -457,3 +457,22 @@ func (e ErrorRelationshipPosts) SetToOneReferenceID(name, ID string) error {
 func (e ErrorRelationshipPosts) SetToManyReferenceIDs(name string, IDs []string) error {
 	return errors.New("this also never works")
 }
+
+type Image struct {
+	ID    string      `json:"-"`
+	Ports []ImagePort `json:"image-ports"`
+}
+
+func (i Image) GetID() string {
+	return i.ID
+}
+
+func (i *Image) SetID(ID string) error {
+	i.ID = ID
+	return nil
+}
+
+type ImagePort struct {
+	Protocol string `json:"protocol"`
+	Number   int    `json:"number"`
+}

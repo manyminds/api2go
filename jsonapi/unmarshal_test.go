@@ -72,6 +72,38 @@ var _ = Describe("Unmarshal", func() {
 			Expect(posts).To(Equal([]SimplePost{firstPost, secondPost}))
 		})
 
+		It("unmarshals array attributes into array structs", func() {
+			expected := Image{
+				ID: "one",
+				Ports: []ImagePort{
+					{
+						Protocol: "something",
+						Number:   666,
+					},
+				},
+			}
+
+			var actual Image
+			err := Unmarshal([]byte(`
+			{
+				"data": {
+					"type": "images",
+					"id": "one",
+					"attributes": {
+						"image-ports": [
+						{
+							"protocol": "something",
+							"number": 666
+						}
+						]
+					}
+				}
+			}
+      `), &actual)
+			Expect(err).To(BeNil())
+			Expect(actual).To(Equal(expected))
+		})
+
 		It("errors on existing record that does not implement MarshalIdentifier", func() {
 			type invalid struct{}
 			invalids := []interface{}{invalid{}}
