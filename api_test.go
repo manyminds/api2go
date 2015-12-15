@@ -487,8 +487,8 @@ var _ = Describe("RestHandler", func() {
 							"type": "users",
 						},
 						"links": map[string]string{
-							"self":    "/v1/posts/1/relationships/author",
-							"related": "/v1/posts/1/author",
+							"self":    "http://localhost/v1/posts/1/relationships/author",
+							"related": "http://localhost/v1/posts/1/author",
 						},
 					},
 					"comments": map[string]interface{}{
@@ -499,15 +499,15 @@ var _ = Describe("RestHandler", func() {
 							},
 						},
 						"links": map[string]string{
-							"self":    "/v1/posts/1/relationships/comments",
-							"related": "/v1/posts/1/comments",
+							"self":    "http://localhost/v1/posts/1/relationships/comments",
+							"related": "http://localhost/v1/posts/1/comments",
 						},
 					},
 					"bananas": map[string]interface{}{
 						"data": []map[string]interface{}{},
 						"links": map[string]string{
-							"self":    "/v1/posts/1/relationships/bananas",
-							"related": "/v1/posts/1/bananas",
+							"self":    "http://localhost/v1/posts/1/relationships/bananas",
+							"related": "http://localhost/v1/posts/1/bananas",
 						},
 					},
 				},
@@ -542,22 +542,22 @@ var _ = Describe("RestHandler", func() {
 					"author": map[string]interface{}{
 						"data": nil,
 						"links": map[string]string{
-							"self":    "/v1/posts/2/relationships/author",
-							"related": "/v1/posts/2/author",
+							"self":    "http://localhost/v1/posts/2/relationships/author",
+							"related": "http://localhost/v1/posts/2/author",
 						},
 					},
 					"comments": map[string]interface{}{
 						"data": []interface{}{},
 						"links": map[string]string{
-							"self":    "/v1/posts/2/relationships/comments",
-							"related": "/v1/posts/2/comments",
+							"self":    "http://localhost/v1/posts/2/relationships/comments",
+							"related": "http://localhost/v1/posts/2/comments",
 						},
 					},
 					"bananas": map[string]interface{}{
 						"data": []map[string]interface{}{},
 						"links": map[string]string{
-							"self":    "/v1/posts/2/relationships/bananas",
-							"related": "/v1/posts/2/bananas",
+							"self":    "http://localhost/v1/posts/2/relationships/bananas",
+							"related": "http://localhost/v1/posts/2/bananas",
 						},
 					},
 				},
@@ -574,28 +574,28 @@ var _ = Describe("RestHandler", func() {
 					"author": map[string]interface{}{
 						"data": nil,
 						"links": map[string]string{
-							"self":    "/v1/posts/3/relationships/author",
-							"related": "/v1/posts/3/author",
+							"self":    "http://localhost/v1/posts/3/relationships/author",
+							"related": "http://localhost/v1/posts/3/author",
 						},
 					},
 					"comments": map[string]interface{}{
 						"data": []interface{}{},
 						"links": map[string]string{
-							"self":    "/v1/posts/3/relationships/comments",
-							"related": "/v1/posts/3/comments",
+							"self":    "http://localhost/v1/posts/3/relationships/comments",
+							"related": "http://localhost/v1/posts/3/comments",
 						},
 					},
 					"bananas": map[string]interface{}{
 						"data": []map[string]interface{}{},
 						"links": map[string]string{
-							"self":    "/v1/posts/3/relationships/bananas",
-							"related": "/v1/posts/3/bananas",
+							"self":    "http://localhost/v1/posts/3/relationships/bananas",
+							"related": "http://localhost/v1/posts/3/bananas",
 						},
 					},
 				},
 			}
 
-			api = NewAPI("v1")
+			api = NewAPIWithBaseURL("v1", "http://localhost")
 
 			if usePointerResources {
 				api.AddResource(&Post{}, source)
@@ -684,7 +684,7 @@ var _ = Describe("RestHandler", func() {
 			Expect(err).ToNot(HaveOccurred())
 			api.Handler().ServeHTTP(rec, req)
 			Expect(rec.Code).To(Equal(http.StatusOK))
-			Expect(rec.Body.Bytes()).To(MatchJSON(`{"data": [{"id": "1", "type": "comments"}], "links": {"self": "/v1/posts/1/relationships/comments", "related": "/v1/posts/1/comments"}}`))
+			Expect(rec.Body.Bytes()).To(MatchJSON(`{"data": [{"id": "1", "type": "comments"}], "links": {"self": "http://localhost/v1/posts/1/relationships/comments", "related": "http://localhost/v1/posts/1/comments"}}`))
 		})
 
 		It("GETs relationship data from relationship url for to-one", func() {
@@ -692,7 +692,7 @@ var _ = Describe("RestHandler", func() {
 			Expect(err).ToNot(HaveOccurred())
 			api.Handler().ServeHTTP(rec, req)
 			Expect(rec.Code).To(Equal(http.StatusOK))
-			Expect(rec.Body.Bytes()).To(MatchJSON(`{"data": {"id": "1", "type": "users"}, "links": {"self": "/v1/posts/1/relationships/author", "related": "/v1/posts/1/author"}}`))
+			Expect(rec.Body.Bytes()).To(MatchJSON(`{"data": {"id": "1", "type": "users"}, "links": {"self": "http://localhost/v1/posts/1/relationships/author", "related": "http://localhost/v1/posts/1/author"}}`))
 		})
 
 		It("Gets 404 if a related struct was not found", func() {
@@ -733,22 +733,22 @@ var _ = Describe("RestHandler", func() {
 						"author": map[string]interface{}{
 							"data": nil,
 							"links": map[string]interface{}{
-								"self":    "/v1/posts/4/relationships/author",
-								"related": "/v1/posts/4/author",
+								"self":    "http://localhost/v1/posts/4/relationships/author",
+								"related": "http://localhost/v1/posts/4/author",
 							},
 						},
 						"comments": map[string]interface{}{
 							"data": []interface{}{},
 							"links": map[string]interface{}{
-								"self":    "/v1/posts/4/relationships/comments",
-								"related": "/v1/posts/4/comments",
+								"self":    "http://localhost/v1/posts/4/relationships/comments",
+								"related": "http://localhost/v1/posts/4/comments",
 							},
 						},
 						"bananas": map[string]interface{}{
 							"data": []interface{}{},
 							"links": map[string]interface{}{
-								"self":    "/v1/posts/4/relationships/bananas",
-								"related": "/v1/posts/4/bananas",
+								"self":    "http://localhost/v1/posts/4/relationships/bananas",
+								"related": "http://localhost/v1/posts/4/bananas",
 							},
 						},
 					},
