@@ -1,7 +1,9 @@
 # api2go
 
-[![Join the chat at https://gitter.im/manyminds/api2go](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/manyminds/api2go?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![PR Stats](http://issuestats.com/github/manyminds/api2go/badge/pr)](http://issuestats.com/github/manyminds/api2go)
+[![Issue Stats](http://issuestats.com/github/manyminds/api2go/badge/issue)](http://issuestats.com/github/manyminds/api2go)
 
+[![Join the chat at https://gitter.im/manyminds/api2go](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/manyminds/api2go?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![GoDoc](https://godoc.org/github.com/manyminds/api2go?status.svg)](https://godoc.org/github.com/manyminds/api2go)
 [![Build Status](https://travis-ci.org/manyminds/api2go.svg?branch=master)](https://travis-ci.org/manyminds/api2go)
 [![Coverage Status](https://coveralls.io/repos/manyminds/api2go/badge.svg?branch=master&service=github)](https://coveralls.io/github/manyminds/api2go?branch=master)
