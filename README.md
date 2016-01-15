@@ -11,20 +11,6 @@
 
 A [JSON API](http://jsonapi.org) Implementation for Go, to be used e.g. as server for [Ember Data](https://github.com/emberjs/data).
 
-# Attention - Manual migration required
-Soon we will release a complete recode of api2go which will help us to achieve things faster and much more stable than before in the future. 
-But this has one major drawback, we cannot guarantee 100% backwards compatibily. 
-
-## What won't work anymore:
-- Content marshalers are removed completely for now. This was a necessary step since the new version relies completely on json.Marshal/json.Unmarshal.
-- All namings done with jsonapi tag must be done by using the normal json tag now. 
-
-In order to get updates in the future there are two ways to possible ways for you:
-- Update your import paths to use ```gopkg.in/manyminds/api2go.v0``` that way you will still get bugfixes for a given time.
-- Update your code to be able to handle ```github.com/manyminds/api2go```. If you did not use content marshalers before, you should only have to change the jsonapi tags.
-
-**We are sorry for the BC break but we are still going for api stability. This should be much easier to achieve now**
-
 ## TOC
 - [Installation](#installation)
 - [Basic funtionality](#basic-functionality)
