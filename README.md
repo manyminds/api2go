@@ -24,7 +24,7 @@ A [JSON API](http://jsonapi.org) Implementation for Go, to be used e.g. as serve
   - [Unmarshalling with references to other structs](#unmarshalling-with-references-to-other-structs)
 - [Manual marshaling / unmarshaling](#manual-marshaling--unmarshaling)
 - [SQL Null-Types](#sql-null-types)
-- [Using api2go with the gin framework](#api2go-with-gin)
+- [Using api2go with the gin framework](#using-api2go-with-the-gin-framework)
 - [Building a REST API](#building-a-rest-api)
   - [Query Params](#query-params)
   - [Using Pagination](#using-pagination)
