@@ -92,8 +92,6 @@ func NewAPI(prefix string) *API {
 // although we suggest using one.
 //
 // if your api only answers to one url you can use a NewStaticResolver() as  `resolver`
-//
-// if you have no specific marshalling needs, use `DefaultContentMarshalers`
 func NewAPIWithRouting(prefix string, resolver URLResolver, router routing.Routeable) *API {
 	return newAPI(prefix, resolver, router)
 }
