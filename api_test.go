@@ -756,6 +756,25 @@ var _ = Describe("RestHandler", func() {
 			}))
 		})
 
+		It("Correctly sets Location header without api prefix", func() {
+			api = NewAPI("")
+			if usePointerResources {
+				api.AddResource(&Post{}, source)
+				api.AddResource(&User{}, &userSource{true})
+				api.AddResource(&Comment{}, &commentSource{true})
+			} else {
+				api.AddResource(Post{}, source)
+				api.AddResource(User{}, &userSource{false})
+				api.AddResource(Comment{}, &commentSource{false})
+			}
+			reqBody := strings.NewReader(`{"data": {"attributes":{"title": "New Post" }, "type": "posts"}}`)
+			req, err := http.NewRequest("POST", "/posts", reqBody)
+			Expect(err).To(BeNil())
+			api.Handler().ServeHTTP(rec, req)
+			Expect(rec.Code).To(Equal(http.StatusCreated))
+			Expect(rec.Header().Get("Location")).To(Equal("/posts/4"))
+		})
+
 		It("POSTSs new objects with trailing slash automatic redirect enabled", func() {
 			reqBody := strings.NewReader(`{"data": [{"title": "New Post", "type": "posts"}]}`)
 			req, err := http.NewRequest("POST", "/v1/posts/", reqBody)

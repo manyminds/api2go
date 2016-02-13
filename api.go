@@ -585,7 +585,11 @@ func (res *resource) handleCreate(c APIContexter, w http.ResponseWriter, r *http
 		return fmt.Errorf("Expected one newly created object by resource %s", res.name)
 	}
 
-	w.Header().Set("Location", "/"+prefix+"/"+res.name+"/"+result.GetID())
+	if len(prefix) > 0 {
+		w.Header().Set("Location", "/"+prefix+"/"+res.name+"/"+result.GetID())
+	} else {
+		w.Header().Set("Location", "/"+res.name+"/"+result.GetID())
+	}
 
 	// handle 200 status codes
 	switch response.StatusCode() {
