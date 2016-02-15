@@ -841,8 +841,9 @@ var _ = Describe("RestHandler", func() {
 			req, err := http.NewRequest("PATCH", "/v1/posts/1", reqBody)
 			Expect(err).To(BeNil())
 			api.Handler().ServeHTTP(rec, req)
-			Expect(rec.Code).To(Equal(http.StatusNotAcceptable))
-			Expect(string(rec.Body.Bytes())).To(MatchJSON(`{"errors":[{"status":"406","title":"missing mandatory attributes object"}]}`))
+			// It's up to the user how to implement this. Api2go just checks if the type is correct
+			Expect(rec.Code).To(Equal(http.StatusNotFound))
+			Expect(string(rec.Body.Bytes())).To(MatchJSON(`{"errors":[{"status":"404","title":"post not found"}]}`))
 		})
 
 		Context("Updating", func() {

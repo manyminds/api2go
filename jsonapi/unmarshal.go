@@ -73,8 +73,7 @@ type EditToManyRelations interface {
 }
 
 var (
-	errInterface         = errors.New("target must implement UnmarshalIdentifier interface")
-	errAttributesMissing = errors.New("missing mandatory attributes object")
+	errInterface = errors.New("target must implement UnmarshalIdentifier interface")
 )
 
 // Unmarshal reads a jsonapi compatible JSON as []byte
@@ -158,13 +157,11 @@ func setDataIntoTarget(data *Data, target interface{}) error {
 		return err
 	}
 
-	if data.Attributes == nil {
-		return errAttributesMissing
-	}
-
-	err = json.Unmarshal(data.Attributes, castedTarget)
-	if err != nil {
-		return err
+	if data.Attributes != nil {
+		err = json.Unmarshal(data.Attributes, castedTarget)
+		if err != nil {
+			return err
+		}
 	}
 	castedTarget.SetID(data.ID)
 	return setRelationshipIDs(data.Relationships, castedTarget)
