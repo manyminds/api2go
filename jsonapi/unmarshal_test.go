@@ -202,23 +202,18 @@ var _ = Describe("Unmarshal", func() {
 			Expect(err.Error()).To(ContainSubstring("parsing time"))
 		})
 
-		It("errors if data array entries have no attributes", func() {
-			faultyPostMap := []byte(`
+		It("empty attributes is OK", func() {
+			json := []byte(`
 			{
 				"data": [{
 					"type": "simplePosts"
 				}]
-			}`)
+			}
+      `)
 			var posts []SimplePost
 
-			err := Unmarshal(faultyPostMap, &posts)
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(Equal("missing mandatory attributes object"))
-
-			morePosts := []SimplePost{{}}
-			err = Unmarshal(faultyPostMap, &morePosts)
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(Equal("missing mandatory attributes object"))
+			err := Unmarshal(json, &posts)
+			Expect(err).ToNot(HaveOccurred())
 		})
 
 		It("errors if target is no pointer", func() {
@@ -700,13 +695,11 @@ var _ = Describe("Unmarshal", func() {
 
 	Context("SQL Null-Types", func() {
 		var (
-			nullPosts []SQLNullPost
-			nullPost  SQLNullPost
-			timeZero  time.Time
+			nullPost SQLNullPost
+			timeZero time.Time
 		)
 
 		BeforeEach(func() {
-			nullPosts = []SQLNullPost{}
 			nullPost = SQLNullPost{}
 			timeZero = time.Time{}
 		})

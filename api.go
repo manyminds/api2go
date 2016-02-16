@@ -564,7 +564,7 @@ func (res *resource) handleCreate(c APIContexter, w http.ResponseWriter, r *http
 
 	err = jsonapi.Unmarshal(ctx, newObj)
 	if err != nil {
-		return err
+		return NewHTTPError(nil, err.Error(), http.StatusNotAcceptable)
 	}
 
 	var response Responder
