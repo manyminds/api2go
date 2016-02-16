@@ -2,7 +2,6 @@ package jsonapi
 
 import (
 	"database/sql"
-	"encoding/json"
 	"time"
 
 	"gopkg.in/guregu/null.v2/zero"
@@ -14,34 +13,14 @@ import (
 var _ = Describe("Marshalling", func() {
 	Context("When marshaling simple objects", func() {
 		var (
-			firstPost, secondPost                        SimplePost
-			firstPostData, secondPostData, firstUserData Data
-			created                                      time.Time
+			firstPost, secondPost SimplePost
+			created               time.Time
 		)
 
 		BeforeEach(func() {
 			created, _ = time.Parse(time.RFC3339, "2014-11-10T16:30:48.823Z")
 			firstPost = SimplePost{ID: "first", Title: "First Post", Text: "Lipsum", Created: created}
-			firstPostJSON, _ := json.Marshal(firstPost)
-			firstPostData = Data{
-				Type:       "simplePosts",
-				ID:         "first",
-				Attributes: firstPostJSON,
-			}
-
 			secondPost = SimplePost{ID: "second", Title: "Second Post", Text: "Getting more advanced!", Created: created, Updated: created}
-			secondPostJSON, _ := json.Marshal(secondPost)
-			secondPostData = Data{
-				Type:       "simplePosts",
-				ID:         "second",
-				Attributes: secondPostJSON,
-			}
-
-			firstUserData = Data{
-				Type:       "users",
-				ID:         "100",
-				Attributes: []byte(`{"name":"Nino"}`),
-			}
 		})
 
 		It("marshals single object without relationships", func() {

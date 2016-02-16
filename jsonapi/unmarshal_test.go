@@ -695,13 +695,11 @@ var _ = Describe("Unmarshal", func() {
 
 	Context("SQL Null-Types", func() {
 		var (
-			nullPosts []SQLNullPost
-			nullPost  SQLNullPost
-			timeZero  time.Time
+			nullPost SQLNullPost
+			timeZero time.Time
 		)
 
 		BeforeEach(func() {
-			nullPosts = []SQLNullPost{}
 			nullPost = SQLNullPost{}
 			timeZero = time.Time{}
 		})
