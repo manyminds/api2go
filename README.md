@@ -13,7 +13,7 @@ A [JSON API](http://jsonapi.org) Implementation for Go, to be used e.g. as serve
 
 ## TOC
 - [Installation](#installation)
-- [Basic funtionality](#basic-functionality)
+- [Basic functionality](#basic-functionality)
 - [Examples](#examples)
 - [Interfaces to implement](#interfaces-to-implement)
   - [Responder](#responder)
