@@ -12,8 +12,10 @@ import (
 )
 
 type Queue struct {
-	ID   string `json:"-"`
-	Name string `json:"name"`
+	ID           string `json:"-"`
+	Name         string `json:"name"`
+	Status       string `json:"status"`
+	requestCount int
 }
 
 func (p *Queue) SetID(s string) error {
@@ -55,26 +57,8 @@ func (q *queueSource) Create(obj interface{}, _ Request) (Responder, error) {
 	queueID++
 	pq.ID = fmt.Sprintf("%d", queueID)
 	q.queue[pq.ID] = pq
-
+	pq.Status = "Pending request, waiting for process to finish"
 	//TODO content location header
-	/*
-	 *HTTP/1.1 202 Accepted
-	 *Content-Type: application/vnd.api+json
-	 *Content-Location: https://example.com/photos/queue-jobs/5234
-	 *
-	 *{
-	 *  "data": {
-	 *    "type": "queue-jobs",
-	 *    "id": "5234",
-	 *    "attributes": {
-	 *      "status": "Pending request, waiting other process"
-	 *    },
-	 *    "links": {
-	 *      "self": "/photos/queue-jobs/5234"
-	 *    }
-	 *  }
-	 *}
-	 */
 	return &Response{Res: pq, Code: http.StatusAccepted}, nil
 }
 
@@ -90,8 +74,23 @@ func (q queueSource) FindAll(_ Request) (Responder, error) {
 	return &Response{Code: 500}, nil
 }
 
-func (q queueSource) FindOne(id string, req Request) (Responder, error) {
-	return &Response{}, nil
+func (q *queueSource) FindOne(id string, req Request) (Responder, error) {
+	if id == "1" {
+		item, ok := q.queue[id]
+		if !ok {
+			return &Response{Code: 404}, nil
+		}
+		item.requestCount++
+		if item.requestCount > 1 {
+			return &Response{Res: item, Code: http.StatusSeeOther}, nil
+		}
+
+		item.Status = "Pending request, waiting for process to finish"
+
+		return &Response{Res: item, Code: http.StatusAccepted}, nil
+	}
+
+	return &Response{Code: 404}, nil
 }
 
 type jobSource struct {
@@ -122,8 +121,8 @@ func (js jobSource) FindAll(_ Request) (Responder, error) {
 	return &Response{Code: 500}, nil
 }
 
-func (js jobSource) FindOne(id string, req Request) (Responder, error) {
-	return &Response{}, nil
+func (js *jobSource) FindOne(id string, req Request) (Responder, error) {
+	return &Response{Code: 404}, nil
 }
 
 var _ = Describe("AsynchTest", func() {
@@ -156,12 +155,41 @@ var _ = Describe("AsynchTest", func() {
 						},
 						"type": "queues"
 					}	
-			}	
-			`
+			}`
+
+			expected := `{
+        "data": {
+          "type": "queues",
+          "id": "1",
+          "attributes": {
+            "name": "invoice_2.pdf",
+            "status": "Pending request, waiting for process to finish"
+          }
+        }
+      }`
+
 			req, err := http.NewRequest("POST", "/v1/queues", strings.NewReader(postRequest))
 			Expect(err).To(BeNil())
 			api.Handler().ServeHTTP(rec, req)
 			Expect(rec.Code).To(Equal(http.StatusAccepted))
+			actual := string(rec.Body.Bytes())
+			Expect(actual).ToNot(Equal(""))
+			Expect(actual).To(MatchJSON(expected))
+
+			req, err, actual, rec = nil, nil, "", httptest.NewRecorder()
+			req, err = http.NewRequest("GET", "/v1/queues/1", nil)
+			Expect(err).To(BeNil())
+			api.Handler().ServeHTTP(rec, req)
+			Expect(rec.Code).To(Equal(http.StatusAccepted))
+			actual = string(rec.Body.Bytes())
+			Expect(actual).ToNot(Equal(""))
+			Expect(actual).To(MatchJSON(expected))
+
+			req, err, actual, rec = nil, nil, "", httptest.NewRecorder()
+			req, err = http.NewRequest("GET", "/v1/queues/1", nil)
+			Expect(err).To(BeNil())
+			api.Handler().ServeHTTP(rec, req)
+			Expect(rec.Code).To(Equal(http.StatusSeeOther))
 		})
 	})
 })

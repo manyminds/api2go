@@ -599,8 +599,7 @@ func (res *resource) handleCreate(c APIContexter, w http.ResponseWriter, r *http
 		w.WriteHeader(response.StatusCode())
 		return nil
 	case http.StatusAccepted:
-		w.WriteHeader(response.StatusCode())
-		return nil
+		return res.respondWith(response, info, response.StatusCode(), w, r)
 	default:
 		return fmt.Errorf("invalid status code %d from resource %s for method Create", response.StatusCode(), res.name)
 	}
