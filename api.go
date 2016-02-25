@@ -473,7 +473,7 @@ func (res *resource) handleRead(c APIContexter, w http.ResponseWriter, r *http.R
 	}
 
 	if seeOther, ok := response.(SeeOtherResponder); ok {
-		w.Header().Add("Location", info.GetBaseURL())
+		w.Header().Add("Location", jsonapi.GetNormalizedResourceURI(seeOther.Other(), info))
 		return res.respondWith(seeOther, info, http.StatusSeeOther, w, r)
 	}
 

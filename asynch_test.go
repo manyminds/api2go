@@ -38,8 +38,12 @@ func (p Queue) GetID() string {
 }
 
 type PrintJob struct {
-	ID   string `json:"-"`
-	Name string
+	ID      string `json:"-"`
+	JobName string `json:"name"`
+}
+
+func (p PrintJob) GetName() string {
+	return "jobs"
 }
 
 func (p *PrintJob) SetID(s string) error {
@@ -200,6 +204,7 @@ var _ = Describe("AsynchTest", func() {
 			Expect(err).To(BeNil())
 			api.Handler().ServeHTTP(rec, req)
 			Expect(rec.Code).To(Equal(http.StatusSeeOther))
+			Expect(rec.Header().Get("Location")).To(Equal("http://localhost/v1/jobs/1"))
 		})
 	})
 })

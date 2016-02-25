@@ -289,6 +289,18 @@ func getLinksForServerInformation(relationer MarshalLinkedRelations, name string
 	return nil
 }
 
+//GetNormalizedResourceURI returns the normalized uri to on marshal identifier struct
+func GetNormalizedResourceURI(id MarshalIdentifier, information ServerInformation) string {
+	prefix := strings.Trim(information.GetBaseURL(), "/")
+	namespace := strings.Trim(information.GetPrefix(), "/")
+	structType := getStructType(id)
+	if namespace != "" {
+		prefix += "/" + namespace
+	}
+
+	return fmt.Sprintf("%s/%s/%s", prefix, structType, id.GetID())
+}
+
 func getIncludedStructs(included MarshalIncludedRelations, information ServerInformation) (*[]Data, error) {
 	result := []Data{}
 	includedStructs := included.GetReferencedStructs()
