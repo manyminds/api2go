@@ -468,6 +468,15 @@ func (res *resource) handleRead(c APIContexter, w http.ResponseWriter, r *http.R
 		return err
 	}
 
+	if response.StatusCode() == http.StatusAccepted {
+		return res.respondWith(response, info, http.StatusAccepted, w, r)
+	}
+
+	if seeOther, ok := response.(SeeOtherResponder); ok {
+		w.Header().Add("Location", info.GetBaseURL())
+		return res.respondWith(seeOther, info, http.StatusSeeOther, w, r)
+	}
+
 	return res.respondWith(response, info, http.StatusOK, w, r)
 }
 

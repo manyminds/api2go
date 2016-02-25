@@ -1,6 +1,10 @@
 package api2go
 
-import "net/http"
+import (
+	"net/http"
+
+	"github.com/manyminds/api2go/jsonapi"
+)
 
 // The CRUD interface MUST be implemented in order to use the api2go api.
 // Use Responder for success status codes and content/meta data. In case of an error,
@@ -79,4 +83,12 @@ type Responder interface {
 	Metadata() map[string]interface{}
 	Result() interface{}
 	StatusCode() int
+}
+
+// SeeOtherResponder allows you to reference another struct
+// in a response. This can be particulary useful
+// in asynchronous handling
+type SeeOtherResponder interface {
+	Responder
+	Other() jsonapi.MarshalIdentifier
 }

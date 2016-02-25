@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"strings"
 
+	"github.com/manyminds/api2go/jsonapi"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -16,6 +17,15 @@ type Queue struct {
 	Name         string `json:"name"`
 	Status       string `json:"status"`
 	requestCount int
+}
+
+type seeOtherResponse struct {
+	Response
+	OtherObject jsonapi.MarshalIdentifier
+}
+
+func (s seeOtherResponse) Other() jsonapi.MarshalIdentifier {
+	return s.OtherObject
 }
 
 func (p *Queue) SetID(s string) error {
@@ -82,7 +92,7 @@ func (q *queueSource) FindOne(id string, req Request) (Responder, error) {
 		}
 		item.requestCount++
 		if item.requestCount > 1 {
-			return &Response{Res: item, Code: http.StatusSeeOther}, nil
+			return &seeOtherResponse{Response{Code: 303}, PrintJob{ID: "1"}}, nil
 		}
 
 		item.Status = "Pending request, waiting for process to finish"
