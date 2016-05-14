@@ -48,6 +48,14 @@ type FindAll interface {
 	FindAll(req Request) (Responder, error)
 }
 
+// The ObjectInitializer interface can be implemented to have the ability to change
+// a created object before Unmarshal is called. This is currently only called on
+// Create as the other actions go through FindOne or FindAll which are already
+// controlled by the implementer.
+type ObjectInitializer interface {
+	InitializeObject(interface{})
+}
+
 //URLResolver allows you to implement a static
 //way to return a baseURL for all incoming
 //requests for one api2go instance.
