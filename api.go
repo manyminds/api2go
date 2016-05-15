@@ -562,6 +562,12 @@ func (res *resource) handleCreate(c APIContexter, w http.ResponseWriter, r *http
 	}
 	newObj := reflect.New(resourceType).Interface()
 
+	// Call InitializeObject if available to allow implementers change the object
+	// before calling Unmarshal.
+	if initSource, ok := res.source.(ObjectInitializer); ok {
+		initSource.InitializeObject(newObj)
+	}
+
 	err = jsonapi.Unmarshal(ctx, newObj)
 	if err != nil {
 		return NewHTTPError(nil, err.Error(), http.StatusNotAcceptable)
