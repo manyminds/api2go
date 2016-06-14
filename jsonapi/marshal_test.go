@@ -950,4 +950,101 @@ var _ = Describe("Marshalling", func() {
 			`))
 		})
 	})
+
+	Context("when overriding default relationship type", func() {
+
+		It("defaults to relationship name pluralization - singular", func() {
+			article := Article{Name: "author", Relationship: DefaultRelationship}
+			result, err := Marshal(article)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(MatchJSON(`
+			{
+				"data": {
+					"type": "articles",
+					"id": "id",
+					"attributes": {},
+					"relationships": {
+						"author": {
+                                                        "data": null
+                                                }
+					}
+				}
+			}
+			`))
+		})
+
+		It("defaults to relationship name pluralization - plural", func() {
+			article := Article{Name: "authors", Relationship: DefaultRelationship}
+			result, err := Marshal(article)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(MatchJSON(`
+			{
+				"data": {
+					"type": "articles",
+					"id": "id",
+					"attributes": {},
+					"relationships": {
+						"authors": {
+                                                        "data": []
+                                                }
+					}
+				}
+			}
+			`))
+		})
+
+		It("can make a to-many relationship", func() {
+			article := Article{
+				IDs:          []string{"1", "2"},
+				Name:         "author",
+				Type:         "users",
+				Relationship: ToManyRelationship,
+			}
+			result, err := Marshal(article)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(MatchJSON(`
+			{
+				"data": {
+					"type": "articles",
+					"id": "id",
+					"attributes": {},
+					"relationships": {
+						"author": {
+		                                        "data": [
+                                                                {"type": "users", "id": "1"},
+                                                                {"type": "users", "id": "2"}
+                                                        ]
+		                                }
+					}
+				}
+			}
+			`))
+		})
+
+		It("can make a to-one relationship", func() {
+			article := Article{
+				IDs:          []string{"1"},
+				Name:         "authors",
+				Type:         "users",
+				Relationship: ToOneRelationship,
+			}
+			result, err := Marshal(article)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(MatchJSON(`
+			{
+				"data": {
+					"type": "articles",
+					"id": "id",
+					"attributes": {},
+					"relationships": {
+						"authors": {
+		                                        "data": {"type": "users", "id": "1"}
+		                                }
+					}
+				}
+			}
+			`))
+		})
+
+	})
 })

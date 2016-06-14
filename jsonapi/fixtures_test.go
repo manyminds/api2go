@@ -476,3 +476,26 @@ type ImagePort struct {
 	Protocol string `json:"protocol"`
 	Number   int    `json:"number"`
 }
+
+type Article struct {
+	IDs          []string         `json:"-"`
+	Type         string           `json:"-"`
+	Name         string           `json:"-"`
+	Relationship RelationshipType `json:"-"`
+}
+
+func (a Article) GetID() string {
+	return "id"
+}
+
+func (a Article) GetReferences() []Reference {
+	return []Reference{{Type: a.Type, Name: a.Name, Relationship: a.Relationship}}
+}
+
+func (a Article) GetReferencedIDs() []ReferenceID {
+	referenceIDs := []ReferenceID{}
+	for _, id := range a.IDs {
+		referenceIDs = append(referenceIDs, ReferenceID{ID: id, Type: a.Type, Name: a.Name, Relationship: a.Relationship})
+	}
+	return referenceIDs
+}
