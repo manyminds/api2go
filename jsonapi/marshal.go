@@ -8,6 +8,18 @@ import (
 	"strings"
 )
 
+// RelationshipType is used to specify whether the relationship with referenced objects are to-one or to-many
+type RelationshipType int
+
+const (
+	// DefaultRelationship guesses the relationship type based on the pluralization of the reference name
+	DefaultRelationship RelationshipType = iota
+	// ToOneRelationship forces the relationship to be to-one
+	ToOneRelationship
+	// ToManyRelationship forces the relationship to be to-many
+	ToManyRelationship
+)
+
 // MarshalIdentifier interface is necessary to give an element
 // a unique ID. This interface must be implemented for
 // marshal and unmarshal in order to let them store
@@ -19,9 +31,10 @@ type MarshalIdentifier interface {
 // ReferenceID contains all necessary information in order
 // to reference another struct in jsonapi
 type ReferenceID struct {
-	ID   string
-	Type string
-	Name string
+	ID           string
+	Type         string
+	Name         string
+	Relationship RelationshipType
 }
 
 // Reference information about possible references of a struct
@@ -30,9 +43,10 @@ type ReferenceID struct {
 // Otherwise, if IsNotLoaded is false and GetReferencedIDs() returns no IDs for this reference name, an
 // empty `data` field will be added which means that there are no references.
 type Reference struct {
-	Type        string
-	Name        string
-	IsNotLoaded bool
+	Type         string
+	Name         string
+	IsNotLoaded  bool
+	Relationship RelationshipType
 }
 
 // MarshalReferences must be implemented if the struct to be serialized has relations. This must be done
@@ -191,6 +205,13 @@ func marshalData(element MarshalIdentifier, information ServerInformation) (*Dat
 	return result, err
 }
 
+func isToMany(relationshipType RelationshipType, name string) bool {
+	if relationshipType == DefaultRelationship {
+		return Pluralize(name) == name
+	}
+	return relationshipType == ToManyRelationship
+}
+
 // getStructRelationships returns the relationships struct with ids
 func getStructRelationships(relationer MarshalLinkedRelations, information ServerInformation) *map[string]Relationship {
 	referencedIDs := relationer.GetReferencedIDs()
@@ -213,7 +234,7 @@ func getStructRelationships(relationer MarshalLinkedRelations, information Serve
 		relationships[name] = Relationship{}
 		// if referenceType is plural, we need to use an array for data, otherwise it's just an object
 		container := RelationshipDataContainer{}
-		if Pluralize(name) == name {
+		if isToMany(referenceIDs[0].Relationship, referenceIDs[0].Name) {
 			// multiple elements in links
 			container.DataArray = []RelationshipData{}
 			for _, referenceID := range referenceIDs {
@@ -247,7 +268,7 @@ func getStructRelationships(relationer MarshalLinkedRelations, information Serve
 	for name, reference := range notIncludedReferences {
 		container := RelationshipDataContainer{}
 		// Plural empty relationships need an empty array and empty to-one need a null in the json
-		if !reference.IsNotLoaded && Pluralize(name) == name {
+		if !reference.IsNotLoaded && isToMany(reference.Relationship, reference.Name) {
 			container.DataArray = []RelationshipData{}
 		}
 
