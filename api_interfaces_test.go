@@ -153,12 +153,6 @@ var _ = Describe("Test return code behavior", func() {
 			Expect(rec.Body.String()).To(BeEmpty())
 		})
 
-		It("return accepted and no content", func() {
-			post(SomeData{ID: "accept", Data: "nothing"})
-			Expect(rec.Code).To(Equal(http.StatusAccepted))
-			Expect(rec.Body.String()).To(BeEmpty())
-		})
-
 		It("does not accept invalid return codes", func() {
 			post(SomeData{ID: "invalid"})
 			Expect(rec.Code).To(Equal(http.StatusInternalServerError))

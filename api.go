@@ -468,6 +468,15 @@ func (res *resource) handleRead(c APIContexter, w http.ResponseWriter, r *http.R
 		return err
 	}
 
+	if response.StatusCode() == http.StatusAccepted {
+		return res.respondWith(response, info, http.StatusAccepted, w, r)
+	}
+
+	if seeOther, ok := response.(SeeOtherResponder); ok {
+		w.Header().Add("Location", jsonapi.GetNormalizedResourceURI(seeOther.Other(), info))
+		return res.respondWith(seeOther, info, http.StatusSeeOther, w, r)
+	}
+
 	return res.respondWith(response, info, http.StatusOK, w, r)
 }
 
@@ -605,8 +614,7 @@ func (res *resource) handleCreate(c APIContexter, w http.ResponseWriter, r *http
 		w.WriteHeader(response.StatusCode())
 		return nil
 	case http.StatusAccepted:
-		w.WriteHeader(response.StatusCode())
-		return nil
+		return res.respondWith(response, info, response.StatusCode(), w, r)
 	default:
 		return fmt.Errorf("invalid status code %d from resource %s for method Create", response.StatusCode(), res.name)
 	}
