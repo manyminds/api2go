@@ -290,9 +290,9 @@ func getStructRelationships(relationer MarshalLinkedRelations, information Serve
 
 // helper method to generate URL fields for `links`
 func getLinksForServerInformation(relationer MarshalLinkedRelations, name string, information ServerInformation) *Links {
-	links := &Links{}
-
 	if information != serverInformationNil {
+		links := &Links{}
+
 		prefix := strings.Trim(information.GetBaseURL(), "/")
 		namespace := strings.Trim(information.GetPrefix(), "/")
 		structType := getStructType(relationer)
