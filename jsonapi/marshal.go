@@ -82,7 +82,7 @@ var serverInformationNil ServerInformation
 func MarshalWithURLs(data interface{}, information ServerInformation) ([]byte, error) {
 	document, err := MarshalToStruct(data, information)
 	if err != nil {
-		return []byte(""), err
+		return nil, err
 	}
 
 	return json.Marshal(document)
@@ -94,7 +94,7 @@ func MarshalWithURLs(data interface{}, information ServerInformation) ([]byte, e
 func Marshal(data interface{}) ([]byte, error) {
 	document, err := MarshalToStruct(data, serverInformationNil)
 	if err != nil {
-		return []byte(""), err
+		return nil, err
 	}
 	return json.Marshal(document)
 }
