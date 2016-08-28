@@ -1,6 +1,9 @@
 package jsonapi
 
-import "testing"
+import (
+	"database/sql"
+	"testing"
+)
 
 func BenchmarkMarshal(b *testing.B) {
 	post := &Post{
@@ -20,6 +23,43 @@ func BenchmarkUnmarshal(b *testing.B) {
 	post := &Post{
 		ID:    1,
 		Title: "Title",
+	}
+
+	data, err := Marshal(post)
+	if err != nil {
+		panic(err)
+	}
+
+	for i := 0; i < b.N; i++ {
+		err = Unmarshal(data, &Post{})
+		if err != nil {
+			panic(err)
+		}
+	}
+}
+
+func BenchmarkMarshalWithRelationships(b *testing.B) {
+	post := &Post{
+		ID:          1,
+		Title:       "Title",
+		AuthorID:    sql.NullInt64{Valid: true, Int64: 1},
+		CommentsIDs: []int{1, 2, 3, 4, 5, 6, 7, 8, 9},
+	}
+
+	for i := 0; i < b.N; i++ {
+		_, err := Marshal(post)
+		if err != nil {
+			panic(err)
+		}
+	}
+}
+
+func BenchmarkUnmarshalWithRelationships(b *testing.B) {
+	post := &Post{
+		ID:          1,
+		Title:       "Title",
+		AuthorID:    sql.NullInt64{Valid: true, Int64: 1},
+		CommentsIDs: []int{1, 2, 3, 4, 5, 6, 7, 8, 9},
 	}
 
 	data, err := Marshal(post)
