@@ -9,7 +9,10 @@ func BenchmarkMarshal(b *testing.B) {
 	}
 
 	for i := 0; i < b.N; i++ {
-		Marshal(post)
+		_, err := Marshal(post)
+		if err != nil {
+			panic(err)
+		}
 	}
 }
 
@@ -19,9 +22,15 @@ func BenchmarkUnmarshal(b *testing.B) {
 		Title: "Title",
 	}
 
-	data, _ := Marshal(post)
+	data, err := Marshal(post)
+	if err != nil {
+		panic(err)
+	}
 
 	for i := 0; i < b.N; i++ {
-		Unmarshal(data, &Post{})
+		err = Unmarshal(data, &Post{})
+		if err != nil {
+			panic(err)
+		}
 	}
 }
