@@ -72,13 +72,6 @@ type EditToManyRelations interface {
 	DeleteToManyIDs(name string, IDs []string) error
 }
 
-var (
-	// ErrInterface occurs if the target struct did not implement the UnmarshalIdentifier interface
-	ErrInterface = errors.New("target must implement UnmarshalIdentifier interface")
-	// ErrNoType occurs if the JSON payload did not have a type field
-	ErrNoType = errors.New("invalid record, no type was specified")
-)
-
 // Unmarshal reads a jsonapi compatible JSON as []byte
 // target must at least implement the `UnmarshalIdentifier` interface.
 func Unmarshal(data []byte, target interface{}) error {
@@ -152,11 +145,11 @@ func Unmarshal(data []byte, target interface{}) error {
 func setDataIntoTarget(data *Data, target interface{}) error {
 	castedTarget, ok := target.(UnmarshalIdentifier)
 	if !ok {
-		return ErrInterface
+		return errors.New("target must implement UnmarshalIdentifier interface")
 	}
 
 	if data.Type == "" {
-		return ErrNoType
+		return errors.New("invalid record, no type was specified")
 	}
 
 	err := checkType(data.Type, castedTarget)
@@ -170,7 +163,9 @@ func setDataIntoTarget(data *Data, target interface{}) error {
 			return err
 		}
 	}
+
 	castedTarget.SetID(data.ID)
+
 	return setRelationshipIDs(data.Relationships, castedTarget)
 }
 
