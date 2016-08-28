@@ -38,6 +38,52 @@ func BenchmarkUnmarshal(b *testing.B) {
 	}
 }
 
+func BenchmarkMarshalSlice(b *testing.B) {
+	post := []Post{
+		{
+			ID:    1,
+			Title: "Title",
+		},
+		{
+			ID:    2,
+			Title: "Title",
+		},
+	}
+
+	for i := 0; i < b.N; i++ {
+		_, err := Marshal(post)
+		if err != nil {
+			panic(err)
+		}
+	}
+}
+
+func BenchmarkUnmarshalSlice(b *testing.B) {
+	post := []*Post{
+		{
+			ID:    1,
+			Title: "Title",
+		},
+		{
+			ID:    2,
+			Title: "Title",
+		},
+	}
+
+	data, err := Marshal(post)
+	if err != nil {
+		panic(err)
+	}
+
+	for i := 0; i < b.N; i++ {
+		var posts []Post
+		err = Unmarshal(data, &posts)
+		if err != nil {
+			panic(err)
+		}
+	}
+}
+
 func BenchmarkMarshalWithRelationships(b *testing.B) {
 	post := &Post{
 		ID:          1,
