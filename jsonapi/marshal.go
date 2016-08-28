@@ -202,7 +202,7 @@ func marshalData(element MarshalIdentifier, information ServerInformation) (*Dat
 	// optional relationship interface for struct
 	references, ok := element.(MarshalLinkedRelations)
 	if ok {
-		result.Relationships = *getStructRelationships(references, information)
+		result.Relationships = getStructRelationships(references, information)
 	}
 
 	return result, nil
@@ -216,7 +216,7 @@ func isToMany(relationshipType RelationshipType, name string) bool {
 }
 
 // getStructRelationships returns the relationships struct with ids
-func getStructRelationships(relationer MarshalLinkedRelations, information ServerInformation) *map[string]Relationship {
+func getStructRelationships(relationer MarshalLinkedRelations, information ServerInformation) map[string]Relationship {
 	referencedIDs := relationer.GetReferencedIDs()
 	sortedResults := map[string][]ReferenceID{}
 	relationships := map[string]Relationship{}
@@ -288,7 +288,7 @@ func getStructRelationships(relationer MarshalLinkedRelations, information Serve
 		relationships[name] = relationship
 	}
 
-	return &relationships
+	return relationships
 }
 
 // helper method to generate URL fields for `links`

@@ -781,7 +781,7 @@ var _ = Describe("Marshalling", func() {
 
 		It("Generates to-one relationships correctly", func() {
 			links := getStructRelationships(post, serverInformationNil)
-			Expect((*links)["author"]).To(Equal(Relationship{
+			Expect(links["author"]).To(Equal(Relationship{
 				Data: &RelationshipDataContainer{
 					DataObject: &RelationshipData{
 						ID:   "1",
@@ -793,7 +793,7 @@ var _ = Describe("Marshalling", func() {
 
 		It("Generates to-many relationships correctly", func() {
 			links := getStructRelationships(post, serverInformationNil)
-			Expect((*links)["comments"]).To(Equal(Relationship{
+			Expect(links["comments"]).To(Equal(Relationship{
 				Data: &RelationshipDataContainer{
 					DataArray: []RelationshipData{
 						{
@@ -807,7 +807,7 @@ var _ = Describe("Marshalling", func() {
 
 		It("Generates self/related URLs with baseURL and prefix correctly", func() {
 			links := getStructRelationships(post, CompleteServerInformation{})
-			Expect((*links)["author"]).To(Equal(Relationship{
+			Expect(links["author"]).To(Equal(Relationship{
 				Data: &RelationshipDataContainer{
 					DataObject: &RelationshipData{
 						ID:   "1",
@@ -823,7 +823,7 @@ var _ = Describe("Marshalling", func() {
 
 		It("Generates self/related URLs with baseURL correctly", func() {
 			links := getStructRelationships(post, BaseURLServerInformation{})
-			Expect((*links)["author"]).To(Equal(Relationship{
+			Expect(links["author"]).To(Equal(Relationship{
 				Data: &RelationshipDataContainer{
 					DataObject: &RelationshipData{
 						ID:   "1",
@@ -839,7 +839,7 @@ var _ = Describe("Marshalling", func() {
 
 		It("Generates self/related URLs with prefix correctly", func() {
 			links := getStructRelationships(post, PrefixServerInformation{})
-			Expect((*links)["author"]).To(Equal(Relationship{
+			Expect(links["author"]).To(Equal(Relationship{
 				Data: &RelationshipDataContainer{
 					DataObject: &RelationshipData{
 						ID:   "1",

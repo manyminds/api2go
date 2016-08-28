@@ -4,7 +4,7 @@ import "testing"
 
 func BenchmarkMarshal(b *testing.B) {
 	post := &Post{
-		ID: 1,
+		ID:    1,
 		Title: "Title",
 	}
 
@@ -18,7 +18,7 @@ func BenchmarkMarshal(b *testing.B) {
 
 func BenchmarkUnmarshal(b *testing.B) {
 	post := &Post{
-		ID: 1,
+		ID:    1,
 		Title: "Title",
 	}
 
