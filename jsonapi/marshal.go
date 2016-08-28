@@ -102,9 +102,9 @@ func Marshal(data interface{}) ([]byte, error) {
 // MarshalToStruct marshals an api2go compatible struct into a jsonapi Document structure which then can be
 // marshaled to JSON. You only need this method if you want to extract or extend parts of the document.
 // You should directly use Marshal to get a []byte with JSON in it.
-func MarshalToStruct(data interface{}, information ServerInformation) (Document, error) {
+func MarshalToStruct(data interface{}, information ServerInformation) (*Document, error) {
 	if data == nil {
-		return Document{}, nil
+		return &Document{}, nil
 	}
 
 	switch reflect.TypeOf(data).Kind() {
@@ -113,12 +113,12 @@ func MarshalToStruct(data interface{}, information ServerInformation) (Document,
 	case reflect.Struct, reflect.Ptr:
 		return marshalStruct(data.(MarshalIdentifier), information)
 	default:
-		return Document{}, errors.New("Marshal only accepts slice, struct or ptr types")
+		return nil, errors.New("Marshal only accepts slice, struct or ptr types")
 	}
 }
 
-func marshalSlice(data interface{}, information ServerInformation) (Document, error) {
-	result := Document{}
+func marshalSlice(data interface{}, information ServerInformation) (*Document, error) {
+	result := &Document{}
 
 	val := reflect.ValueOf(data)
 	dataElements := []Data{}
@@ -326,8 +326,8 @@ func getIncludedStructs(included MarshalIncludedRelations, information ServerInf
 	return &result, nil
 }
 
-func marshalStruct(data MarshalIdentifier, information ServerInformation) (Document, error) {
-	result := Document{}
+func marshalStruct(data MarshalIdentifier, information ServerInformation) (*Document, error) {
+	result := &Document{}
 	contentData, err := marshalData(data, information)
 	if err != nil {
 		return result, err
