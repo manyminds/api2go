@@ -881,12 +881,12 @@ var _ = Describe("Marshalling", func() {
 
 		It("should work with default marshalData", func() {
 			actual := reduceDuplicates(input, nil, marshalData)
-			Expect(len(*actual)).To(Equal(len(expected)))
+			Expect(len(actual)).To(Equal(len(expected)))
 		})
 
 		It("should work with dummy marshalData", func() {
 			actual := reduceDuplicates(input, nil, dummyFunc)
-			Expect(len(*actual)).To(Equal(len(expected)))
+			Expect(len(actual)).To(Equal(len(expected)))
 		})
 	})
 

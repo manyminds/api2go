@@ -149,8 +149,8 @@ func marshalSlice(data interface{}, information ServerInformation) (*Document, e
 	result.Data = &DataContainer{
 		DataArray: dataElements,
 	}
-	if includedElements != nil && len(*includedElements) > 0 {
-		result.Included = *includedElements
+	if includedElements != nil && len(includedElements) > 0 {
+		result.Included = includedElements
 	}
 
 	return result, nil
@@ -161,7 +161,7 @@ func reduceDuplicates(
 	input []MarshalIdentifier,
 	information ServerInformation,
 	method func(MarshalIdentifier, ServerInformation) (*Data, error),
-) *[]Data {
+) []Data {
 	alreadyIncluded := map[string]map[string]bool{}
 	includedElements := []Data{}
 
@@ -178,7 +178,7 @@ func reduceDuplicates(
 		}
 	}
 
-	return &includedElements
+	return includedElements
 }
 
 func marshalData(element MarshalIdentifier, information ServerInformation) (*Data, error) {
@@ -312,7 +312,7 @@ func getLinksForServerInformation(relationer MarshalLinkedRelations, name string
 	return links
 }
 
-func getIncludedStructs(included MarshalIncludedRelations, information ServerInformation) (*[]Data, error) {
+func getIncludedStructs(included MarshalIncludedRelations, information ServerInformation) ([]Data, error) {
 	result := []Data{}
 	includedStructs := included.GetReferencedStructs()
 
@@ -325,7 +325,7 @@ func getIncludedStructs(included MarshalIncludedRelations, information ServerInf
 		result = append(result, *marshalled)
 	}
 
-	return &result, nil
+	return result, nil
 }
 
 func marshalStruct(data MarshalIdentifier, information ServerInformation) (*Document, error) {
@@ -346,8 +346,8 @@ func marshalStruct(data MarshalIdentifier, information ServerInformation) (*Docu
 			return nil, err
 		}
 
-		if len(*included) > 0 {
-			result.Included = *included
+		if len(included) > 0 {
+			result.Included = included
 		}
 	}
 
