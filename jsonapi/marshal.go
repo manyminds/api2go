@@ -128,12 +128,12 @@ func marshalSlice(data interface{}, information ServerInformation) (*Document, e
 		k := val.Index(i).Interface()
 		element, ok := k.(MarshalIdentifier)
 		if !ok {
-			return result, errors.New("all elements within the slice must implement api2go.MarshalIdentifier")
+			return nil, errors.New("all elements within the slice must implement api2go.MarshalIdentifier")
 		}
 
 		content, err := marshalData(element, information)
 		if err != nil {
-			return result, err
+			return nil, err
 		}
 
 		dataElements = append(dataElements, *content)
@@ -183,15 +183,18 @@ func reduceDuplicates(
 }
 
 func marshalData(element MarshalIdentifier, information ServerInformation) (*Data, error) {
-	var err error
 	result := &Data{}
 
 	refValue := reflect.ValueOf(element)
 	if refValue.Kind() == reflect.Ptr && refValue.IsNil() {
-		return result, errors.New("MarshalIdentifier must not be nil")
+		return nil, errors.New("MarshalIdentifier must not be nil")
 	}
 
 	attributes, err := json.Marshal(element)
+	if err != nil {
+		return nil, err
+	}
+
 	result.Attributes = attributes
 	result.ID = element.GetID()
 	result.Type = getStructType(element)
@@ -202,7 +205,7 @@ func marshalData(element MarshalIdentifier, information ServerInformation) (*Dat
 		result.Relationships = *getStructRelationships(references, information)
 	}
 
-	return result, err
+	return result, nil
 }
 
 func isToMany(relationshipType RelationshipType, name string) bool {
@@ -317,7 +320,7 @@ func getIncludedStructs(included MarshalIncludedRelations, information ServerInf
 	for key := range includedStructs {
 		marshalled, err := marshalData(includedStructs[key], information)
 		if err != nil {
-			return &result, err
+			return nil, err
 		}
 
 		result = append(result, *marshalled)
@@ -330,7 +333,7 @@ func marshalStruct(data MarshalIdentifier, information ServerInformation) (*Docu
 	result := &Document{}
 	contentData, err := marshalData(data, information)
 	if err != nil {
-		return result, err
+		return nil, err
 	}
 
 	result.Data = &DataContainer{
@@ -341,7 +344,7 @@ func marshalStruct(data MarshalIdentifier, information ServerInformation) (*Docu
 	if ok {
 		included, err := getIncludedStructs(included, information)
 		if err != nil {
-			return result, err
+			return nil, err
 		}
 
 		if len(*included) > 0 {
