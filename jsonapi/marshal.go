@@ -120,7 +120,7 @@ func marshalSlice(data interface{}, information ServerInformation) (*Document, e
 	result := &Document{}
 
 	val := reflect.ValueOf(data)
-	dataElements := []Data{}
+	dataElements := make([]Data, val.Len())
 	var referencedStructs []MarshalIdentifier
 
 	for i := 0; i < val.Len(); i++ {
@@ -130,12 +130,10 @@ func marshalSlice(data interface{}, information ServerInformation) (*Document, e
 			return nil, errors.New("all elements within the slice must implement api2go.MarshalIdentifier")
 		}
 
-		content, err := marshalData(element, information)
+		err := marshalData(element, &dataElements[i], information)
 		if err != nil {
 			return nil, err
 		}
-
-		dataElements = append(dataElements, *content)
 
 		included, ok := k.(MarshalIncludedRelations)
 		if ok {
@@ -143,7 +141,10 @@ func marshalSlice(data interface{}, information ServerInformation) (*Document, e
 		}
 	}
 
-	includedElements := reduceDuplicates(referencedStructs, information, marshalData)
+	includedElements, err := reduceDuplicates(referencedStructs, information)
+	if err != nil {
+		return nil, err
+	}
 
 	//data key is always present
 	result.Data = &DataContainer{
@@ -157,11 +158,7 @@ func marshalSlice(data interface{}, information ServerInformation) (*Document, e
 }
 
 // reduceDuplicates eliminates duplicate MarshalIdentifier from input and calls `method` on every unique MarshalIdentifier
-func reduceDuplicates(
-	input []MarshalIdentifier,
-	information ServerInformation,
-	method func(MarshalIdentifier, ServerInformation) (*Data, error),
-) []Data {
+func reduceDuplicates(input []MarshalIdentifier, information ServerInformation) ([]Data, error) {
 	alreadyIncluded := map[string]map[string]bool{}
 	includedElements := []Data{}
 
@@ -172,39 +169,42 @@ func reduceDuplicates(
 		}
 
 		if !alreadyIncluded[structType][referencedStruct.GetID()] {
-			marshalled, _ := method(referencedStruct, information)
-			includedElements = append(includedElements, *marshalled)
+			var data Data
+			err := marshalData(referencedStruct, &data, information)
+			if err != nil {
+				return nil, err
+			}
+
+			includedElements = append(includedElements, data)
 			alreadyIncluded[structType][referencedStruct.GetID()] = true
 		}
 	}
 
-	return includedElements
+	return includedElements, nil
 }
 
-func marshalData(element MarshalIdentifier, information ServerInformation) (*Data, error) {
-	result := &Data{}
-
+func marshalData(element MarshalIdentifier, data *Data, information ServerInformation) error {
 	refValue := reflect.ValueOf(element)
 	if refValue.Kind() == reflect.Ptr && refValue.IsNil() {
-		return nil, errors.New("MarshalIdentifier must not be nil")
+		return errors.New("MarshalIdentifier must not be nil")
 	}
 
 	attributes, err := json.Marshal(element)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	result.Attributes = attributes
-	result.ID = element.GetID()
-	result.Type = getStructType(element)
+	data.Attributes = attributes
+	data.ID = element.GetID()
+	data.Type = getStructType(element)
 
 	// optional relationship interface for struct
 	references, ok := element.(MarshalLinkedRelations)
 	if ok {
-		result.Relationships = getStructRelationships(references, information)
+		data.Relationships = getStructRelationships(references, information)
 	}
 
-	return result, nil
+	return nil
 }
 
 func isToMany(relationshipType RelationshipType, name string) bool {
@@ -313,30 +313,31 @@ func getLinksForServerInformation(relationer MarshalLinkedRelations, name string
 }
 
 func getIncludedStructs(included MarshalIncludedRelations, information ServerInformation) ([]Data, error) {
-	result := []Data{}
 	includedStructs := included.GetReferencedStructs()
 
-	for key := range includedStructs {
-		marshalled, err := marshalData(includedStructs[key], information)
+	result := make([]Data, len(includedStructs))
+
+	for i, includedStruct := range includedStructs {
+		err := marshalData(includedStruct, &result[i], information)
 		if err != nil {
 			return nil, err
 		}
-
-		result = append(result, *marshalled)
 	}
 
 	return result, nil
 }
 
 func marshalStruct(data MarshalIdentifier, information ServerInformation) (*Document, error) {
-	result := &Document{}
-	contentData, err := marshalData(data, information)
+	var contentData Data
+	err := marshalData(data, &contentData, information)
 	if err != nil {
 		return nil, err
 	}
 
-	result.Data = &DataContainer{
-		DataObject: contentData,
+	result := &Document{
+		Data: &DataContainer{
+			DataObject: &contentData,
+		},
 	}
 
 	included, ok := data.(MarshalIncludedRelations)

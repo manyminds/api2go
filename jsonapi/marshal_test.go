@@ -875,17 +875,9 @@ var _ = Describe("Marshalling", func() {
 			{"name": "User2", "id": 2, "type": "users"},
 		}
 
-		dummyFunc := func(m MarshalIdentifier, i ServerInformation) (*Data, error) {
-			return &Data{}, nil
-		}
-
 		It("should work with default marshalData", func() {
-			actual := reduceDuplicates(input, nil, marshalData)
-			Expect(len(actual)).To(Equal(len(expected)))
-		})
-
-		It("should work with dummy marshalData", func() {
-			actual := reduceDuplicates(input, nil, dummyFunc)
+			actual, err := reduceDuplicates(input, nil)
+			Expect(err).ToNot(HaveOccurred())
 			Expect(len(actual)).To(Equal(len(expected)))
 		})
 	})
