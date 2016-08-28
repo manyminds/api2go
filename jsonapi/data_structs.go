@@ -6,6 +6,9 @@ import (
 	"errors"
 )
 
+var objectSuffix = []byte("{")
+var arraySuffix = []byte("[")
+
 // Document represents a JSONAPI document like specified: http://jsonapi.org
 type Document struct {
 	Links    *Links                 `json:"links,omitempty"`
@@ -23,12 +26,12 @@ type DataContainer struct {
 // UnmarshalJSON implements Unmarshaler because we have to detect if payload is an object
 // or an array
 func (c *DataContainer) UnmarshalJSON(payload []byte) error {
-	if bytes.HasPrefix(payload, []byte("{")) {
+	if bytes.HasPrefix(payload, objectSuffix) {
 		// payload is an object
 		return json.Unmarshal(payload, &c.DataObject)
 	}
 
-	if bytes.HasPrefix(payload, []byte("[")) {
+	if bytes.HasPrefix(payload, arraySuffix) {
 		// payload is an array
 		return json.Unmarshal(payload, &c.DataArray)
 	}
@@ -78,12 +81,12 @@ type RelationshipDataContainer struct {
 
 // UnmarshalJSON implements Unmarshaler and also detects array/object type
 func (c *RelationshipDataContainer) UnmarshalJSON(payload []byte) error {
-	if bytes.HasPrefix(payload, []byte("{")) {
+	if bytes.HasPrefix(payload, objectSuffix) {
 		// payload is an object
 		return json.Unmarshal(payload, &c.DataObject)
 	}
 
-	if bytes.HasPrefix(payload, []byte("[")) {
+	if bytes.HasPrefix(payload, arraySuffix) {
 		// payload is an array
 		return json.Unmarshal(payload, &c.DataArray)
 	}
