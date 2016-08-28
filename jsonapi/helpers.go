@@ -7,7 +7,6 @@ import (
 	"github.com/gedex/inflector"
 )
 
-// commonInitialisms, taken from
 // https://github.com/golang/lint/blob/3d26dc39376c307203d3a221bada26816b3073cf/lint.go#L482
 var commonInitialisms = map[string]bool{
 	"API":   true,
@@ -44,20 +43,23 @@ var commonInitialisms = map[string]bool{
 	"JWT":   true,
 }
 
-// Jsonify returns a JSON formatted key name from a go struct field name
+// Jsonify returns a JSON formatted key name from a go struct field name.
 func Jsonify(s string) string {
 	if s == "" {
 		return ""
 	}
+
 	if commonInitialisms[s] {
 		return strings.ToLower(s)
 	}
+
 	rs := []rune(s)
 	rs[0] = unicode.ToLower(rs[0])
+
 	return string(rs)
 }
 
-// Pluralize a noun
+// Pluralize returns the pluralization of a noun.
 func Pluralize(word string) string {
 	return inflector.Pluralize(word)
 }

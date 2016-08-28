@@ -27,8 +27,7 @@ var _ = Describe("Marshalling", func() {
 			user := User{ID: 100, Name: "Nino", Password: "babymaus"}
 			i, err := Marshal(user)
 			Expect(err).To(BeNil())
-			Expect(i).To(MatchJSON(`
-			{
+			Expect(i).To(MatchJSON(`{
 				"data": {
 					"type": "users",
 					"id": "100",
@@ -36,16 +35,14 @@ var _ = Describe("Marshalling", func() {
 						"name": "Nino"
 					}
 				}
-			}
-			`))
+			}`))
 		})
 
 		It("marshals single object without relationships as pointer", func() {
 			user := User{ID: 100, Name: "Nino", Password: "babymaus"}
 			i, err := Marshal(&user)
 			Expect(err).To(BeNil())
-			Expect(i).To(MatchJSON(`
-			{
+			Expect(i).To(MatchJSON(`{
 				"data": {
 					"type": "users",
 					"id": "100",
@@ -53,15 +50,13 @@ var _ = Describe("Marshalling", func() {
 						"name": "Nino"
 					}
 				}
-			}
-			`))
+			}`))
 		})
 
 		It("marshals single object", func() {
 			i, err := Marshal(firstPost)
 			Expect(err).To(BeNil())
-			Expect(i).To(MatchJSON(`
-			{
+			Expect(i).To(MatchJSON(`{
 				"data": {
 					"type": "simplePosts",
 					"id": "first",
@@ -73,8 +68,7 @@ var _ = Describe("Marshalling", func() {
 						"size": 0
 					}
 				}
-			}
-			`))
+			}`))
 		})
 
 		It("should prefer fmt.Stringer().String() over string contents", func() {
@@ -83,8 +77,7 @@ var _ = Describe("Marshalling", func() {
 
 			v, e := Marshal(m)
 			Expect(e).ToNot(HaveOccurred())
-			Expect(v).To(MatchJSON(`
-			{
+			Expect(v).To(MatchJSON(`{
 				"data": {
 					"type": "magics",
 					"id": "This should be visible",
@@ -102,31 +95,30 @@ var _ = Describe("Marshalling", func() {
 		It("marshals collections object", func() {
 			i, err := Marshal([]SimplePost{firstPost, secondPost})
 			Expect(err).To(BeNil())
-			Expect(i).To(MatchJSON(`
-			{
+			Expect(i).To(MatchJSON(`{
 				"data": [
-				{
-					"type": "simplePosts",
-					"id": "first",
-					"attributes": {
-						"title": "First Post",
-						"text": "Lipsum",
-						"size": 0,
-						"created-date": "2014-11-10T16:30:48.823Z",
-						"updated-date": "0001-01-01T00:00:00Z"
+					{
+						"type": "simplePosts",
+						"id": "first",
+						"attributes": {
+							"title": "First Post",
+							"text": "Lipsum",
+							"size": 0,
+							"created-date": "2014-11-10T16:30:48.823Z",
+							"updated-date": "0001-01-01T00:00:00Z"
+						}
+					},
+					{
+						"type": "simplePosts",
+						"id": "second",
+						"attributes": {
+							"title": "Second Post",
+							"text": "Getting more advanced!",
+							"size": 0,
+							"created-date": "2014-11-10T16:30:48.823Z",
+							"updated-date": "2014-11-10T16:30:48.823Z"
+						}
 					}
-				},
-				{
-					"type": "simplePosts",
-					"id": "second",
-					"attributes": {
-						"title": "Second Post",
-						"text": "Getting more advanced!",
-						"size": 0,
-						"created-date": "2014-11-10T16:30:48.823Z",
-						"updated-date": "2014-11-10T16:30:48.823Z"
-					}
-				}
 				]
 			}`))
 		})
@@ -143,20 +135,19 @@ var _ = Describe("Marshalling", func() {
 		It("marshals slices of interface with one struct", func() {
 			i, err := Marshal([]interface{}{firstPost})
 			Expect(err).ToNot(HaveOccurred())
-			Expect(i).To(MatchJSON(`
-			{
+			Expect(i).To(MatchJSON(`{
 				"data": [
-				{
-					"type": "simplePosts",
-					"id": "first",
-					"attributes": {
-						"title": "First Post",
-						"text": "Lipsum",
-						"size": 0,
-						"created-date": "2014-11-10T16:30:48.823Z",
-						"updated-date": "0001-01-01T00:00:00Z"
+					{
+						"type": "simplePosts",
+						"id": "first",
+						"attributes": {
+							"title": "First Post",
+							"text": "Lipsum",
+							"size": 0,
+							"created-date": "2014-11-10T16:30:48.823Z",
+							"updated-date": "0001-01-01T00:00:00Z"
+						}
 					}
-				}
 				]
 			}`))
 		})
@@ -164,38 +155,37 @@ var _ = Describe("Marshalling", func() {
 		It("marshals slices of interface with structs", func() {
 			i, err := Marshal([]interface{}{firstPost, secondPost, User{ID: 1337, Name: "Nino", Password: "God"}})
 			Expect(err).ToNot(HaveOccurred())
-			Expect(i).To(MatchJSON(`
-			{
+			Expect(i).To(MatchJSON(`{
 				"data": [
-				{
-					"type": "simplePosts",
-					"id": "first",
-					"attributes": {
-						"title": "First Post",
-						"text": "Lipsum",
-						"size": 0,
-						"created-date": "2014-11-10T16:30:48.823Z",
-						"updated-date": "0001-01-01T00:00:00Z"
+					{
+						"type": "simplePosts",
+						"id": "first",
+						"attributes": {
+							"title": "First Post",
+							"text": "Lipsum",
+							"size": 0,
+							"created-date": "2014-11-10T16:30:48.823Z",
+							"updated-date": "0001-01-01T00:00:00Z"
+						}
+					},
+					{
+						"type": "simplePosts",
+						"id": "second",
+						"attributes": {
+							"title": "Second Post",
+							"text": "Getting more advanced!",
+							"size": 0,
+							"created-date": "2014-11-10T16:30:48.823Z",
+							"updated-date": "2014-11-10T16:30:48.823Z"
+						}
+					},
+					{
+						"type": "users",
+						"id": "1337",
+						"attributes": {
+							"name": "Nino"
+						}
 					}
-				},
-				{
-					"type": "simplePosts",
-					"id": "second",
-					"attributes": {
-						"title": "Second Post",
-						"text": "Getting more advanced!",
-						"size": 0,
-						"created-date": "2014-11-10T16:30:48.823Z",
-						"updated-date": "2014-11-10T16:30:48.823Z"
-					}
-				},
-				{
-					"type": "users",
-					"id": "1337",
-					"attributes": {
-						"name": "Nino"
-					}
-				}
 				]
 			}`))
 		})
@@ -244,113 +234,110 @@ var _ = Describe("Marshalling", func() {
 			i, err := MarshalWithURLs(posts, CompleteServerInformation{})
 			Expect(err).To(BeNil())
 
-			expected := `
-			{
+			expected := `{
 				"data": [
-				{
-					"type": "posts",
-					"id": "1",
-					"attributes": {
-						"title": "Foobar"
-					},
-					"relationships": {
-						"author": {
-							"links": {
-								"self": "http://my.domain/v1/posts/1/relationships/author",
-								"related": "http://my.domain/v1/posts/1/author"
-							},
-							"data": {
-								"type": "users",
-								"id": "1"
-							}
+					{
+						"type": "posts",
+						"id": "1",
+						"attributes": {
+							"title": "Foobar"
 						},
-						"comments": {
-							"links": {
-								"self": "http://my.domain/v1/posts/1/relationships/comments",
-								"related": "http://my.domain/v1/posts/1/comments"
+						"relationships": {
+							"author": {
+								"links": {
+									"self": "http://my.domain/v1/posts/1/relationships/author",
+									"related": "http://my.domain/v1/posts/1/author"
+								},
+								"data": {
+									"type": "users",
+									"id": "1"
+								}
 							},
-							"data": [
-							{
-								"type": "comments",
-								"id": "1"
-							},
-							{
-								"type": "comments",
-								"id": "2"
+							"comments": {
+								"links": {
+									"self": "http://my.domain/v1/posts/1/relationships/comments",
+									"related": "http://my.domain/v1/posts/1/comments"
+								},
+								"data": [
+									{
+										"type": "comments",
+										"id": "1"
+									},
+									{
+										"type": "comments",
+										"id": "2"
+									}
+								]
 							}
-							]
+						}
+					},
+					{
+						"type": "posts",
+						"id": "2",
+						"attributes": {
+							"title": "Foobarbarbar"
+						},
+						"relationships": {
+							"author": {
+								"links": {
+									"self": "http://my.domain/v1/posts/2/relationships/author",
+									"related": "http://my.domain/v1/posts/2/author"
+								},
+								"data": {
+									"type": "users",
+									"id": "1"
+								}
+							},
+							"comments": {
+								"links": {
+									"self": "http://my.domain/v1/posts/2/relationships/comments",
+									"related": "http://my.domain/v1/posts/2/comments"
+								},
+								"data": [
+									{
+										"type": "comments",
+										"id": "1"
+									},
+									{
+										"type": "comments",
+										"id": "2"
+									}
+								]
+							}
 						}
 					}
-				},
-				{
-					"type": "posts",
-					"id": "2",
-					"attributes": {
-						"title": "Foobarbarbar"
-					},
-					"relationships": {
-						"author": {
-							"links": {
-								"self": "http://my.domain/v1/posts/2/relationships/author",
-								"related": "http://my.domain/v1/posts/2/author"
-							},
-							"data": {
-								"type": "users",
-								"id": "1"
-							}
-						},
-						"comments": {
-							"links": {
-								"self": "http://my.domain/v1/posts/2/relationships/comments",
-								"related": "http://my.domain/v1/posts/2/comments"
-							},
-							"data": [
-							{
-								"type": "comments",
-								"id": "1"
-							},
-							{
-								"type": "comments",
-								"id": "2"
-							}
-							]
-						}
-					}
-				}
 				],
 				"included": [
-				{
-					"type": "users",
-					"id": "1",
-					"attributes": {
-						"name": "Test Author"
+					{
+						"type": "users",
+						"id": "1",
+						"attributes": {
+							"name": "Test Author"
+						}
+					},
+					{
+						"type": "comments",
+						"id": "1",
+						"attributes": {
+							"text": "First!"
+						}
+					},
+					{
+						"type": "comments",
+						"id": "2",
+						"attributes": {
+							"text": "Second!"
+						}
 					}
-				},
-				{
-					"type": "comments",
-					"id": "1",
-					"attributes": {
-						"text": "First!"
-					}
-				},
-				{
-					"type": "comments",
-					"id": "2",
-					"attributes": {
-						"text": "Second!"
-					}
-				}
 				]
-			}
-			`
+			}`
 			Expect(i).To(MatchJSON(expected))
 		})
 
 		It("adds IDs", func() {
 			post := Post{ID: 1, Comments: []Comment{}, CommentsIDs: []int{1}}
 			i, err := MarshalWithURLs(post, CompleteServerInformation{})
-			expected := `
-			{
+			expected := `{
 				"data": {
 					"type": "posts",
 					"id": "1",
@@ -371,16 +358,15 @@ var _ = Describe("Marshalling", func() {
 								"related": "http://my.domain/v1/posts/1/comments"
 							},
 							"data": [
-							{
-								"type": "comments",
-								"id": "1"
-							}
+								{
+									"type": "comments",
+									"id": "1"
+								}
 							]
 						}
 					}
 				}
-			}
-			`
+			}`
 
 			Expect(err).To(BeNil())
 			Expect(i).To(MatchJSON(expected))
@@ -409,10 +395,10 @@ var _ = Describe("Marshalling", func() {
 						},
 						"comments": {
 							"data": [
-							{
-								"type": "comments",
-								"id": "1"
-							}
+								{
+									"type": "comments",
+									"id": "1"
+								}
 							]
 						}
 					}
@@ -433,16 +419,14 @@ var _ = Describe("Marshalling", func() {
 						}
 					}
 				]
-			}
-			`))
+			}`))
 		})
 
 		It("uses ID field if MarshalLinkedRelations is implemented", func() {
 			anotherPost := AnotherPost{ID: 1, AuthorID: 1}
 			i, err := Marshal(anotherPost)
 			Expect(err).To(BeNil())
-			Expect(i).To(MatchJSON(`
-			{
+			Expect(i).To(MatchJSON(`{
 				"data": {
 					"type": "anotherPosts",
 					"id": "1",
@@ -456,8 +440,7 @@ var _ = Describe("Marshalling", func() {
 						}
 					}
 				}
-			}
-			`))
+			}`))
 		})
 	})
 
@@ -469,8 +452,7 @@ var _ = Describe("Marshalling", func() {
 			// violated, because you at least need a data, links, or meta field
 			i, err := MarshalWithURLs(post, CompleteServerInformation{})
 			Expect(err).ToNot(HaveOccurred())
-			Expect(i).To(MatchJSON(`
-			{
+			Expect(i).To(MatchJSON(`{
 				"data": {
 					"type": "posts",
 					"id": "123",
@@ -492,8 +474,7 @@ var _ = Describe("Marshalling", func() {
 						}
 					}
 				}
-			}
-			`))
+			}`))
 		})
 
 		It("skips data field for not loaded author relation", func() {
@@ -503,8 +484,7 @@ var _ = Describe("Marshalling", func() {
 			// violated, because you at least need a data, links, or meta field
 			i, err := MarshalWithURLs(post, CompleteServerInformation{})
 			Expect(err).ToNot(HaveOccurred())
-			Expect(i).To(MatchJSON(`
-			{
+			Expect(i).To(MatchJSON(`{
 				"data": {
 					"type": "posts",
 					"id": "123",
@@ -527,8 +507,7 @@ var _ = Describe("Marshalling", func() {
 						}
 					}
 				}
-			}
-			`))
+			}`))
 		})
 
 		It("skips data field for not loaded comments", func() {
@@ -538,8 +517,7 @@ var _ = Describe("Marshalling", func() {
 			// violated, because you at least need a data, links, or meta field
 			i, err := MarshalWithURLs(post, CompleteServerInformation{})
 			Expect(err).ToNot(HaveOccurred())
-			Expect(i).To(MatchJSON(`
-			{
+			Expect(i).To(MatchJSON(`{
 				"data": {
 					"type": "posts",
 					"id": "123",
@@ -562,8 +540,7 @@ var _ = Describe("Marshalling", func() {
 						}
 					}
 				}
-			}
-			`))
+			}`))
 		})
 	})
 
@@ -576,8 +553,7 @@ var _ = Describe("Marshalling", func() {
 			marshalled, err := Marshal(post)
 
 			Expect(err).To(BeNil())
-			Expect(marshalled).To(MatchJSON(`
-			{
+			Expect(marshalled).To(MatchJSON(`{
 				"data": {
 					"type": "zeroPosts",
 					"id": "1",
@@ -586,16 +562,14 @@ var _ = Describe("Marshalling", func() {
 						"value": 2.3
 					}
 				}
-			}
-			`))
+			}`))
 		})
 
 		It("correctly unmarshals driver values with pointer", func() {
 			marshalled, err := Marshal(pointerPost)
 
 			Expect(err).To(BeNil())
-			Expect(marshalled).To(MatchJSON(`
-			{
+			Expect(marshalled).To(MatchJSON(`{
 				"data": {
 					"type": "zeroPostPointers",
 					"id": "1",
@@ -604,8 +578,7 @@ var _ = Describe("Marshalling", func() {
 						"value": 2.3
 					}
 				}
-			}
-			`))
+			}`))
 		})
 	})
 
@@ -618,8 +591,7 @@ var _ = Describe("Marshalling", func() {
 		It("Correctly marshalls question2 and sets question1 into included", func() {
 			marshalled, err := Marshal(question2)
 			Expect(err).To(BeNil())
-			Expect(marshalled).To(MatchJSON(`
-			{
+			Expect(marshalled).To(MatchJSON(`{
 				"data": {
 					"type": "questions",
 					"id": "2",
@@ -636,76 +608,73 @@ var _ = Describe("Marshalling", func() {
 					}
 				},
 				"included": [
-				{
-					"type": "questions",
-					"id": "1",
-					"attributes": {
-						"text": "Does this test work?"
-					},
-					"relationships": {
-						"inspiringQuestion": {
-							"data": null
+					{
+						"type": "questions",
+						"id": "1",
+						"attributes": {
+							"text": "Does this test work?"
+						},
+						"relationships": {
+							"inspiringQuestion": {
+								"data": null
+							}
 						}
 					}
-				}
 				]
-			}
-			`))
+			}`))
 		})
 
 		It("Does not marshall same dependencies multiple times", func() {
 			marshalled, err := Marshal([]Question{question3, question2})
 			Expect(err).To(BeNil())
-			Expect(marshalled).To(MatchJSON(`
-			{
+			Expect(marshalled).To(MatchJSON(`{
 				"data": [
-				{
-					"type": "questions",
-					"id": "3",
-					"attributes": {
-						"text": "It works now"
+					{
+						"type": "questions",
+						"id": "3",
+						"attributes": {
+							"text": "It works now"
+						},
+						"relationships": {
+							"inspiringQuestion": {
+								"data": {
+									"type": "questions",
+									"id": "1"
+								}
+							}
+						}
 					},
-					"relationships": {
-						"inspiringQuestion": {
-							"data": {
-								"type": "questions",
-								"id": "1"
+					{
+						"type": "questions",
+						"id": "2",
+						"attributes": {
+							"text": "Will it ever work?"
+						},
+						"relationships": {
+							"inspiringQuestion": {
+								"data": {
+									"type": "questions",
+									"id": "1"
+								}
 							}
 						}
 					}
-				},
-				{
-					"type": "questions",
-					"id": "2",
-					"attributes": {
-						"text": "Will it ever work?"
-					},
-					"relationships": {
-						"inspiringQuestion": {
-							"data": {
-								"type": "questions",
-								"id": "1"
-							}
-						}
-					}
-				}
 				],
-				"included": [
-				{
-					"type": "questions",
-					"id": "1",
-					"attributes": {
-						"text": "Does this test work?"
-					},
-					"relationships": {
-						"inspiringQuestion": {
-							"data": null
+					"included": [
+					{
+						"type": "questions",
+						"id": "1",
+						"attributes": {
+							"text": "Does this test work?"
+						},
+						"relationships": {
+							"inspiringQuestion": {
+								"data": null
+							}
 						}
 					}
-				}
 				]
-			}
-			`))
+			}`))
 		})
 	})
 
@@ -713,8 +682,7 @@ var _ = Describe("Marshalling", func() {
 		It("Marshalls the slice field correctly", func() {
 			marshalled, err := Marshal(Identity{1234, []string{"user_global"}})
 			Expect(err).To(BeNil())
-			Expect(marshalled).To(MatchJSON(`
-			{
+			Expect(marshalled).To(MatchJSON(`{
 				"data": {
 					"type": "identities",
 					"id": "1234",
@@ -724,15 +692,13 @@ var _ = Describe("Marshalling", func() {
 						]
 					}
 				}
-			}
-			`))
+			}`))
 		})
 
 		It("Marshalls correctly without an ID field", func() {
 			marshalled, err := Marshal(Unicorn{1234, []string{"user_global"}})
 			Expect(err).To(BeNil())
-			Expect(marshalled).To(MatchJSON(`
-			{
+			Expect(marshalled).To(MatchJSON(`{
 				"data": {
 					"type": "unicorns",
 					"id": "magicalUnicorn",
@@ -743,8 +709,7 @@ var _ = Describe("Marshalling", func() {
 						]
 					}
 				}
-			}
-			`))
+			}`))
 		})
 	})
 
@@ -876,7 +841,7 @@ var _ = Describe("Marshalling", func() {
 		}
 
 		It("should work with default marshalData", func() {
-			actual, err := reduceDuplicates(input, nil)
+			actual, err := filterDuplicates(input, nil)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(len(actual)).To(Equal(len(expected)))
 		})
@@ -897,21 +862,19 @@ var _ = Describe("Marshalling", func() {
 			}
 			result, err := Marshal(nullPost)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(result).To(MatchJSON(`
-				{
-					"data": {
-						"id": "theID",
-						"type": "sqlNullPosts",
-						"attributes": {
-							"title": "Test",
-							"likes": 666,
-							"rating": 66.66,
-							"isCool": true,
-							"today": "0001-01-01T00:00:00Z"
-						}
+			Expect(result).To(MatchJSON(`{
+				"data": {
+					"id": "theID",
+					"type": "sqlNullPosts",
+					"attributes": {
+						"title": "Test",
+						"likes": 666,
+						"rating": 66.66,
+						"isCool": true,
+						"today": "0001-01-01T00:00:00Z"
 					}
 				}
-			`))
+			}`))
 		})
 
 		It("correctly marshalls Null String, Int64, Float64, Bool and Time", func() {
@@ -925,21 +888,19 @@ var _ = Describe("Marshalling", func() {
 			}
 			result, err := Marshal(nullPost)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(result).To(MatchJSON(`
-				{
-					"data": {
-						"id": "theID",
-						"type": "sqlNullPosts",
-						"attributes": {
-							"title": "",
-							"likes": 0,
-							"rating": 0,
-							"isCool": false,
-							"today": "0001-01-01T00:00:00Z"
-						}
+			Expect(result).To(MatchJSON(`{
+				"data": {
+					"id": "theID",
+					"type": "sqlNullPosts",
+					"attributes": {
+						"title": "",
+						"likes": 0,
+						"rating": 0,
+						"isCool": false,
+						"today": "0001-01-01T00:00:00Z"
 					}
 				}
-			`))
+			}`))
 		})
 	})
 
@@ -949,40 +910,36 @@ var _ = Describe("Marshalling", func() {
 			article := Article{Name: "author", Relationship: DefaultRelationship}
 			result, err := Marshal(article)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(result).To(MatchJSON(`
-			{
+			Expect(result).To(MatchJSON(`{
 				"data": {
 					"type": "articles",
 					"id": "id",
 					"attributes": {},
 					"relationships": {
 						"author": {
-                                                        "data": null
-                                                }
+							"data": null
+						}
 					}
 				}
-			}
-			`))
+			}`))
 		})
 
 		It("defaults to relationship name pluralization - plural", func() {
 			article := Article{Name: "authors", Relationship: DefaultRelationship}
 			result, err := Marshal(article)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(result).To(MatchJSON(`
-			{
+			Expect(result).To(MatchJSON(`{
 				"data": {
 					"type": "articles",
 					"id": "id",
 					"attributes": {},
 					"relationships": {
 						"authors": {
-                                                        "data": []
-                                                }
+                        	"data": []
+                        }
 					}
 				}
-			}
-			`))
+			}`))
 		})
 
 		It("can make a to-many relationship", func() {
@@ -994,23 +951,21 @@ var _ = Describe("Marshalling", func() {
 			}
 			result, err := Marshal(article)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(result).To(MatchJSON(`
-			{
+			Expect(result).To(MatchJSON(`{
 				"data": {
 					"type": "articles",
 					"id": "id",
 					"attributes": {},
 					"relationships": {
 						"author": {
-		                                        "data": [
-                                                                {"type": "users", "id": "1"},
-                                                                {"type": "users", "id": "2"}
-                                                        ]
-		                                }
+							"data": [
+								{"type": "users", "id": "1"},
+								{"type": "users", "id": "2"}
+							]
+						}
 					}
 				}
-			}
-			`))
+			}`))
 		})
 
 		It("can make a to-one relationship", func() {
@@ -1022,21 +977,18 @@ var _ = Describe("Marshalling", func() {
 			}
 			result, err := Marshal(article)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(result).To(MatchJSON(`
-			{
+			Expect(result).To(MatchJSON(`{
 				"data": {
 					"type": "articles",
 					"id": "id",
 					"attributes": {},
 					"relationships": {
 						"authors": {
-		                                        "data": {"type": "users", "id": "1"}
-		                                }
+							"data": {"type": "users", "id": "1"}
+						}
 					}
 				}
-			}
-			`))
+			}`))
 		})
-
 	})
 })

@@ -9,7 +9,7 @@ import (
 var objectSuffix = []byte("{")
 var arraySuffix = []byte("[")
 
-// Document represents a JSONAPI document like specified: http://jsonapi.org
+// A Document represents a JSON API document as specified here: http://jsonapi.org.
 type Document struct {
 	Links    *Links                 `json:"links,omitempty"`
 	Data     *DataContainer         `json:"data"`
@@ -17,37 +17,38 @@ type Document struct {
 	Meta     map[string]interface{} `json:"meta,omitempty"`
 }
 
-// DataContainer is needed to either keep "data" contents as array or object.
+// A DataContainer is used to marshal and unmarshal single objects and arrays
+// of objects.
 type DataContainer struct {
 	DataObject *Data
 	DataArray  []Data
 }
 
-// UnmarshalJSON implements Unmarshaler because we have to detect if payload is an object
-// or an array
+// UnmarshalJSON unmarshals the JSON-encoded data to the DataObject field if the
+// root element is an object or to the DataArray field for arrays.
 func (c *DataContainer) UnmarshalJSON(payload []byte) error {
 	if bytes.HasPrefix(payload, objectSuffix) {
-		// payload is an object
 		return json.Unmarshal(payload, &c.DataObject)
 	}
 
 	if bytes.HasPrefix(payload, arraySuffix) {
-		// payload is an array
 		return json.Unmarshal(payload, &c.DataArray)
 	}
 
-	return errors.New("Invalid json for data array/object")
+	return errors.New("expected a JSON encoded object or array")
 }
 
-// MarshalJSON either Marshals an array or object of data
+// MarshalJSON returns the JSON encoding of the DataArray field or the DataObject
+// field. It will return "null" if neither of them is set.
 func (c *DataContainer) MarshalJSON() ([]byte, error) {
 	if c.DataArray != nil {
 		return json.Marshal(c.DataArray)
 	}
+
 	return json.Marshal(c.DataObject)
 }
 
-// Links is general links struct for top level and relationships
+// Links is a general struct for document links and relationship links.
 type Links struct {
 	Self     string `json:"self,omitempty"`
 	Related  string `json:"related,omitempty"`
@@ -57,7 +58,7 @@ type Links struct {
 	Last     string `json:"last,omitempty"`
 }
 
-// Data for top level and included data
+// Data is a general struct for document data and included data.
 type Data struct {
 	Type          string                  `json:"type"`
 	ID            string                  `json:"id"`
@@ -73,13 +74,15 @@ type Relationship struct {
 	Meta  map[string]interface{}     `json:"meta,omitempty"`
 }
 
-// RelationshipDataContainer is needed to either keep relationship "data" contents as array or object.
+// A RelationshipDataContainer is used to marshal and unmarshal single relationship
+// objects and arrays of relationship objects.
 type RelationshipDataContainer struct {
 	DataObject *RelationshipData
 	DataArray  []RelationshipData
 }
 
-// UnmarshalJSON implements Unmarshaler and also detects array/object type
+// UnmarshalJSON unmarshals the JSON-encoded data to the DataObject field if the
+// root element is an object or to the DataArray field for arrays.
 func (c *RelationshipDataContainer) UnmarshalJSON(payload []byte) error {
 	if bytes.HasPrefix(payload, objectSuffix) {
 		// payload is an object
@@ -94,7 +97,8 @@ func (c *RelationshipDataContainer) UnmarshalJSON(payload []byte) error {
 	return errors.New("Invalid json for relationship data array/object")
 }
 
-// MarshalJSON either Marshals an array or object of relationship data
+// MarshalJSON returns the JSON encoding of the DataArray field or the DataObject
+// field. It will return "null" if neither of them is set.
 func (c *RelationshipDataContainer) MarshalJSON() ([]byte, error) {
 	if c.DataArray != nil {
 		return json.Marshal(c.DataArray)
@@ -102,7 +106,7 @@ func (c *RelationshipDataContainer) MarshalJSON() ([]byte, error) {
 	return json.Marshal(c.DataObject)
 }
 
-// RelationshipData represents one specific reference ID
+// RelationshipData represents one specific reference ID.
 type RelationshipData struct {
 	Type string `json:"type"`
 	ID   string `json:"id"`

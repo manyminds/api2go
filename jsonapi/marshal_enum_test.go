@@ -27,12 +27,10 @@ func (s PublishStatus) String() string {
 	return publishStatusValues[s]
 }
 
-// MarshalText implements the TextMarshaler interface.
-func (s PublishStatus) MarshalText() (text []byte, err error) {
+func (s PublishStatus) MarshalText() ([]byte, error) {
 	return []byte(s.String()), nil
 }
 
-// UnmarshalText implements the TextUnmarshaler interface.
 func (s *PublishStatus) UnmarshalText(text []byte) error {
 	label := string(text)
 

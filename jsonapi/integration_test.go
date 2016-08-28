@@ -40,11 +40,21 @@ func (b Book) GetReferences() []Reference {
 
 func (b Book) GetReferencedIDs() []ReferenceID {
 	result := []ReferenceID{}
+
 	if b.Author != nil {
-		result = append(result, ReferenceID{ID: b.Author.GetID(), Name: "author", Type: "stupidUsers"})
+		result = append(result, ReferenceID{
+			ID:   b.Author.GetID(),
+			Name: "author",
+			Type: "stupidUsers",
+		})
 	}
+
 	for _, page := range b.Pages {
-		result = append(result, ReferenceID{ID: page.GetID(), Name: "pages", Type: "pages"})
+		result = append(result, ReferenceID{
+			ID:   page.GetID(),
+			Name: "pages",
+			Type: "pages",
+		})
 	}
 
 	return result
@@ -72,6 +82,7 @@ func (b *Book) SetToManyReferenceIDs(name string, IDs []string) error {
 
 func (b Book) GetReferencedStructs() []MarshalIdentifier {
 	result := []MarshalIdentifier{}
+
 	if b.Author != nil {
 		result = append(result, *b.Author)
 	}
@@ -119,87 +130,18 @@ var _ = Describe("Test for the public api of this package", func() {
 		Pages:  pages,
 	}
 
-	testResult := `
-		{ "data" : 
-			{ 
-				"id" : "TheOneAndOnlyID",
-				"attributes": {},
-				"relationships" : 
-				{ 
-						"author" : 
-						{
-							"data": {
-								"id" : "A Magical UserID",
-								"type" : "stupidUsers"
-							}
-						},
-						"pages" : 
-						{ 
-							"data": [
-								{
-									"id": "Page 1",
-									"type": "pages"
-								},
-								{
-									"id": "Page 2",
-									"type": "pages"
-								},
-								{
-									"id": "Page 3",
-									"type": "pages"
-								}
-							]
-						}
-				},
-					"type" : "books"
-			},
-			"included" : 
-				[ 
-					{ 
-						"id" : "A Magical UserID",
-						"attributes": {
-							"name" : "Terry Pratchett"
-						},
-						"type" : "stupidUsers"
-					},
-					{ 
-						"attributes": {
-							"content" : "First Page"
-						},
-						"id" : "Page 1",
-						"type" : "pages"
-					},
-					{ 
-						"attributes": {
-							"content" : "Second Page"
-						},
-						"id" : "Page 2",
-						"type" : "pages"
-					},
-					{ 
-						"attributes": {
-							"content" : "Final page"
-						},
-						"id" : "Page 3",
-						"type" : "pages"
-					}
-				]
-		}	
-	`
-
-	testRequest := `{
-		"data":{
-			"id":"TheOneAndOnlyID",
-			"type":"books",
+	testResult := `{
+		"data": {
+			"id": "TheOneAndOnlyID",
 			"attributes": {},
-			"relationships":{
-				"author":{
+			"relationships": {
+				"author": {
 					"data": {
-						"id":"A Magical UserID",
-						"type":"users"
+						"id" : "A Magical UserID",
+						"type" : "stupidUsers"
 					}
 				},
-				"pages":{
+				"pages": {
 					"data": [
 						{
 							"id": "Page 1",
@@ -213,10 +155,74 @@ var _ = Describe("Test for the public api of this package", func() {
 							"id": "Page 3",
 							"type": "pages"
 						}
-					]}
+					]
+				}
+			},
+			"type": "books"
+		},
+		"included": [
+			{
+				"id" : "A Magical UserID",
+				"attributes": {
+					"name" : "Terry Pratchett"
+				},
+				"type" : "stupidUsers"
+			},
+			{
+				"attributes": {
+					"content" : "First Page"
+				},
+				"id" : "Page 1",
+				"type" : "pages"
+			},
+			{
+				"attributes": {
+					"content" : "Second Page"
+				},
+				"id" : "Page 2",
+				"type" : "pages"
+			},
+			{
+				"attributes": {
+					"content" : "Final page"
+				},
+				"id" : "Page 3",
+				"type" : "pages"
+			}
+		]
+	}`
+
+	testRequest := `{
+		"data": {
+			"id": "TheOneAndOnlyID",
+			"type": "books",
+			"attributes": {},
+			"relationships": {
+				"author": {
+					"data": {
+						"id":"A Magical UserID",
+						"type":"users"
+					}
+				},
+				"pages": {
+					"data": [
+						{
+							"id": "Page 1",
+							"type": "pages"
+						},
+						{
+							"id": "Page 2",
+							"type": "pages"
+						},
+						{
+							"id": "Page 3",
+							"type": "pages"
+						}
+					]
 				}
 			}
-		}`
+		}
+	}`
 
 	Context("Marshal and Unmarshal data", func() {
 		It("Should be marshalled correctly", func() {

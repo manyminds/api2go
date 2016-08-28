@@ -144,13 +144,16 @@ func (c *Post) SetToOneReferenceID(name, ID string) error {
 func (c *Post) SetToManyReferenceIDs(name string, IDs []string) error {
 	if name == "comments" {
 		commentsIDs := []int{}
+
 		for _, ID := range IDs {
 			intID, err := strconv.ParseInt(ID, 10, 64)
 			if err != nil {
 				return err
 			}
+
 			commentsIDs = append(commentsIDs, int(intID))
 		}
+
 		c.CommentsIDs = commentsIDs
 
 		return nil
@@ -203,12 +206,15 @@ func (c Post) GetReferencedIDs() []ReferenceID {
 
 func (c Post) GetReferencedStructs() []MarshalIdentifier {
 	result := []MarshalIdentifier{}
+
 	if c.Author != nil {
 		result = append(result, c.Author)
 	}
+
 	for key := range c.Comments {
 		result = append(result, c.Comments[key])
 	}
+
 	return result
 }
 
@@ -287,6 +293,7 @@ func (q Question) GetReferences() []Reference {
 
 func (q Question) GetReferencedIDs() []ReferenceID {
 	result := []ReferenceID{}
+
 	if q.InspiringQuestionID.Valid {
 		result = append(result, ReferenceID{ID: q.InspiringQuestionID.String, Name: "inspiringQuestion", Type: "questions"})
 	}
@@ -296,6 +303,7 @@ func (q Question) GetReferencedIDs() []ReferenceID {
 
 func (q Question) GetReferencedStructs() []MarshalIdentifier {
 	result := []MarshalIdentifier{}
+
 	if q.InspiringQuestion != nil {
 		result = append(result, *q.InspiringQuestion)
 	}
@@ -319,7 +327,7 @@ func (i *Identity) SetID(ID string) error {
 }
 
 type Unicorn struct {
-	UnicornID int64    `json:"unicorn_id"` //Annotations are ignored
+	UnicornID int64    `json:"unicorn_id"` // annotations are ignored
 	Scopes    []string `json:"scopes"`
 }
 
@@ -336,7 +344,6 @@ type NumberPost struct {
 
 func (n *NumberPost) SetID(ID string) error {
 	n.ID = ID
-
 	return nil
 }
 
@@ -390,7 +397,6 @@ func (r RenamedComment) GetName() string {
 
 type CompleteServerInformation struct{}
 
-const completePrefix = "http://my.domain/v1"
 const baseURL = "http://my.domain"
 const prefix = "v1"
 
@@ -494,8 +500,10 @@ func (a Article) GetReferences() []Reference {
 
 func (a Article) GetReferencedIDs() []ReferenceID {
 	referenceIDs := []ReferenceID{}
+
 	for _, id := range a.IDs {
 		referenceIDs = append(referenceIDs, ReferenceID{ID: id, Type: a.Type, Name: a.Name, Relationship: a.Relationship})
 	}
+
 	return referenceIDs
 }
