@@ -780,7 +780,7 @@ var _ = Describe("Marshalling", func() {
 		})
 
 		It("Generates to-one relationships correctly", func() {
-			links := getStructRelationships(post, serverInformationNil)
+			links := getStructRelationships(post, nil)
 			Expect(links["author"]).To(Equal(Relationship{
 				Data: &RelationshipDataContainer{
 					DataObject: &RelationshipData{
@@ -792,7 +792,7 @@ var _ = Describe("Marshalling", func() {
 		})
 
 		It("Generates to-many relationships correctly", func() {
-			links := getStructRelationships(post, serverInformationNil)
+			links := getStructRelationships(post, nil)
 			Expect(links["comments"]).To(Equal(Relationship{
 				Data: &RelationshipDataContainer{
 					DataArray: []RelationshipData{
@@ -880,12 +880,12 @@ var _ = Describe("Marshalling", func() {
 		}
 
 		It("should work with default marshalData", func() {
-			actual := reduceDuplicates(input, serverInformationNil, marshalData)
+			actual := reduceDuplicates(input, nil, marshalData)
 			Expect(len(*actual)).To(Equal(len(expected)))
 		})
 
 		It("should work with dummy marshalData", func() {
-			actual := reduceDuplicates(input, serverInformationNil, dummyFunc)
+			actual := reduceDuplicates(input, nil, dummyFunc)
 			Expect(len(*actual)).To(Equal(len(expected)))
 		})
 	})

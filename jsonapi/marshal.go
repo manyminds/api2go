@@ -76,8 +76,6 @@ type ServerInformation interface {
 	GetPrefix() string
 }
 
-var serverInformationNil ServerInformation
-
 // MarshalWithURLs can be used to include the generation of `related` and `self` links
 func MarshalWithURLs(data interface{}, information ServerInformation) ([]byte, error) {
 	document, err := MarshalToStruct(data, information)
@@ -92,10 +90,11 @@ func MarshalWithURLs(data interface{}, information ServerInformation) ([]byte, e
 // Any struct in `data`or data itself, must at least implement the `MarshalIdentifier` interface.
 // If so, it will generate a map[string]interface{} matching the jsonapi specification.
 func Marshal(data interface{}) ([]byte, error) {
-	document, err := MarshalToStruct(data, serverInformationNil)
+	document, err := MarshalToStruct(data, nil)
 	if err != nil {
 		return nil, err
 	}
+
 	return json.Marshal(document)
 }
 
@@ -293,24 +292,24 @@ func getStructRelationships(relationer MarshalLinkedRelations, information Serve
 
 // helper method to generate URL fields for `links`
 func getLinksForServerInformation(relationer MarshalLinkedRelations, name string, information ServerInformation) *Links {
-	if information != serverInformationNil {
-		links := &Links{}
-
-		prefix := strings.Trim(information.GetBaseURL(), "/")
-		namespace := strings.Trim(information.GetPrefix(), "/")
-		structType := getStructType(relationer)
-
-		if namespace != "" {
-			prefix += "/" + namespace
-		}
-
-		links.Self = fmt.Sprintf("%s/%s/%s/relationships/%s", prefix, structType, relationer.GetID(), name)
-		links.Related = fmt.Sprintf("%s/%s/%s/%s", prefix, structType, relationer.GetID(), name)
-
-		return links
+	if information == nil {
+		return nil
 	}
 
-	return nil
+	links := &Links{}
+
+	prefix := strings.Trim(information.GetBaseURL(), "/")
+	namespace := strings.Trim(information.GetPrefix(), "/")
+	structType := getStructType(relationer)
+
+	if namespace != "" {
+		prefix += "/" + namespace
+	}
+
+	links.Self = fmt.Sprintf("%s/%s/%s/relationships/%s", prefix, structType, relationer.GetID(), name)
+	links.Related = fmt.Sprintf("%s/%s/%s/%s", prefix, structType, relationer.GetID(), name)
+
+	return links
 }
 
 func getIncludedStructs(included MarshalIncludedRelations, information ServerInformation) (*[]Data, error) {
