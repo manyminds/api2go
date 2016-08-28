@@ -176,15 +176,12 @@ func setDataIntoTarget(data *Data, target interface{}) error {
 
 // extracts all found relationships and set's them via SetToOneReferenceID or SetToManyReferenceIDs
 func setRelationshipIDs(relationships map[string]Relationship, target UnmarshalIdentifier) error {
-	toOneError := fmt.Errorf("struct %s does not implement UnmarshalToOneRelations", reflect.TypeOf(target))
-	toManyError := fmt.Errorf("struct %s does not implement UnmarshalToManyRelations", reflect.TypeOf(target))
-
 	for name, rel := range relationships {
 		// if Data is nil, it means that we have an empty toOne relationship
 		if rel.Data == nil {
 			castedToOne, ok := target.(UnmarshalToOneRelations)
 			if !ok {
-				return toOneError
+				return fmt.Errorf("struct %s does not implement UnmarshalToOneRelations", reflect.TypeOf(target))
 			}
 
 			castedToOne.SetToOneReferenceID(name, "")
@@ -195,7 +192,7 @@ func setRelationshipIDs(relationships map[string]Relationship, target UnmarshalI
 		if rel.Data.DataObject != nil {
 			castedToOne, ok := target.(UnmarshalToOneRelations)
 			if !ok {
-				return toOneError
+				return fmt.Errorf("struct %s does not implement UnmarshalToOneRelations", reflect.TypeOf(target))
 			}
 			err := castedToOne.SetToOneReferenceID(name, rel.Data.DataObject.ID)
 			if err != nil {
@@ -207,7 +204,7 @@ func setRelationshipIDs(relationships map[string]Relationship, target UnmarshalI
 		if rel.Data.DataArray != nil {
 			castedToMany, ok := target.(UnmarshalToManyRelations)
 			if !ok {
-				return toManyError
+				return fmt.Errorf("struct %s does not implement UnmarshalToManyRelations", reflect.TypeOf(target))
 			}
 			IDs := make([]string, len(rel.Data.DataArray))
 			for index, relData := range rel.Data.DataArray {
