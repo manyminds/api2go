@@ -18,8 +18,7 @@ var _ = Describe("Unmarshal", func() {
 		firstPost := SimplePost{ID: "1", Title: "First Post", Text: "Lipsum", Created: t}
 		secondPost := SimplePost{ID: "2", Title: "Second Post", Text: "Foobar!", Created: t, Updated: t}
 
-		singlePostJSON := []byte(`
-		{
+		singlePostJSON := []byte(`{
 			"data": {
 				"id": "1",
 				"type": "simplePosts",
@@ -29,34 +28,31 @@ var _ = Describe("Unmarshal", func() {
 					"created-date": "2014-11-10T16:30:48.823Z"
 				}
 			}
-		}
-		`)
+		}`)
 
-		multiplePostJSON := []byte(`
+		multiplePostJSON := []byte(`{
+			"data": [
 				{
-					"data": [
-					{
-						"id": "1",
-						"type": "simplePosts",
-						"attributes": {
-							"title": "First Post",
-							"text": "Lipsum",
-							"created-date": "2014-11-10T16:30:48.823Z"
-						}
-					},
-					{
-						"id": "2",
-						"type": "simplePosts",
-						"attributes": {
-							"title": "Second Post",
-							"text": "Foobar!",
-							"created-date": "2014-11-10T16:30:48.823Z",
-							"updated-date": "2014-11-10T16:30:48.823Z"
-						}
+					"id": "1",
+					"type": "simplePosts",
+					"attributes": {
+						"title": "First Post",
+						"text": "Lipsum",
+						"created-date": "2014-11-10T16:30:48.823Z"
 					}
-					]
+				},
+				{
+					"id": "2",
+					"type": "simplePosts",
+					"attributes": {
+						"title": "Second Post",
+						"text": "Foobar!",
+						"created-date": "2014-11-10T16:30:48.823Z",
+						"updated-date": "2014-11-10T16:30:48.823Z"
+					}
 				}
-				`)
+			]
+		}`)
 
 		It("unmarshals single object into a struct", func() {
 			var post SimplePost
@@ -84,8 +80,7 @@ var _ = Describe("Unmarshal", func() {
 			}
 
 			var actual Image
-			err := Unmarshal([]byte(`
-			{
+			err := Unmarshal([]byte(`{
 				"data": {
 					"type": "images",
 					"id": "one",
@@ -98,8 +93,7 @@ var _ = Describe("Unmarshal", func() {
 						]
 					}
 				}
-			}
-      `), &actual)
+			}`), &actual)
 			Expect(err).To(BeNil())
 			Expect(actual).To(Equal(expected))
 		})
@@ -129,28 +123,23 @@ var _ = Describe("Unmarshal", func() {
 
 		It("errors on non-array root", func() {
 			var post SimplePost
-			err := Unmarshal([]byte(`
-			{
+			err := Unmarshal([]byte(`{
 				"data": 42
-			}
-			`), &post)
+			}`), &post)
 			Expect(err).Should(HaveOccurred())
 		})
 
 		It("errors on non-documents", func() {
 			var post SimplePost
-			err := Unmarshal([]byte(`
-			{
+			err := Unmarshal([]byte(`{
 				"data": {42}
-			}
-			`), &post)
+			}`), &post)
 			Expect(err).Should(HaveOccurred())
 		})
 
 		It("it ignores fields that can not be unmarshaled like the nomral json.Unmarshaler", func() {
 			var post SimplePost
-			err := Unmarshal([]byte(`
-			{
+			err := Unmarshal([]byte(`{
 				"data": {
 					"attributes": {
 						"title": "something",
@@ -159,15 +148,13 @@ var _ = Describe("Unmarshal", func() {
 					},
 					"type": "simplePosts"
 				}
-			}
-			`), &post)
+			}`), &post)
 			Expect(err).ShouldNot(HaveOccurred())
 		})
 
 		It("errors with wrong type, expected int, got a string", func() {
 			var post SimplePost
-			err := Unmarshal([]byte(`
-			{
+			err := Unmarshal([]byte(`{
 				"data": {
 					"attributes": {
 						"text": "Gopher",
@@ -175,8 +162,7 @@ var _ = Describe("Unmarshal", func() {
 					},
 					"type": "simplePosts"
 				}
-			}
-			`), &post)
+			}`), &post)
 			Expect(err).To(HaveOccurred())
 			Expect(err).Should(BeAssignableToTypeOf(&json.UnmarshalTypeError{}))
 			typeError := err.(*json.UnmarshalTypeError)
@@ -185,8 +171,7 @@ var _ = Describe("Unmarshal", func() {
 
 		It("errors with invalid time format", func() {
 			t, err := time.Parse(time.RFC3339, "2014-11-10T16:30:48.823Z")
-			faultyPostMap := []byte(`
-			{
+			faultyPostMap := []byte(`{
 				"data": {
 					"attributes": {
 						"title": "` + firstPost.Title + `",
@@ -203,13 +188,11 @@ var _ = Describe("Unmarshal", func() {
 		})
 
 		It("empty attributes is OK", func() {
-			json := []byte(`
-			{
+			json := []byte(`{
 				"data": [{
 					"type": "simplePosts"
 				}]
-			}
-      `)
+			}`)
 			var posts []SimplePost
 
 			err := Unmarshal(json, &posts)
@@ -217,13 +200,11 @@ var _ = Describe("Unmarshal", func() {
 		})
 
 		It("errors if target is no pointer", func() {
-			json := []byte(`
-			{
+			json := []byte(`{
 				"data": {
 					"type": "simplePosts"
 				}
-			}
-			`)
+			}`)
 
 			err := Unmarshal(json, SimplePost{})
 			Expect(err).To(HaveOccurred())
@@ -231,16 +212,14 @@ var _ = Describe("Unmarshal", func() {
 		})
 
 		It("errors if json array cannot be unmarshaled into a struct", func() {
-			json := []byte(`
-			{
+			json := []byte(`{
 				"data": [{
 					"type": "simplePosts",
 					"attributes": {
 						"title": "something"
 					}
 				}]
-			}
-			`)
+			}`)
 			var post SimplePost
 			err := Unmarshal(json, &post)
 			Expect(err).To(HaveOccurred())
@@ -249,19 +228,17 @@ var _ = Describe("Unmarshal", func() {
 
 		Context("slice fields", func() {
 			It("unmarshal slice fields with single entry correctly", func() {
-				sliceJSON := []byte(`
-				{
+				sliceJSON := []byte(`{
 					"data": {
 						"id":   "1234",
 						"type": "identities",
 						"attributes": {
 							"scopes": [
 								"user_global"
-								]
-							}
+							]
 						}
 					}
-				`)
+				}`)
 				var identity Identity
 				err := Unmarshal(sliceJSON, &identity)
 				Expect(err).ToNot(HaveOccurred())
@@ -270,8 +247,7 @@ var _ = Describe("Unmarshal", func() {
 			})
 
 			It("unmarshal slice fields with multiple entries", func() {
-				input := `
-				{
+				input := `{
 					"data": {
 						"id": "1234",
 						"type": "identities",
@@ -279,8 +255,7 @@ var _ = Describe("Unmarshal", func() {
 							"scopes": ["test", "1234"]
 						}
 					}
-				}
-				`
+				}`
 
 				var identity Identity
 				err := Unmarshal([]byte(input), &identity)
@@ -290,8 +265,7 @@ var _ = Describe("Unmarshal", func() {
 			})
 
 			It("unmarshal empty slice fields from json input", func() {
-				input := `
-				{
+				input := `{
 					"data": {
 						"id": "1234",
 						"type": "identities",
@@ -299,8 +273,7 @@ var _ = Describe("Unmarshal", func() {
 							"scopes": []
 						}
 					}
-				}
-				`
+				}`
 
 				var identity Identity
 				err := Unmarshal([]byte(input), &identity)
@@ -309,8 +282,7 @@ var _ = Describe("Unmarshal", func() {
 			})
 
 			It("unmarshals renamed fields", func() {
-				input := `
-				{
+				input := `{
 					"data": {
 						"id": "1",
 						"type": "renamedPostWithEmbeddings",
@@ -332,10 +304,9 @@ var _ = Describe("Unmarshal", func() {
 	})
 
 	Context("when unmarshaling objects with relationships", func() {
-		It("unmarshals to many relationship IDs", func() {
+		It("unmarshals to-many relationship IDs", func() {
 			expectedPost := Post{ID: 1, CommentsIDs: []int{1}}
-			postJSON := []byte(`
-			{
+			postJSON := []byte(`{
 				"data": {
 					"id": "1",
 					"type": "posts",
@@ -350,8 +321,7 @@ var _ = Describe("Unmarshal", func() {
 						}
 					}
 				}
-			}
-			`)
+			}`)
 			var post Post
 			err := Unmarshal(postJSON, &post)
 			Expect(err).To(BeNil())
@@ -360,8 +330,7 @@ var _ = Describe("Unmarshal", func() {
 
 		It("unmarshals aliased relationships with array data payload", func() {
 			post := Post{ID: 1, CommentsIDs: []int{1}}
-			postJSON := []byte(`
-			{
+			postJSON := []byte(`{
 				"data": [{
 					"id":    "1",
 					"type":  "posts",
@@ -375,8 +344,7 @@ var _ = Describe("Unmarshal", func() {
 						}
 					}
 				}]
-			}
-			`)
+			}`)
 			var posts []Post
 			err := Unmarshal(postJSON, &posts)
 			Expect(err).To(BeNil())
@@ -385,8 +353,7 @@ var _ = Describe("Unmarshal", func() {
 
 		It("unmarshal to-one and to-many relations", func() {
 			expectedPost := Post{ID: 3, Title: "Test", AuthorID: sql.NullInt64{Valid: true, Int64: 1}, Author: nil, CommentsIDs: []int{1, 2}}
-			postJSON := []byte(`
-			{
+			postJSON := []byte(`{
 				"data": {
 					"id":   "3",
 					"type": "posts",
@@ -402,20 +369,19 @@ var _ = Describe("Unmarshal", func() {
 						},
 						"comments": {
 							"data": [
-							{
-								"id":   "1",
-								"type": "comments"
-							},
-							{
-								"id":   "2",
-								"type": "comments"
-							}
+								{
+									"id":   "1",
+									"type": "comments"
+								},
+								{
+									"id":   "2",
+									"type": "comments"
+								}
 							]
 						}
 					}
 				}
-			}
-			`)
+			}`)
 			var post Post
 			err := Unmarshal(postJSON, &post)
 			Expect(err).To(BeNil())
@@ -424,8 +390,7 @@ var _ = Describe("Unmarshal", func() {
 
 		It("unmarshals empty relationships", func() {
 			expectedPost := Post{ID: 3, Title: "Test", AuthorID: sql.NullInt64{Valid: false, Int64: 0}, Author: nil, CommentsIDs: []int{}}
-			postJSON := []byte(`
-			{
+			postJSON := []byte(`{
 				"data": {
 					"id":   "3",
 					"type": "posts",
@@ -441,8 +406,7 @@ var _ = Describe("Unmarshal", func() {
 						}
 					}
 				}
-			}
-			`)
+			}`)
 			post := Post{CommentsIDs: []int{}}
 			err := Unmarshal(postJSON, &post)
 			Expect(err).To(BeNil())
@@ -450,8 +414,7 @@ var _ = Describe("Unmarshal", func() {
 		})
 
 		It("errors if target does not implement UnmarshalToOneRelations for empty relationship", func() {
-			postJSON := []byte(`
-			{
+			postJSON := []byte(`{
 				"data": {
 					"id":   "3",
 					"type": "posts",
@@ -464,8 +427,7 @@ var _ = Describe("Unmarshal", func() {
 						}
 					}
 				}
-			}
-			`)
+			}`)
 			post := NoRelationshipPosts{}
 			err := Unmarshal(postJSON, &post)
 			Expect(err).To(HaveOccurred())
@@ -473,8 +435,7 @@ var _ = Describe("Unmarshal", func() {
 		})
 
 		Context("UnmarshalToOneRelations error handling", func() {
-			postJSON := []byte(`
-			{
+			postJSON := []byte(`{
 				"data": {
 					"id":   "3",
 					"type": "posts",
@@ -490,8 +451,7 @@ var _ = Describe("Unmarshal", func() {
 						}
 					}
 				}
-			}
-			`)
+			}`)
 
 			It("errors if target does not implement UnmarshalToOneRelations", func() {
 				post := NoRelationshipPosts{}
@@ -509,8 +469,7 @@ var _ = Describe("Unmarshal", func() {
 		})
 
 		Context("UnmarshalToManyRelations error handling", func() {
-			postJSON := []byte(`
-			{
+			postJSON := []byte(`{
 				"data": {
 					"id":   "3",
 					"type": "posts",
@@ -526,8 +485,7 @@ var _ = Describe("Unmarshal", func() {
 						}
 					}
 				}
-			}
-			`)
+			}`)
 
 			It("errors if target does not implement UnmarshalToManyRelations", func() {
 				post := NoRelationshipPosts{}
@@ -546,16 +504,15 @@ var _ = Describe("Unmarshal", func() {
 	})
 
 	It("check if type field matches target struct", func() {
-		postJSON := []byte(`
-			{
-				"data": {
-					"id":    "1",
-					"type":  "totallyWrongType",
-					"attributes": {
-						"title": "Test"
-					}
+		postJSON := []byte(`{
+			"data": {
+				"id": "1",
+				"type": "totallyWrongType",
+				"attributes": {
+					"title": "Test"
 				}
-			}`)
+			}
+		}`)
 		var post Post
 		err := Unmarshal(postJSON, &post)
 		Expect(err).To(HaveOccurred())
@@ -564,8 +521,7 @@ var _ = Describe("Unmarshal", func() {
 	Context("when unmarshaling into an existing slice", func() {
 		It("overrides existing entries", func() {
 			post := Post{ID: 1, Title: "Old Title"}
-			postJSON := []byte(`
-			{
+			postJSON := []byte(`{
 				"data": [{
 					"id":   "1",
 					"type": "posts",
@@ -584,14 +540,13 @@ var _ = Describe("Unmarshal", func() {
 	Context("when unmarshaling with null values", func() {
 		It("adding a new entry", func() {
 			expectedPost := SimplePost{ID: "1", Title: "Nice Title"}
-			postJSON := []byte(`
-			{
+			postJSON := []byte(`{
 				"data": {
-					"id":   "1",
+					"id": "1",
 					"type": "simplePosts",
 					"attributes": {
 						"title": "Nice Title",
-						"text":  null
+						"text": null
 					}
 				}
 			}`)
@@ -623,20 +578,18 @@ var _ = Describe("Unmarshal", func() {
 
 	Context("when unmarshalling objects with numbers", func() {
 		It("correctly converts number to int64", func() {
-			json := `
-			{
+			json := `{
 				"data": [
-				{
-					"id": "test",
-					"type": "numberPosts",
-					"attributes": {
-						"title": "Blubb",
-						"number": 1337
+					{
+						"id": "test",
+						"type": "numberPosts",
+						"attributes": {
+							"title": "Blubb",
+							"number": 1337
+						}
 					}
-				}
 				]
-			}
-			`
+			}`
 			var numberPosts []NumberPost
 
 			err := Unmarshal([]byte(json), &numberPosts)
@@ -646,20 +599,18 @@ var _ = Describe("Unmarshal", func() {
 		})
 
 		It("correctly converts negative number to int64", func() {
-			json := `
-			{
+			json := `{
 				"data": [
-				{
-					"id": "test",
-					"type": "numberPosts",
-					"attributes": {
-						"title": "Blubb",
-						"number": -1337
+					{
+						"id": "test",
+						"type": "numberPosts",
+						"attributes": {
+							"title": "Blubb",
+							"number": -1337
+						}
 					}
-				}
 				]
-			}
-			`
+			}`
 			var numberPosts []NumberPost
 
 			err := Unmarshal([]byte(json), &numberPosts)
@@ -669,20 +620,18 @@ var _ = Describe("Unmarshal", func() {
 		})
 
 		It("correctly converts number to uint64", func() {
-			json := `
-			{
+			json := `{
 				"data": [
-				{
-					"id": "test",
-					"type": "numberPosts",
-					"attributes": {
-						"title": "Blubb",
-						"unsignedNumber": 1337
+					{
+						"id": "test",
+						"type": "numberPosts",
+						"attributes": {
+							"title": "Blubb",
+							"unsignedNumber": 1337
+						}
 					}
-				}
 				]
-			}
-			`
+			}`
 
 			var numberPosts []NumberPost
 
@@ -705,8 +654,7 @@ var _ = Describe("Unmarshal", func() {
 		})
 
 		It("correctly unmarshals String, Int64, Float64 and Time", func() {
-			err := Unmarshal([]byte(fmt.Sprintf(`
-			{
+			err := Unmarshal([]byte(fmt.Sprintf(`{
 				"data": {
 					"id": "theID",
 					"type": "sqlNullPosts",
@@ -718,8 +666,7 @@ var _ = Describe("Unmarshal", func() {
 						"today": "%v"
 					}
 				}
-			}
-			`, timeZero.Format(time.RFC3339))), &nullPost)
+			}`, timeZero.Format(time.RFC3339))), &nullPost)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(nullPost).To(Equal(SQLNullPost{
 				ID:     "theID",
@@ -732,8 +679,7 @@ var _ = Describe("Unmarshal", func() {
 		})
 
 		It("correctly unmarshals Null String, Int64, Float64 and Time", func() {
-			err := Unmarshal([]byte(`
-			{
+			err := Unmarshal([]byte(`{
 				"data": {
 					"id": "theID",
 					"type": "sqlNullPosts",
@@ -745,8 +691,7 @@ var _ = Describe("Unmarshal", func() {
 						"today": null
 					}
 				}
-			}
-			`), &nullPost)
+			}`), &nullPost)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(nullPost).To(Equal(SQLNullPost{
 				ID:     "theID",
@@ -767,8 +712,7 @@ var _ = Describe("Unmarshal", func() {
 				IsCool: zero.BoolFrom(true),
 				Rating: zero.FloatFrom(4.5),
 				Today:  zero.TimeFrom(time.Now().UTC())}
-			err := Unmarshal([]byte(`
-			{
+			err := Unmarshal([]byte(`{
 				"data": {
 					"id": "newID",
 					"type": "sqlNullPosts",
@@ -780,8 +724,7 @@ var _ = Describe("Unmarshal", func() {
 						"today": null
 					}
 				}
-			}
-			`), &target)
+			}`), &target)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(target.Title.Valid).To(Equal(false))
 			Expect(target.Likes.Valid).To(Equal(false))

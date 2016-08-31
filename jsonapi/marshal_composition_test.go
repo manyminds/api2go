@@ -23,8 +23,7 @@ var _ = Describe("Embedded struct types", func() {
 		It("marshals", func() {
 			i, err := Marshal(post)
 			Expect(err).To(BeNil())
-			Expect(i).To(MatchJSON(`
-			{
+			Expect(i).To(MatchJSON(`{
 				"data": {
 					"type":"taggedPosts",
 					"id":"first",
@@ -37,27 +36,25 @@ var _ = Describe("Embedded struct types", func() {
 						"tag":"important"
 					}
 				}
-			}
-			`))
+			}`))
 		})
 	})
 
 	Context("When unmarshaling objects with struct composition", func() {
-		postJSON := `
-			{
-				"data": {
-					"type": "taggedPosts",
-					"id": "first",
-					"attributes": {
-						"title": "First Post",
-						"text":  "Lipsum",
-						"size": 0,
-						"created-date": "2014-11-10T16:30:48.823Z",
-						"tag": "important"
-					}
+		postJSON := `{
+			"data": {
+				"type": "taggedPosts",
+				"id": "first",
+				"attributes": {
+					"title": "First Post",
+					"text":  "Lipsum",
+					"size": 0,
+					"created-date": "2014-11-10T16:30:48.823Z",
+					"tag": "important"
 				}
 			}
-		`
+		}`
+
 		It("unmarshals", func() {
 			target := TaggedPost{}
 			err := Unmarshal([]byte(postJSON), &target)

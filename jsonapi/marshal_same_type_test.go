@@ -68,8 +68,7 @@ var _ = Describe("Marshalling with the same reference type", func() {
 	It("marshals all the relationships of the same type", func() {
 		i, err := Marshal(&theNode)
 		Expect(err).To(BeNil())
-		Expect(i).To(MatchJSON(`
-		{
+		Expect(i).To(MatchJSON(`{
 			"data": {
 				"type": "nodes",
 				"id": "super",
@@ -79,26 +78,26 @@ var _ = Describe("Marshalling with the same reference type", func() {
 				"relationships": {
 					"abandoned-child-nodes": {
 						"data": [
-						{
-							"type": "nodes",
-							"id": "2"
-						},
-						{
-							"type": "nodes",
-							"id": "1"
-						}
+							{
+								"type": "nodes",
+								"id": "2"
+							},
+							{
+								"type": "nodes",
+								"id": "1"
+							}
 						]
 					},
 					"child-nodes": {
 						"data": [
-						{
-							"type": "nodes",
-							"id": "666"
-						},
-						{
-							"type": "nodes",
-							"id": "42"
-						}
+							{
+								"type": "nodes",
+								"id": "666"
+							},
+							{
+								"type": "nodes",
+								"id": "42"
+							}
 						]
 					},
 					"mother-node": {
@@ -109,7 +108,6 @@ var _ = Describe("Marshalling with the same reference type", func() {
 					}
 				}
 			}
-		}
-		`))
+		}`))
 	})
 })

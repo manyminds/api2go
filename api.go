@@ -951,7 +951,7 @@ func filterSparseFields(resp interface{}, r *http.Request) (interface{}, error) 
 		return resp, nil
 	}
 
-	if document, ok := resp.(jsonapi.Document); ok {
+	if document, ok := resp.(*jsonapi.Document); ok {
 		wrongFields := map[string][]string{}
 
 		// single entry in data

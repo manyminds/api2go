@@ -8,28 +8,28 @@ import (
 	"strings"
 )
 
-// RelationshipType is used to specify whether the relationship with referenced objects are to-one or to-many
+// RelationshipType specifies the type of a relationship.
 type RelationshipType int
 
+// The available relationship types.
+//
+// Note: DefaultRelationship guesses the relationship type based on the
+// pluralization of the reference name.
 const (
-	// DefaultRelationship guesses the relationship type based on the pluralization of the reference name
 	DefaultRelationship RelationshipType = iota
-	// ToOneRelationship forces the relationship to be to-one
 	ToOneRelationship
-	// ToManyRelationship forces the relationship to be to-many
 	ToManyRelationship
 )
 
-// MarshalIdentifier interface is necessary to give an element
-// a unique ID. This interface must be implemented for
-// marshal and unmarshal in order to let them store
-// elements
+// The MarshalIdentifier interface is necessary to give an element a unique ID.
+//
+// Note: The implementation of this interface is mandatory.
 type MarshalIdentifier interface {
 	GetID() string
 }
 
-// ReferenceID contains all necessary information in order
-// to reference another struct in jsonapi
+// ReferenceID contains all necessary information in order to reference another
+// struct in JSON API.
 type ReferenceID struct {
 	ID           string
 	Type         string
@@ -37,10 +37,12 @@ type ReferenceID struct {
 	Relationship RelationshipType
 }
 
-// Reference information about possible references of a struct
-// If IsNotLoaded is set to true, the `data` field will be omitted and only the `links` object will be
-// generated. You should do this if there are some references, but you do not want to load them.
-// Otherwise, if IsNotLoaded is false and GetReferencedIDs() returns no IDs for this reference name, an
+// A Reference information about possible references of a struct.
+//
+// Note: If IsNotLoaded is set to true, the `data` field will be omitted and only
+// the `links` object will be generated. You should do this if there are some
+// references, but you do not want to load them. Otherwise, if IsNotLoaded is
+// false and GetReferencedIDs() returns no IDs for this reference name, an
 // empty `data` field will be added which means that there are no references.
 type Reference struct {
 	Type         string
@@ -49,62 +51,65 @@ type Reference struct {
 	Relationship RelationshipType
 }
 
-// MarshalReferences must be implemented if the struct to be serialized has relations. This must be done
-// because jsonapi needs information about relations even if many to many relations or many to one relations
-// are empty
+// The MarshalReferences interface must be implemented if the struct to be
+// serialized has relationships.
 type MarshalReferences interface {
 	GetReferences() []Reference
 }
 
-// MarshalLinkedRelations must be implemented if there are references and the reference IDs should be included
+// The MarshalLinkedRelations interface must be implemented if there are
+// reference ids that should be included in the document.
 type MarshalLinkedRelations interface {
 	MarshalReferences
 	MarshalIdentifier
 	GetReferencedIDs() []ReferenceID
 }
 
-// MarshalIncludedRelations must be implemented if referenced structs should be included
+// The MarshalIncludedRelations interface must be implemented if referenced
+// structs should be included in the document.
 type MarshalIncludedRelations interface {
 	MarshalReferences
 	MarshalIdentifier
 	GetReferencedStructs() []MarshalIdentifier
 }
 
-// ServerInformation can be passed to MarshalWithURLs to generate the `self` and `related` urls inside `links`
+// A ServerInformation implementor can be passed to MarshalWithURLs to generate
+// the `self` and `related` urls inside `links`.
 type ServerInformation interface {
 	GetBaseURL() string
 	GetPrefix() string
 }
 
-var serverInformationNil ServerInformation
-
-// MarshalWithURLs can be used to include the generation of `related` and `self` links
+// MarshalWithURLs can be used to pass along a ServerInformation implementor.
 func MarshalWithURLs(data interface{}, information ServerInformation) ([]byte, error) {
 	document, err := MarshalToStruct(data, information)
 	if err != nil {
-		return []byte(""), err
+		return nil, err
 	}
 
 	return json.Marshal(document)
 }
 
-// Marshal thats the input from `data` which can be a struct, a slice, or a pointer of it.
-// Any struct in `data`or data itself, must at least implement the `MarshalIdentifier` interface.
-// If so, it will generate a map[string]interface{} matching the jsonapi specification.
+// Marshal wraps data in a Document and returns its JSON encoding.
+//
+// Data can be a struct, a pointer to a struct or a slice of structs. All structs
+// must at least implement the `MarshalIdentifier` interface.
 func Marshal(data interface{}) ([]byte, error) {
-	document, err := MarshalToStruct(data, serverInformationNil)
+	document, err := MarshalToStruct(data, nil)
 	if err != nil {
-		return []byte(""), err
+		return nil, err
 	}
+
 	return json.Marshal(document)
 }
 
-// MarshalToStruct marshals an api2go compatible struct into a jsonapi Document structure which then can be
-// marshaled to JSON. You only need this method if you want to extract or extend parts of the document.
-// You should directly use Marshal to get a []byte with JSON in it.
-func MarshalToStruct(data interface{}, information ServerInformation) (Document, error) {
+// MarshalToStruct marshals an api2go compatible struct into a jsonapi Document
+// structure which then can be marshaled to JSON. You only need this method if
+// you want to extract or extend parts of the document. You should directly use
+// Marshal to get a []byte with JSON in it.
+func MarshalToStruct(data interface{}, information ServerInformation) (*Document, error) {
 	if data == nil {
-		return Document{}, nil
+		return &Document{}, nil
 	}
 
 	switch reflect.TypeOf(data).Kind() {
@@ -113,30 +118,28 @@ func MarshalToStruct(data interface{}, information ServerInformation) (Document,
 	case reflect.Struct, reflect.Ptr:
 		return marshalStruct(data.(MarshalIdentifier), information)
 	default:
-		return Document{}, errors.New("Marshal only accepts slice, struct or ptr types")
+		return nil, errors.New("Marshal only accepts slice, struct or ptr types")
 	}
 }
 
-func marshalSlice(data interface{}, information ServerInformation) (Document, error) {
-	result := Document{}
+func marshalSlice(data interface{}, information ServerInformation) (*Document, error) {
+	result := &Document{}
 
 	val := reflect.ValueOf(data)
-	dataElements := []Data{}
+	dataElements := make([]Data, val.Len())
 	var referencedStructs []MarshalIdentifier
 
 	for i := 0; i < val.Len(); i++ {
 		k := val.Index(i).Interface()
 		element, ok := k.(MarshalIdentifier)
 		if !ok {
-			return result, errors.New("all elements within the slice must implement api2go.MarshalIdentifier")
+			return nil, errors.New("all elements within the slice must implement api2go.MarshalIdentifier")
 		}
 
-		content, err := marshalData(element, information)
+		err := marshalData(element, &dataElements[i], information)
 		if err != nil {
-			return result, err
+			return nil, err
 		}
-
-		dataElements = append(dataElements, *content)
 
 		included, ok := k.(MarshalIncludedRelations)
 		if ok {
@@ -144,76 +147,79 @@ func marshalSlice(data interface{}, information ServerInformation) (Document, er
 		}
 	}
 
-	includedElements := reduceDuplicates(referencedStructs, information, marshalData)
+	includedElements, err := filterDuplicates(referencedStructs, information)
+	if err != nil {
+		return nil, err
+	}
 
-	//data key is always present
 	result.Data = &DataContainer{
 		DataArray: dataElements,
 	}
-	if includedElements != nil && len(*includedElements) > 0 {
-		result.Included = *includedElements
+
+	if includedElements != nil && len(includedElements) > 0 {
+		result.Included = includedElements
 	}
 
 	return result, nil
 }
 
-// reduceDuplicates eliminates duplicate MarshalIdentifier from input and calls `method` on every unique MarshalIdentifier
-func reduceDuplicates(
-	input []MarshalIdentifier,
-	information ServerInformation,
-	method func(MarshalIdentifier, ServerInformation) (*Data, error),
-) *[]Data {
+func filterDuplicates(input []MarshalIdentifier, information ServerInformation) ([]Data, error) {
 	alreadyIncluded := map[string]map[string]bool{}
 	includedElements := []Data{}
 
 	for _, referencedStruct := range input {
 		structType := getStructType(referencedStruct)
+
 		if alreadyIncluded[structType] == nil {
 			alreadyIncluded[structType] = make(map[string]bool)
 		}
 
 		if !alreadyIncluded[structType][referencedStruct.GetID()] {
-			marshalled, _ := method(referencedStruct, information)
-			includedElements = append(includedElements, *marshalled)
+			var data Data
+			err := marshalData(referencedStruct, &data, information)
+			if err != nil {
+				return nil, err
+			}
+
+			includedElements = append(includedElements, data)
 			alreadyIncluded[structType][referencedStruct.GetID()] = true
 		}
 	}
 
-	return &includedElements
+	return includedElements, nil
 }
 
-func marshalData(element MarshalIdentifier, information ServerInformation) (*Data, error) {
-	var err error
-	result := &Data{}
-
+func marshalData(element MarshalIdentifier, data *Data, information ServerInformation) error {
 	refValue := reflect.ValueOf(element)
 	if refValue.Kind() == reflect.Ptr && refValue.IsNil() {
-		return result, errors.New("MarshalIdentifier must not be nil")
+		return errors.New("MarshalIdentifier must not be nil")
 	}
 
 	attributes, err := json.Marshal(element)
-	result.Attributes = attributes
-	result.ID = element.GetID()
-	result.Type = getStructType(element)
-
-	// optional relationship interface for struct
-	references, ok := element.(MarshalLinkedRelations)
-	if ok {
-		result.Relationships = *getStructRelationships(references, information)
+	if err != nil {
+		return err
 	}
 
-	return result, err
+	data.Attributes = attributes
+	data.ID = element.GetID()
+	data.Type = getStructType(element)
+
+	if references, ok := element.(MarshalLinkedRelations); ok {
+		data.Relationships = getStructRelationships(references, information)
+	}
+
+	return nil
 }
 
 func isToMany(relationshipType RelationshipType, name string) bool {
 	if relationshipType == DefaultRelationship {
 		return Pluralize(name) == name
 	}
+
 	return relationshipType == ToManyRelationship
 }
 
-// getStructRelationships returns the relationships struct with ids
-func getStructRelationships(relationer MarshalLinkedRelations, information ServerInformation) *map[string]Relationship {
+func getStructRelationships(relationer MarshalLinkedRelations, information ServerInformation) map[string]Relationship {
 	referencedIDs := relationer.GetReferencedIDs()
 	sortedResults := map[string][]ReferenceID{}
 	relationships := map[string]Relationship{}
@@ -224,7 +230,7 @@ func getStructRelationships(relationer MarshalLinkedRelations, information Serve
 
 	references := relationer.GetReferences()
 
-	// helper mad to check if all references are included to also include mepty ones
+	// helper map to check if all references are included to also include empty ones
 	notIncludedReferences := map[string]Reference{}
 	for _, reference := range references {
 		notIncludedReferences[reference.Name] = reference
@@ -232,8 +238,10 @@ func getStructRelationships(relationer MarshalLinkedRelations, information Serve
 
 	for name, referenceIDs := range sortedResults {
 		relationships[name] = Relationship{}
+
 		// if referenceType is plural, we need to use an array for data, otherwise it's just an object
 		container := RelationshipDataContainer{}
+
 		if isToMany(referenceIDs[0].Relationship, referenceIDs[0].Name) {
 			// multiple elements in links
 			container.DataArray = []RelationshipData{}
@@ -267,6 +275,7 @@ func getStructRelationships(relationer MarshalLinkedRelations, information Serve
 	// check for empty references
 	for name, reference := range notIncludedReferences {
 		container := RelationshipDataContainer{}
+
 		// Plural empty relationships need an empty array and empty to-one need a null in the json
 		if !reference.IsNotLoaded && isToMany(reference.Relationship, reference.Name) {
 			container.DataArray = []RelationshipData{}
@@ -285,67 +294,68 @@ func getStructRelationships(relationer MarshalLinkedRelations, information Serve
 		relationships[name] = relationship
 	}
 
-	return &relationships
+	return relationships
 }
 
-// helper method to generate URL fields for `links`
 func getLinksForServerInformation(relationer MarshalLinkedRelations, name string, information ServerInformation) *Links {
+	if information == nil {
+		return nil
+	}
+
 	links := &Links{}
 
-	if information != serverInformationNil {
-		prefix := strings.Trim(information.GetBaseURL(), "/")
-		namespace := strings.Trim(information.GetPrefix(), "/")
-		structType := getStructType(relationer)
+	prefix := strings.Trim(information.GetBaseURL(), "/")
+	namespace := strings.Trim(information.GetPrefix(), "/")
+	structType := getStructType(relationer)
 
-		if namespace != "" {
-			prefix += "/" + namespace
-		}
-
-		links.Self = fmt.Sprintf("%s/%s/%s/relationships/%s", prefix, structType, relationer.GetID(), name)
-		links.Related = fmt.Sprintf("%s/%s/%s/%s", prefix, structType, relationer.GetID(), name)
-
-		return links
+	if namespace != "" {
+		prefix += "/" + namespace
 	}
 
-	return nil
+	links.Self = fmt.Sprintf("%s/%s/%s/relationships/%s", prefix, structType, relationer.GetID(), name)
+	links.Related = fmt.Sprintf("%s/%s/%s/%s", prefix, structType, relationer.GetID(), name)
+
+	return links
 }
 
-func getIncludedStructs(included MarshalIncludedRelations, information ServerInformation) (*[]Data, error) {
-	result := []Data{}
+func getIncludedStructs(included MarshalIncludedRelations, information ServerInformation) ([]Data, error) {
 	includedStructs := included.GetReferencedStructs()
 
-	for key := range includedStructs {
-		marshalled, err := marshalData(includedStructs[key], information)
-		if err != nil {
-			return &result, err
-		}
+	result := make([]Data, len(includedStructs))
 
-		result = append(result, *marshalled)
+	for i, includedStruct := range includedStructs {
+		err := marshalData(includedStruct, &result[i], information)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	return &result, nil
+	return result, nil
 }
 
-func marshalStruct(data MarshalIdentifier, information ServerInformation) (Document, error) {
-	result := Document{}
-	contentData, err := marshalData(data, information)
+func marshalStruct(data MarshalIdentifier, information ServerInformation) (*Document, error) {
+	var contentData Data
+
+	err := marshalData(data, &contentData, information)
 	if err != nil {
-		return result, err
+		return nil, err
 	}
 
-	result.Data = &DataContainer{
-		DataObject: contentData,
+	result := &Document{
+		Data: &DataContainer{
+			DataObject: &contentData,
+		},
 	}
 
 	included, ok := data.(MarshalIncludedRelations)
 	if ok {
 		included, err := getIncludedStructs(included, information)
 		if err != nil {
-			return result, err
+			return nil, err
 		}
 
-		if len(*included) > 0 {
-			result.Included = *included
+		if len(included) > 0 {
+			result.Included = included
 		}
 	}
 

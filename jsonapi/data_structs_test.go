@@ -10,10 +10,8 @@ import (
 var _ = Describe("JSONAPI Struct tests", func() {
 	Context("Testing array and object data payload", func() {
 		It("detects object payload", func() {
-			sampleJSON := `
-			{
-				"data":
-				{
+			sampleJSON := `{
+				"data": {
 					"type": "test",
 					"id": "1",
 					"attributes": {"foo": "bar"},
@@ -23,8 +21,8 @@ var _ = Describe("JSONAPI Struct tests", func() {
 						}
 					}
 				}
-			}
-`
+			}`
+
 			expectedData := &Data{
 				Type:       "test",
 				ID:         "1",
@@ -49,8 +47,7 @@ var _ = Describe("JSONAPI Struct tests", func() {
 		})
 
 		It("detects array payload", func() {
-			sampleJSON := `
-			{
+			sampleJSON := `{
 				"data": [
 					{
 						"type": "test",
@@ -66,8 +63,8 @@ var _ = Describe("JSONAPI Struct tests", func() {
 						}
 					}
 				]
-			}
-`
+			}`
+
 			expectedData := Data{
 				Type:       "test",
 				ID:         "1",
@@ -102,19 +99,18 @@ var _ = Describe("JSONAPI Struct tests", func() {
 		sampleJSON := `
 		{
 			"data": [
-			{
-				"type": "test",
-				"id": "1",
-				"attributes": {"foo": "bar"},
-				"relationships": {
-					"comments": {
-						"data": "foo"
+				{
+					"type": "test",
+					"id": "1",
+					"attributes": {"foo": "bar"},
+					"relationships": {
+						"comments": {
+							"data": "foo"
+						}
 					}
 				}
-			}
 			]
-		}
-		`
+		}`
 
 		target := Document{}
 
@@ -124,25 +120,24 @@ var _ = Describe("JSONAPI Struct tests", func() {
 	})
 
 	It("creates an empty slice for empty to-many relationships and nil for empty toOne", func() {
-		sampleJSON := `
-			{
-				"data": [
-					{
-						"type": "test",
-						"id": "1",
-						"attributes": {"foo": "bar"},
-						"relationships": {
-							"comments": {
-								"data": []
-							},
-							"author": {
-								"data": null
-							}
+		sampleJSON := `{
+			"data": [
+				{
+					"type": "test",
+					"id": "1",
+					"attributes": {"foo": "bar"},
+					"relationships": {
+						"comments": {
+							"data": []
+						},
+						"author": {
+							"data": null
 						}
 					}
-				]
-			}
-`
+				}
+			]
+		}`
+
 		expectedData := Data{
 			Type:       "test",
 			ID:         "1",
