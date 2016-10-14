@@ -106,6 +106,20 @@ var _ = Describe("Unmarshal", func() {
 			Expect(err.Error()).To(Equal("existing structs must implement interface MarshalIdentifier"))
 		})
 
+		It("errors on invalid ID", func() {
+			post := ErrorIDPost{Error: fmt.Errorf("error")}
+			err := Unmarshal([]byte(`{
+				"data": {
+					"type": "errorIDPosts",
+					"attributes": {
+						"title": "test"
+					}
+				}
+			}`), &post)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(Equal("error"))
+		})
+
 		It("errors on invalid param nil", func() {
 			err := Unmarshal(singlePostJSON, nil)
 			Expect(err).Should(HaveOccurred())

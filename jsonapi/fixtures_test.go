@@ -86,6 +86,18 @@ func (s *SimplePost) SetID(ID string) error {
 	return nil
 }
 
+type ErrorIDPost struct {
+	Error error
+}
+
+func (s ErrorIDPost) GetID() string {
+	return ""
+}
+
+func (s *ErrorIDPost) SetID(ID string) error {
+	return s.Error
+}
+
 type Post struct {
 	ID            int           `json:"-"`
 	Title         string        `json:"title"`
