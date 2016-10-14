@@ -1,14 +1,13 @@
 language: go
 
 go:
-  - 1.5
   - 1.6
   - 1.7
   - tip
 
 sudo: false
 
-install: 
+install:
   - go get -t -d -v ./...
   - go get github.com/onsi/ginkgo/ginkgo
   - go get -u github.com/golang/lint/golint
@@ -24,6 +23,6 @@ script:
 
 notifications:
   webhooks:
-    urls: 
+    urls:
       - https://webhooks.gitter.im/e/9caacfa1bede5e900019
     on_success: change
