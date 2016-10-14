@@ -169,7 +169,9 @@ func setDataIntoTarget(data *Data, target interface{}) error {
 		}
 	}
 
-	castedTarget.SetID(data.ID)
+	if err := castedTarget.SetID(data.ID); err != nil {
+		return err
+	}
 
 	return setRelationshipIDs(data.Relationships, castedTarget)
 }
