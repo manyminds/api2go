@@ -519,3 +519,41 @@ func (a Article) GetReferencedIDs() []ReferenceID {
 
 	return referenceIDs
 }
+
+type DeepDedendencies struct {
+	ID            string             `json:"-"`
+	Relationships []DeepDedendencies `json:"-"`
+}
+
+func (d DeepDedendencies) GetID() string {
+	return d.ID
+}
+
+func (DeepDedendencies) GetName() string {
+	return "deep"
+}
+
+func (d DeepDedendencies) GetReferences() []Reference {
+	return []Reference{{Type: "deep", Name: "deps"}}
+}
+
+func (d DeepDedendencies) GetReferencedIDs() []ReferenceID {
+	references := make([]ReferenceID, 0, len(d.Relationships))
+
+	for _, r := range d.Relationships {
+		references = append(references, ReferenceID{ID: r.ID, Type: "deep", Name: "deps"})
+	}
+
+	return references
+}
+
+func (d DeepDedendencies) GetReferencedStructs() []MarshalIdentifier {
+	var structs []MarshalIdentifier
+
+	for _, r := range d.Relationships {
+		structs = append(structs, r)
+		structs = append(structs, r.GetReferencedStructs()...)
+	}
+
+	return structs
+}
