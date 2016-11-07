@@ -318,21 +318,6 @@ func getLinksForServerInformation(relationer MarshalLinkedRelations, name string
 	return links
 }
 
-func getIncludedStructs(included MarshalIncludedRelations, information ServerInformation) ([]Data, error) {
-	includedStructs := included.GetReferencedStructs()
-
-	result := make([]Data, len(includedStructs))
-
-	for i, includedStruct := range includedStructs {
-		err := marshalData(includedStruct, &result[i], information)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return result, nil
-}
-
 func marshalStruct(data MarshalIdentifier, information ServerInformation) (*Document, error) {
 	var contentData Data
 
@@ -349,7 +334,7 @@ func marshalStruct(data MarshalIdentifier, information ServerInformation) (*Docu
 
 	included, ok := data.(MarshalIncludedRelations)
 	if ok {
-		included, err := getIncludedStructs(included, information)
+		included, err := filterDuplicates(included.GetReferencedStructs(), information)
 		if err != nil {
 			return nil, err
 		}

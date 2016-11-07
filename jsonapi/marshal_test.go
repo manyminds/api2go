@@ -624,7 +624,7 @@ var _ = Describe("Marshalling", func() {
 			}`))
 		})
 
-		It("Does not marshall same dependencies multiple times", func() {
+		It("Does not marshall same dependencies multiple times for slice", func() {
 			marshalled, err := Marshal([]Question{question3, question2})
 			Expect(err).To(BeNil())
 			Expect(marshalled).To(MatchJSON(`{
@@ -670,6 +670,87 @@ var _ = Describe("Marshalling", func() {
 						"relationships": {
 							"inspiringQuestion": {
 								"data": null
+							}
+						}
+					}
+				]
+			}`))
+		})
+
+		It("Does not marshall same dependencies multiple times for single struct", func() {
+			sharedDependency := DeepDedendencies{ID: "4"}
+			marshalled, err := Marshal(DeepDedendencies{
+				ID: "1",
+				Relationships: []DeepDedendencies{
+					{
+						ID:            "2",
+						Relationships: []DeepDedendencies{sharedDependency},
+					},
+					{
+						ID:            "3",
+						Relationships: []DeepDedendencies{sharedDependency},
+					},
+				},
+			})
+			Expect(err).To(BeNil())
+			Expect(marshalled).To(MatchJSON(`{
+				"data": {
+						"type": "deep",
+						"id": "1",
+						"attributes": {},
+						"relationships": {
+							"deps": {
+								"data": [
+									{
+										"type": "deep",
+										"id": "2"
+									},
+									{
+										"type": "deep",
+										"id": "3"
+									}
+								]
+							}
+						}
+					},
+				"included": [
+					{
+						"type": "deep",
+						"id": "2",
+						"attributes": {},
+						"relationships": {
+							"deps": {
+								"data": [
+									{
+										"type": "deep",
+										"id": "4"
+									}
+								]
+							}
+						}
+					},
+					{
+						"type": "deep",
+						"id": "4",
+						"attributes": {},
+						"relationships": {
+							"deps": {
+								"data": []
+							}
+						}
+					},
+					{
+						"type": "deep",
+						"id": "3",
+						"attributes": {},
+						"relationships": {
+							"deps": {
+								"data": [
+									{
+										"type": "deep",
+										"id": "4"
+									}
+								]
 							}
 						}
 					}
@@ -819,7 +900,7 @@ var _ = Describe("Marshalling", func() {
 		})
 	})
 
-	Context("test reduceDuplicates", func() {
+	Context("test filterDuplicates", func() {
 		input := []MarshalIdentifier{
 			User{ID: 314, Name: "User314"},
 			Comment{ID: 314},
