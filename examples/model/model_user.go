@@ -41,9 +41,9 @@ func (u User) GetReferences() []jsonapi.Reference {
 // GetReferencedIDs to satisfy the jsonapi.MarshalLinkedRelations interface
 func (u User) GetReferencedIDs() []jsonapi.ReferenceID {
 	result := []jsonapi.ReferenceID{}
-	for _, chocolate := range u.Chocolates {
+	for _, chocolateID := range u.ChocolatesIDs {
 		result = append(result, jsonapi.ReferenceID{
-			ID:   chocolate.ID,
+			ID:   chocolateID,
 			Type: "chocolates",
 			Name: "sweets",
 		})
