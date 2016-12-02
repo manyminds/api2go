@@ -610,7 +610,7 @@ query Paramter and only return comments that belong to it. In this example, retu
 
 ### Using middleware
 We provide a custom `APIContext` with
-a [context](https://godoc.org/golang.org/x/net/context) implementation that you
+a [context](https://godoc.org/context) implementation that you
 can use if you for example need to check if a user is properly authenticated
 before a request reaches the api2go routes.
 

@@ -313,7 +313,7 @@ func (s *fixtureSource) Create(obj interface{}, req Request) (Responder, error) 
 	}
 
 	if p.Title == "" {
-		err := NewHTTPError(errors.New("Bad request."), "Bad Request", http.StatusBadRequest)
+		err := NewHTTPError(errors.New("Bad request"), "Bad Request", http.StatusBadRequest)
 		err.Errors = append(err.Errors, Error{ID: "SomeErrorID", Source: &ErrorSource{Pointer: "Title"}})
 		return &Response{}, err
 	}
