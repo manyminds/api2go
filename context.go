@@ -1,9 +1,8 @@
 package api2go
 
 import (
+	"context"
 	"time"
-
-	"golang.org/x/net/context"
 )
 
 // APIContextAllocatorFunc to allow custom context implementations
