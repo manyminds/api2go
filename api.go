@@ -506,38 +506,67 @@ func (res *resource) handleLinked(c APIContexter, api *API, w http.ResponseWrite
 			request.QueryParams[res.name+"ID"] = []string{id}
 			request.QueryParams[res.name+"Name"] = []string{linked.Name}
 
-			// check for pagination, otherwise normal FindAll
-			pagination := newPaginationQueryParams(r)
-			if pagination.isValid() {
-				source, ok := resource.source.(PaginatedFindAll)
+			if jsonapi.IsToMany(linked.Relationship, linked.Name) {
+				// check for pagination, otherwise normal FindAll
+				pagination := newPaginationQueryParams(r)
+				if pagination.isValid() {
+					source, ok := resource.source.(PaginatedFindAll)
+					if !ok {
+						return NewHTTPError(nil, "Resource does not implement the PaginatedFindAll interface", http.StatusNotFound)
+					}
+
+					var count uint
+					count, response, err := source.PaginatedFindAll(request)
+					if err != nil {
+						return err
+					}
+
+					paginationLinks, err := pagination.getLinks(r, count, info)
+					if err != nil {
+						return err
+					}
+
+					return res.respondWithPagination(response, info, http.StatusOK, paginationLinks, w, r)
+				}
+
+				source, ok := resource.source.(FindAll)
 				if !ok {
-					return NewHTTPError(nil, "Resource does not implement the PaginatedFindAll interface", http.StatusNotFound)
+					return NewHTTPError(nil, "Resource does not implement the FindAll interface", http.StatusNotFound)
 				}
 
-				var count uint
-				count, response, err := source.PaginatedFindAll(request)
+				obj, err := source.FindAll(request)
+				if err != nil {
+					return err
+				}
+				return res.respondWith(obj, info, http.StatusOK, w, r)
+			} else {
+				obj, err := res.source.FindOne(id, request)
 				if err != nil {
 					return err
 				}
 
-				paginationLinks, err := pagination.getLinks(r, count, info)
+				result, ok := obj.Result().(jsonapi.MarshalLinkedRelations)
+				if !ok {
+					return NewHTTPError(nil, "Model does not implement the MarshalLinkedRelations interface", http.StatusNotFound)
+				}
+
+				var id *string
+				for _, ref := range result.GetReferencedIDs() {
+					if ref.Name == linked.Name {
+						id = &ref.ID
+						break
+					}
+				}
+				if id == nil {
+					return NewHTTPError(nil, "Model did not provide an ID for relationship "+linked.Name, http.StatusNotFound)
+				}
+
+				obj, err = resource.source.FindOne(*id, request)
 				if err != nil {
 					return err
 				}
-
-				return res.respondWithPagination(response, info, http.StatusOK, paginationLinks, w, r)
+				return res.respondWith(obj, info, http.StatusOK, w, r)
 			}
-
-			source, ok := resource.source.(FindAll)
-			if !ok {
-				return NewHTTPError(nil, "Resource does not implement the FindAll interface", http.StatusNotFound)
-			}
-
-			obj, err := source.FindAll(request)
-			if err != nil {
-				return err
-			}
-			return res.respondWith(obj, info, http.StatusOK, w, r)
 		}
 	}
 
