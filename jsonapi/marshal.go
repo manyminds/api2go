@@ -211,7 +211,8 @@ func marshalData(element MarshalIdentifier, data *Data, information ServerInform
 	return nil
 }
 
-func isToMany(relationshipType RelationshipType, name string) bool {
+// IsToMany returns true if the relationship is determined to be to-many, rather than to-one.
+func IsToMany(relationshipType RelationshipType, name string) bool {
 	if relationshipType == DefaultRelationship {
 		return Pluralize(name) == name
 	}
@@ -242,7 +243,7 @@ func getStructRelationships(relationer MarshalLinkedRelations, information Serve
 		// if referenceType is plural, we need to use an array for data, otherwise it's just an object
 		container := RelationshipDataContainer{}
 
-		if isToMany(referenceIDs[0].Relationship, referenceIDs[0].Name) {
+		if IsToMany(referenceIDs[0].Relationship, referenceIDs[0].Name) {
 			// multiple elements in links
 			container.DataArray = []RelationshipData{}
 			for _, referenceID := range referenceIDs {
@@ -277,7 +278,7 @@ func getStructRelationships(relationer MarshalLinkedRelations, information Serve
 		container := RelationshipDataContainer{}
 
 		// Plural empty relationships need an empty array and empty to-one need a null in the json
-		if !reference.IsNotLoaded && isToMany(reference.Relationship, reference.Name) {
+		if !reference.IsNotLoaded && IsToMany(reference.Relationship, reference.Name) {
 			container.DataArray = []RelationshipData{}
 		}
 
