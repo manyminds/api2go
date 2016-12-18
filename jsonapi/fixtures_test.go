@@ -440,6 +440,32 @@ func (i PrefixServerInformation) GetPrefix() string {
 	return prefix
 }
 
+type CustomLinksPost struct{}
+
+func (n CustomLinksPost) GetID() string {
+	return "someID"
+}
+
+func (n *CustomLinksPost) SetID(ID string) error {
+	return nil
+}
+
+func (n CustomLinksPost) GetName() string {
+	return "posts"
+}
+
+func (n CustomLinksPost) GetCustomLinks(base string) CustomLinks {
+	return CustomLinks{
+		"someLink": CustomLink{Href: base + `/someLink`},
+		"otherLink": CustomLink{
+			Href: base + `/otherLink`,
+			Meta: map[string]interface{}{
+				"method": "GET",
+			},
+		},
+	}
+}
+
 type NoRelationshipPosts struct{}
 
 func (n NoRelationshipPosts) GetID() string {

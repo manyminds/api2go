@@ -73,6 +73,13 @@ type MarshalIncludedRelations interface {
 	GetReferencedStructs() []MarshalIdentifier
 }
 
+// The MarshalCustomLinks interface can be implemented if the struct should
+// want any custom links.
+type MarshalCustomLinks interface {
+	MarshalIdentifier
+	GetCustomLinks(string) CustomLinks
+}
+
 // A ServerInformation implementor can be passed to MarshalWithURLs to generate
 // the `self` and `related` urls inside `links`.
 type ServerInformation interface {
@@ -204,6 +211,16 @@ func marshalData(element MarshalIdentifier, data *Data, information ServerInform
 	data.ID = element.GetID()
 	data.Type = getStructType(element)
 
+	if information != nil {
+		if customLinks, ok := element.(MarshalCustomLinks); ok {
+			data.Links = make(map[string]interface{})
+			base := getLinkBaseURL(element, information)
+			for k, v := range customLinks.GetCustomLinks(base) {
+				data.Links[k] = v
+			}
+		}
+	}
+
 	if references, ok := element.(MarshalLinkedRelations); ok {
 		data.Relationships = getStructRelationships(references, information)
 	}
@@ -297,23 +314,28 @@ func getStructRelationships(relationer MarshalLinkedRelations, information Serve
 	return relationships
 }
 
+func getLinkBaseURL(element MarshalIdentifier, information ServerInformation) string {
+	prefix := strings.Trim(information.GetBaseURL(), "/")
+	namespace := strings.Trim(information.GetPrefix(), "/")
+	structType := getStructType(element)
+
+	if namespace != "" {
+		prefix += "/" + namespace
+	}
+
+	return fmt.Sprintf("%s/%s/%s", prefix, structType, element.GetID())
+}
+
 func getLinksForServerInformation(relationer MarshalLinkedRelations, name string, information ServerInformation) *Links {
 	if information == nil {
 		return nil
 	}
 
 	links := &Links{}
+	base := getLinkBaseURL(relationer, information)
 
-	prefix := strings.Trim(information.GetBaseURL(), "/")
-	namespace := strings.Trim(information.GetPrefix(), "/")
-	structType := getStructType(relationer)
-
-	if namespace != "" {
-		prefix += "/" + namespace
-	}
-
-	links.Self = fmt.Sprintf("%s/%s/%s/relationships/%s", prefix, structType, relationer.GetID(), name)
-	links.Related = fmt.Sprintf("%s/%s/%s/%s", prefix, structType, relationer.GetID(), name)
+	links.Self = fmt.Sprintf("%s/relationships/%s", base, name)
+	links.Related = fmt.Sprintf("%s/%s", base, name)
 
 	return links
 }

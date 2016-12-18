@@ -48,6 +48,15 @@ func (c *DataContainer) MarshalJSON() ([]byte, error) {
 	return json.Marshal(c.DataObject)
 }
 
+// CustomLink represents a custom link for return in the document.
+type CustomLink struct {
+	Href string                 `json:"href"`
+	Meta map[string]interface{} `json:"meta,omitempty"`
+}
+
+// CustomLinks contains a map of CustomLink objects as given by an element.
+type CustomLinks map[string]CustomLink
+
 // Links is a general struct for document links and relationship links.
 type Links struct {
 	Self     string `json:"self,omitempty"`
@@ -64,7 +73,7 @@ type Data struct {
 	ID            string                  `json:"id"`
 	Attributes    json.RawMessage         `json:"attributes"`
 	Relationships map[string]Relationship `json:"relationships,omitempty"`
-	Links         *Links                  `json:"links,omitempty"`
+	Links         map[string]interface{}  `json:"links,omitempty"`
 }
 
 // Relationship contains reference IDs to the related structs
