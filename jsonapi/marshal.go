@@ -77,7 +77,7 @@ type MarshalIncludedRelations interface {
 // want any custom links.
 type MarshalCustomLinks interface {
 	MarshalIdentifier
-	GetCustomLinks(string) CustomLinks
+	GetCustomLinks(string) Links
 }
 
 // A ServerInformation implementor can be passed to MarshalWithURLs to generate
@@ -214,7 +214,7 @@ func marshalData(element MarshalIdentifier, data *Data, information ServerInform
 	if information != nil {
 		if customLinks, ok := element.(MarshalCustomLinks); ok {
 			if data.Links == nil {
-				data.Links = make(map[string]interface{})
+				data.Links = make(Links)
 			}
 			base := getLinkBaseURL(element, information)
 			for k, v := range customLinks.GetCustomLinks(base) {
@@ -335,13 +335,13 @@ func getLinksForServerInformation(relationer MarshalLinkedRelations, name string
 		return nil
 	}
 
-	links := &Links{}
+	links := make(Links)
 	base := getLinkBaseURL(relationer, information)
 
-	links.Self = fmt.Sprintf("%s/relationships/%s", base, name)
-	links.Related = fmt.Sprintf("%s/%s", base, name)
+	links["self"] = Link{Href: fmt.Sprintf("%s/relationships/%s", base, name)}
+	links["related"] = Link{Href: fmt.Sprintf("%s/%s", base, name)}
 
-	return links
+	return &links
 }
 
 func marshalStruct(data MarshalIdentifier, information ServerInformation) (*Document, error) {

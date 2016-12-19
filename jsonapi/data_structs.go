@@ -49,15 +49,15 @@ func (c *DataContainer) MarshalJSON() ([]byte, error) {
 	return json.Marshal(c.DataObject)
 }
 
-// CustomLink represents a custom link for return in the document.
-type CustomLink struct {
+// Link represents a link for return in the document.
+type Link struct {
 	Href string                 `json:"href"`
 	Meta map[string]interface{} `json:"meta,omitempty"`
 }
 
 // UnmarshalJSON marshals a string value into the Href field or marshals an
 // object value into the whole struct.
-func (l CustomLink) UnmarshalJSON(payload []byte) error {
+func (l Link) UnmarshalJSON(payload []byte) error {
 	if bytes.HasPrefix(payload, stringSuffix) {
 		return json.Unmarshal(payload, &l.Href)
 	}
@@ -71,7 +71,7 @@ func (l CustomLink) UnmarshalJSON(payload []byte) error {
 
 // MarshalJSON returns the JSON encoding of only the Href field if the Meta
 // field is empty, otherwise it marshals the whole struct.
-func (l CustomLink) MarshalJSON() ([]byte, error) {
+func (l Link) MarshalJSON() ([]byte, error) {
 	if len(l.Meta) == 0 {
 		return json.Marshal(l.Href)
 	}
@@ -81,18 +81,8 @@ func (l CustomLink) MarshalJSON() ([]byte, error) {
 	})
 }
 
-// CustomLinks contains a map of CustomLink objects as given by an element.
-type CustomLinks map[string]CustomLink
-
-// Links is a general struct for document links and relationship links.
-type Links struct {
-	Self     string `json:"self,omitempty"`
-	Related  string `json:"related,omitempty"`
-	First    string `json:"first,omitempty"`
-	Previous string `json:"prev,omitempty"`
-	Next     string `json:"next,omitempty"`
-	Last     string `json:"last,omitempty"`
-}
+// Links contains a map of custom Link objects as given by an element.
+type Links map[string]Link
 
 // Data is a general struct for document data and included data.
 type Data struct {
@@ -100,7 +90,7 @@ type Data struct {
 	ID            string                  `json:"id"`
 	Attributes    json.RawMessage         `json:"attributes"`
 	Relationships map[string]Relationship `json:"relationships,omitempty"`
-	Links         map[string]interface{}  `json:"links,omitempty"`
+	Links         Links                   `json:"links,omitempty"`
 }
 
 // Relationship contains reference IDs to the related structs

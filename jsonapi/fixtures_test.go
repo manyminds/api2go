@@ -454,10 +454,10 @@ func (n CustomLinksPost) GetName() string {
 	return "posts"
 }
 
-func (n CustomLinksPost) GetCustomLinks(base string) CustomLinks {
-	return CustomLinks{
-		"someLink": CustomLink{Href: base + `/someLink`},
-		"otherLink": CustomLink{
+func (n CustomLinksPost) GetCustomLinks(base string) Links {
+	return Links{
+		"someLink": Link{Href: base + `/someLink`},
+		"otherLink": Link{
 			Href: base + `/otherLink`,
 			Meta: map[string]interface{}{
 				"method": "GET",

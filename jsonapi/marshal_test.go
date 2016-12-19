@@ -883,8 +883,8 @@ var _ = Describe("Marshalling", func() {
 					},
 				},
 				Links: &Links{
-					Self:    "http://my.domain/v1/posts/1/relationships/author",
-					Related: "http://my.domain/v1/posts/1/author",
+					"self":    Link{Href: "http://my.domain/v1/posts/1/relationships/author"},
+					"related": Link{Href: "http://my.domain/v1/posts/1/author"},
 				},
 			}))
 		})
@@ -899,8 +899,8 @@ var _ = Describe("Marshalling", func() {
 					},
 				},
 				Links: &Links{
-					Self:    "http://my.domain/posts/1/relationships/author",
-					Related: "http://my.domain/posts/1/author",
+					"self":    Link{Href: "http://my.domain/posts/1/relationships/author"},
+					"related": Link{Href: "http://my.domain/posts/1/author"},
 				},
 			}))
 		})
@@ -915,8 +915,8 @@ var _ = Describe("Marshalling", func() {
 					},
 				},
 				Links: &Links{
-					Self:    "/v1/posts/1/relationships/author",
-					Related: "/v1/posts/1/author",
+					"self":    Link{Href: "/v1/posts/1/relationships/author"},
+					"related": Link{Href: "/v1/posts/1/author"},
 				},
 			}))
 		})
