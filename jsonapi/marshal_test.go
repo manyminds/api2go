@@ -11,28 +11,6 @@ import (
 )
 
 var _ = Describe("Marshalling", func() {
-	Context("When marshaling objects with custom links", func() {
-		It("contains the custom links in the marshaled data", func() {
-			post := CustomLinksPost{}
-			i, err := MarshalWithURLs(post, CompleteServerInformation{})
-			Expect(err).To(BeNil())
-			Expect(i).To(MatchJSON(`{
-				"data": {
-					"type": "posts",
-					"id": "someID",
-					"attributes": {},
-					"links": {
-						"someLink": {"href": "http://my.domain/v1/posts/someID/someLink"},
-						"otherLink": {
-							"href": "http://my.domain/v1/posts/someID/otherLink",
-							"meta": {"method": "GET"}
-						}
-					}
-				}
-			}`))
-		})
-	})
-
 	Context("When marshaling simple objects", func() {
 		var (
 			firstPost, secondPost SimplePost
@@ -254,7 +232,7 @@ var _ = Describe("Marshalling", func() {
 					"id": "someID",
 					"attributes": {},
 					"links": {
-						"someLink": {"href": "http://my.domain/v1/posts/someID/someLink"},
+						"someLink": "http://my.domain/v1/posts/someID/someLink",
 						"otherLink": {
 							"href": "http://my.domain/v1/posts/someID/otherLink",
 							"meta": {"method": "GET"}

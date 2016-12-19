@@ -8,6 +8,7 @@ import (
 
 var objectSuffix = []byte("{")
 var arraySuffix = []byte("[")
+var stringSuffix = []byte(`"`)
 
 // A Document represents a JSON API document as specified here: http://jsonapi.org.
 type Document struct {
@@ -52,6 +53,32 @@ func (c *DataContainer) MarshalJSON() ([]byte, error) {
 type CustomLink struct {
 	Href string                 `json:"href"`
 	Meta map[string]interface{} `json:"meta,omitempty"`
+}
+
+// UnmarshalJSON marshals a string value into the Href field or marshals an
+// object value into the whole struct.
+func (l CustomLink) UnmarshalJSON(payload []byte) error {
+	if bytes.HasPrefix(payload, stringSuffix) {
+		return json.Unmarshal(payload, &l.Href)
+	}
+
+	if bytes.HasPrefix(payload, objectSuffix) {
+		return json.Unmarshal(payload, l)
+	}
+
+	return errors.New("expected a JSON encoded string or object")
+}
+
+// MarshalJSON returns the JSON encoding of only the Href field if the Meta
+// field is empty, otherwise it marshals the whole struct.
+func (l CustomLink) MarshalJSON() ([]byte, error) {
+	if len(l.Meta) == 0 {
+		return json.Marshal(l.Href)
+	}
+	return json.Marshal(map[string]interface{}{
+		"href": l.Href,
+		"meta": l.Meta,
+	})
 }
 
 // CustomLinks contains a map of CustomLink objects as given by an element.
