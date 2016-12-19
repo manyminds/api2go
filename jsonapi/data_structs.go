@@ -62,8 +62,8 @@ func (l *Link) UnmarshalJSON(payload []byte) error {
 		return json.Unmarshal(payload, &l.Href)
 	}
 
-	obj := make(map[string]interface{})
 	if bytes.HasPrefix(payload, objectSuffix) {
+		obj := make(map[string]interface{})
 		err := json.Unmarshal(payload, &obj)
 		if err != nil {
 			return err

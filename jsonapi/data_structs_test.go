@@ -215,9 +215,21 @@ var _ = Describe("JSONAPI Struct tests", func() {
 		})
 
 		It("unmarshals with an error for syntax error", func() {
-			err := json.Unmarshal([]byte(`{`), &Link{})
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(Equal("unexpected end of JSON input"))
+			badPayloads := []string{`{`, `"`}
+			for _, payload := range badPayloads {
+				err := json.Unmarshal([]byte(payload), &Link{})
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(Equal("unexpected end of JSON input"))
+			}
+		})
+
+		It("unmarshals with an error for wrong types", func() {
+			badPayloads := []string{`null`, `13`, `[]`}
+			for _, payload := range badPayloads {
+				err := json.Unmarshal([]byte(payload), &Link{})
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(Equal("expected a JSON encoded string or object"))
+			}
 		})
 	})
 })
