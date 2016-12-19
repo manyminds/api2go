@@ -12,7 +12,7 @@ var stringSuffix = []byte(`"`)
 
 // A Document represents a JSON API document as specified here: http://jsonapi.org.
 type Document struct {
-	Links    *Links                 `json:"links,omitempty"`
+	Links    Links                  `json:"links,omitempty"`
 	Data     *DataContainer         `json:"data"`
 	Included []Data                 `json:"included,omitempty"`
 	Meta     map[string]interface{} `json:"meta,omitempty"`
@@ -95,7 +95,7 @@ type Data struct {
 
 // Relationship contains reference IDs to the related structs
 type Relationship struct {
-	Links *Links                     `json:"links,omitempty"`
+	Links Links                      `json:"links,omitempty"`
 	Data  *RelationshipDataContainer `json:"data,omitempty"`
 	Meta  map[string]interface{}     `json:"meta,omitempty"`
 }

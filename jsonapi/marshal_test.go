@@ -882,7 +882,7 @@ var _ = Describe("Marshalling", func() {
 						Type: "users",
 					},
 				},
-				Links: &Links{
+				Links: Links{
 					"self":    Link{Href: "http://my.domain/v1/posts/1/relationships/author"},
 					"related": Link{Href: "http://my.domain/v1/posts/1/author"},
 				},
@@ -898,7 +898,7 @@ var _ = Describe("Marshalling", func() {
 						Type: "users",
 					},
 				},
-				Links: &Links{
+				Links: Links{
 					"self":    Link{Href: "http://my.domain/posts/1/relationships/author"},
 					"related": Link{Href: "http://my.domain/posts/1/author"},
 				},
@@ -914,7 +914,7 @@ var _ = Describe("Marshalling", func() {
 						Type: "users",
 					},
 				},
-				Links: &Links{
+				Links: Links{
 					"self":    Link{Href: "/v1/posts/1/relationships/author"},
 					"related": Link{Href: "/v1/posts/1/author"},
 				},

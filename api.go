@@ -926,7 +926,7 @@ func (res *resource) respondWithPagination(obj Responder, info information, stat
 		return err
 	}
 
-	data.Links = &links
+	data.Links = links
 	meta := obj.Metadata()
 	if len(meta) > 0 {
 		data.Meta = meta

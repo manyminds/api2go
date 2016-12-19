@@ -330,7 +330,7 @@ func getLinkBaseURL(element MarshalIdentifier, information ServerInformation) st
 	return fmt.Sprintf("%s/%s/%s", prefix, structType, element.GetID())
 }
 
-func getLinksForServerInformation(relationer MarshalLinkedRelations, name string, information ServerInformation) *Links {
+func getLinksForServerInformation(relationer MarshalLinkedRelations, name string, information ServerInformation) Links {
 	if information == nil {
 		return nil
 	}
@@ -341,7 +341,7 @@ func getLinksForServerInformation(relationer MarshalLinkedRelations, name string
 	links["self"] = Link{Href: fmt.Sprintf("%s/relationships/%s", base, name)}
 	links["related"] = Link{Href: fmt.Sprintf("%s/%s", base, name)}
 
-	return &links
+	return links
 }
 
 func marshalStruct(data MarshalIdentifier, information ServerInformation) (*Document, error) {
