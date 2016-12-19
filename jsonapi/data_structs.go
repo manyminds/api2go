@@ -57,13 +57,24 @@ type Link struct {
 
 // UnmarshalJSON marshals a string value into the Href field or marshals an
 // object value into the whole struct.
-func (l Link) UnmarshalJSON(payload []byte) error {
+func (l *Link) UnmarshalJSON(payload []byte) error {
 	if bytes.HasPrefix(payload, stringSuffix) {
 		return json.Unmarshal(payload, &l.Href)
 	}
 
+	obj := make(map[string]interface{})
 	if bytes.HasPrefix(payload, objectSuffix) {
-		return json.Unmarshal(payload, l)
+		err := json.Unmarshal(payload, &obj)
+		if err != nil {
+			return err
+		}
+		var ok bool
+		l.Href, ok = obj["href"].(string)
+		if !ok {
+			return errors.New(`link object expects a "href" key`)
+		}
+		l.Meta, _ = obj["meta"].(map[string]interface{})
+		return nil
 	}
 
 	return errors.New("expected a JSON encoded string or object")

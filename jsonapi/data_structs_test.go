@@ -160,4 +160,64 @@ var _ = Describe("JSONAPI Struct tests", func() {
 		Expect(err).ToNot(HaveOccurred())
 		Expect(target.Data.DataArray).To(Equal([]Data{expectedData}))
 	})
+
+	Context("Marshal and Unmarshal link structs", func() {
+		It("marshals to a string with no metadata", func() {
+			link := Link{Href: "test link"}
+			ret, err := json.Marshal(&link)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(ret).To(MatchJSON(`"test link"`))
+		})
+
+		It("marshals to an object with metadata", func() {
+			link := Link{
+				Href: "test link",
+				Meta: map[string]interface{}{
+					"test": "data",
+				},
+			}
+			ret, err := json.Marshal(&link)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(ret).To(MatchJSON(`{
+				"href": "test link",
+				"meta": {"test": "data"}
+			}`))
+		})
+
+		It("unmarshals from a string", func() {
+			expected := Link{Href: "test link"}
+			target := Link{}
+			err := json.Unmarshal([]byte(`"test link"`), &target)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(target).To(Equal(expected))
+		})
+
+		It("unmarshals from an object", func() {
+			expected := Link{
+				Href: "test link",
+				Meta: map[string]interface{}{
+					"test": "data",
+				},
+			}
+			target := Link{}
+			err := json.Unmarshal([]byte(`{
+				"href": "test link",
+				"meta": {"test": "data"}
+			}`), &target)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(target).To(Equal(expected))
+		})
+
+		It("unmarshals with an error when href is missing", func() {
+			err := json.Unmarshal([]byte(`{}`), &Link{})
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(Equal(`link object expects a "href" key`))
+		})
+
+		It("unmarshals with an error for syntax error", func() {
+			err := json.Unmarshal([]byte(`{`), &Link{})
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(Equal("unexpected end of JSON input"))
+		})
+	})
 })
