@@ -213,10 +213,14 @@ func marshalData(element MarshalIdentifier, data *Data, information ServerInform
 
 	if information != nil {
 		if customLinks, ok := element.(MarshalCustomLinks); ok {
-			data.Links = make(map[string]interface{})
+			if data.Links == nil {
+				data.Links = make(map[string]interface{})
+			}
 			base := getLinkBaseURL(element, information)
 			for k, v := range customLinks.GetCustomLinks(base) {
-				data.Links[k] = v
+				if _, ok := data.Links[k]; !ok {
+					data.Links[k] = v
+				}
 			}
 		}
 	}
