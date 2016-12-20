@@ -70,7 +70,7 @@ func (p paginationQueryParams) isValid() bool {
 }
 
 func (p paginationQueryParams) getLinks(r *http.Request, count uint, info information) (result jsonapi.Links, err error) {
-	result = jsonapi.Links{}
+	result = make(jsonapi.Links)
 
 	params := r.URL.Query()
 	prefix := ""
@@ -91,11 +91,11 @@ func (p paginationQueryParams) getLinks(r *http.Request, count uint, info inform
 		if p.number != "1" {
 			params.Set("page[number]", "1")
 			query, _ := url.QueryUnescape(params.Encode())
-			result.First = fmt.Sprintf("%s?%s", requestURL, query)
+			result["first"] = jsonapi.Link{Href: fmt.Sprintf("%s?%s", requestURL, query)}
 
 			params.Set("page[number]", strconv.FormatUint(number-1, 10))
 			query, _ = url.QueryUnescape(params.Encode())
-			result.Previous = fmt.Sprintf("%s?%s", requestURL, query)
+			result["prev"] = jsonapi.Link{Href: fmt.Sprintf("%s?%s", requestURL, query)}
 		}
 
 		// calculate last page number
@@ -113,11 +113,11 @@ func (p paginationQueryParams) getLinks(r *http.Request, count uint, info inform
 		if number != totalPages {
 			params.Set("page[number]", strconv.FormatUint(number+1, 10))
 			query, _ := url.QueryUnescape(params.Encode())
-			result.Next = fmt.Sprintf("%s?%s", requestURL, query)
+			result["next"] = jsonapi.Link{Href: fmt.Sprintf("%s?%s", requestURL, query)}
 
 			params.Set("page[number]", strconv.FormatUint(totalPages, 10))
 			query, _ = url.QueryUnescape(params.Encode())
-			result.Last = fmt.Sprintf("%s?%s", requestURL, query)
+			result["last"] = jsonapi.Link{Href: fmt.Sprintf("%s?%s", requestURL, query)}
 		}
 	} else {
 		// we have offset & limit params
@@ -134,7 +134,7 @@ func (p paginationQueryParams) getLinks(r *http.Request, count uint, info inform
 		if p.offset != "0" {
 			params.Set("page[offset]", "0")
 			query, _ := url.QueryUnescape(params.Encode())
-			result.First = fmt.Sprintf("%s?%s", requestURL, query)
+			result["first"] = jsonapi.Link{Href: fmt.Sprintf("%s?%s", requestURL, query)}
 
 			var prevOffset uint64
 			if limit > offset {
@@ -144,18 +144,18 @@ func (p paginationQueryParams) getLinks(r *http.Request, count uint, info inform
 			}
 			params.Set("page[offset]", strconv.FormatUint(prevOffset, 10))
 			query, _ = url.QueryUnescape(params.Encode())
-			result.Previous = fmt.Sprintf("%s?%s", requestURL, query)
+			result["prev"] = jsonapi.Link{Href: fmt.Sprintf("%s?%s", requestURL, query)}
 		}
 
 		// check if there are more entries to be loaded
 		if (offset + limit) < uint64(count) {
 			params.Set("page[offset]", strconv.FormatUint(offset+limit, 10))
 			query, _ := url.QueryUnescape(params.Encode())
-			result.Next = fmt.Sprintf("%s?%s", requestURL, query)
+			result["next"] = jsonapi.Link{Href: fmt.Sprintf("%s?%s", requestURL, query)}
 
 			params.Set("page[offset]", strconv.FormatUint(uint64(count)-limit, 10))
 			query, _ = url.QueryUnescape(params.Encode())
-			result.Last = fmt.Sprintf("%s?%s", requestURL, query)
+			result["last"] = jsonapi.Link{Href: fmt.Sprintf("%s?%s", requestURL, query)}
 		}
 	}
 
@@ -926,7 +926,7 @@ func (res *resource) respondWithPagination(obj Responder, info information, stat
 		return err
 	}
 
-	data.Links = &links
+	data.Links = links
 	meta := obj.Metadata()
 	if len(meta) > 0 {
 		data.Meta = meta

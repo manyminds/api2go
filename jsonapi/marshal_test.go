@@ -221,6 +221,28 @@ var _ = Describe("Marshalling", func() {
 		})
 	})
 
+	Context("When marshaling objects with custom links", func() {
+		It("contains the custom links in the marshaled data", func() {
+			post := CustomLinksPost{}
+			i, err := MarshalWithURLs(post, CompleteServerInformation{})
+			Expect(err).To(BeNil())
+			Expect(i).To(MatchJSON(`{
+				"data": {
+					"type": "posts",
+					"id": "someID",
+					"attributes": {},
+					"links": {
+						"someLink": "http://my.domain/v1/posts/someID/someLink",
+						"otherLink": {
+							"href": "http://my.domain/v1/posts/someID/otherLink",
+							"meta": {"method": "GET"}
+						}
+					}
+				}
+			}`))
+		})
+	})
+
 	Context("When marshaling compound objects", func() {
 		It("marshals nested objects", func() {
 			comment1 := Comment{ID: 1, Text: "First!"}
@@ -860,9 +882,9 @@ var _ = Describe("Marshalling", func() {
 						Type: "users",
 					},
 				},
-				Links: &Links{
-					Self:    "http://my.domain/v1/posts/1/relationships/author",
-					Related: "http://my.domain/v1/posts/1/author",
+				Links: Links{
+					"self":    Link{Href: "http://my.domain/v1/posts/1/relationships/author"},
+					"related": Link{Href: "http://my.domain/v1/posts/1/author"},
 				},
 			}))
 		})
@@ -876,9 +898,9 @@ var _ = Describe("Marshalling", func() {
 						Type: "users",
 					},
 				},
-				Links: &Links{
-					Self:    "http://my.domain/posts/1/relationships/author",
-					Related: "http://my.domain/posts/1/author",
+				Links: Links{
+					"self":    Link{Href: "http://my.domain/posts/1/relationships/author"},
+					"related": Link{Href: "http://my.domain/posts/1/author"},
 				},
 			}))
 		})
@@ -892,9 +914,9 @@ var _ = Describe("Marshalling", func() {
 						Type: "users",
 					},
 				},
-				Links: &Links{
-					Self:    "/v1/posts/1/relationships/author",
-					Related: "/v1/posts/1/author",
+				Links: Links{
+					"self":    Link{Href: "/v1/posts/1/relationships/author"},
+					"related": Link{Href: "/v1/posts/1/author"},
 				},
 			}))
 		})
