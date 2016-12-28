@@ -427,25 +427,24 @@ func (res *resource) marshalResponse(resp interface{}, w http.ResponseWriter, st
 }
 
 func (res *resource) handleIndex(c APIContexter, w http.ResponseWriter, r *http.Request, info information) error {
-	pagination := newPaginationQueryParams(r)
-	if pagination.isValid() {
-		source, ok := res.source.(PaginatedFindAll)
-		if !ok {
-			return NewHTTPError(nil, "Resource does not implement the PaginatedFindAll interface", http.StatusNotFound)
-		}
+	if source, ok := res.source.(PaginatedFindAll); ok {
+		pagination := newPaginationQueryParams(r)
 
-		count, response, err := source.PaginatedFindAll(buildRequest(c, r))
-		if err != nil {
-			return err
-		}
+		if pagination.isValid() {
+			count, response, err := source.PaginatedFindAll(buildRequest(c, r))
+			if err != nil {
+				return err
+			}
 
-		paginationLinks, err := pagination.getLinks(r, count, info)
-		if err != nil {
-			return err
-		}
+			paginationLinks, err := pagination.getLinks(r, count, info)
+			if err != nil {
+				return err
+			}
 
-		return res.respondWithPagination(response, info, http.StatusOK, paginationLinks, w, r)
+			return res.respondWithPagination(response, info, http.StatusOK, paginationLinks, w, r)
+		}
 	}
+
 	source, ok := res.source.(FindAll)
 	if !ok {
 		return NewHTTPError(nil, "Resource does not implement the FindAll interface", http.StatusNotFound)
