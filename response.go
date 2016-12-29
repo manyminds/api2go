@@ -40,12 +40,11 @@ func buildLink(base string, r *http.Request, pagination map[string]string) jsona
 		qk := fmt.Sprintf("page[%s]", k)
 		params.Set(qk, v)
 	}
-	if len(params) > 0 {
-		query, _ := url.QueryUnescape(params.Encode())
-		return jsonapi.Link{Href: fmt.Sprintf("%s?%s", base, query)}
-	} else {
+	if len(params) == 0 {
 		return jsonapi.Link{Href: base}
 	}
+	query, _ := url.QueryUnescape(params.Encode())
+	return jsonapi.Link{Href: fmt.Sprintf("%s?%s", base, query)}
 }
 
 // Links returns a jsonapi.Links object to include in the top-level response
