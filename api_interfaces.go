@@ -1,6 +1,10 @@
 package api2go
 
-import "net/http"
+import (
+	"net/http"
+
+	"github.com/manyminds/api2go/jsonapi"
+)
 
 // The CRUD interface MUST be implemented in order to use the api2go api.
 // Use Responder for success status codes and content/meta data. In case of an error,
@@ -31,6 +35,14 @@ type CRUD interface {
 	// - 202 Accepted: Processing is delayed, return nothing
 	// - 204 No Content: Update was successful, no fields were changed by the server, return nothing
 	Update(obj interface{}, req Request) (Responder, error)
+}
+
+// Pagination represents information needed to return pagination links
+type Pagination struct {
+	Next  map[string]string
+	Prev  map[string]string
+	First map[string]string
+	Last  map[string]string
 }
 
 // The PaginatedFindAll interface can be optionally implemented to fetch a subset of all records.
@@ -87,4 +99,11 @@ type Responder interface {
 	Metadata() map[string]interface{}
 	Result() interface{}
 	StatusCode() int
+}
+
+// The LinksResponder interface may be used when the response object is able to return
+// a set of links for the top-level response object.
+type LinksResponder interface {
+	Responder
+	Links(*http.Request, string) jsonapi.Links
 }

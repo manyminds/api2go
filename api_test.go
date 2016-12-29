@@ -219,6 +219,17 @@ type fixtureSource struct {
 func (s *fixtureSource) FindAll(req Request) (Responder, error) {
 	var err error
 
+	if _, ok := req.Pagination["custom"]; ok {
+		return &Response{
+			Res: []*Post{},
+			Pagination: Pagination{
+				Next:  map[string]string{"type": "next"},
+				Prev:  map[string]string{"type": "prev"},
+				First: map[string]string{},
+			},
+		}, nil
+	}
+
 	if limit, ok := req.QueryParams["limit"]; ok {
 		if l, err := strconv.ParseInt(limit[0], 10, 64); err == nil {
 			if s.pointers {
@@ -1174,6 +1185,18 @@ var _ = Describe("RestHandler", func() {
 			api2goReq := buildRequest(c, req)
 			Expect(api2goReq.QueryParams).To(Equal(map[string][]string{"sort": {"title", "date"}}))
 		})
+
+		It("Extracts pagination parameters correctly", func() {
+			req, err := http.NewRequest("GET", "/v0/posts?page[volume]=one&page[size]=10", nil)
+			Expect(err).To(BeNil())
+			c := &APIContext{}
+
+			api2goReq := buildRequest(c, req)
+			Expect(api2goReq.Pagination).To(Equal(map[string]string{
+				"volume": "one",
+				"size":   "10",
+			}))
+		})
 	})
 
 	Context("When using pagination", func() {
@@ -1231,6 +1254,17 @@ var _ = Describe("RestHandler", func() {
 
 			return result
 		}
+
+		Context("custom pagination", func() {
+			It("returns the correct links", func() {
+				links := doRequest("/v1/posts?page[custom]=test")
+				Expect(links).To(Equal(map[string]string{
+					"next":  "/v1/posts?page[custom]=test&page[type]=next",
+					"prev":  "/v1/posts?page[custom]=test&page[type]=prev",
+					"first": "/v1/posts?page[custom]=test",
+				}))
+			})
+		})
 
 		Context("number & size links", func() {
 			It("No prev and first on first page, size = 1", func() {
