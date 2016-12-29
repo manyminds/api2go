@@ -22,7 +22,10 @@ const (
 	defaultContentTypHeader = "application/vnd.api+json"
 )
 
-var queryFieldsRegex = regexp.MustCompile(`^fields\[(\w+)\]$`)
+var (
+	queryPageRegex   = regexp.MustCompile(`^page\[(\w+)\]$`)
+	queryFieldsRegex = regexp.MustCompile(`^fields\[(\w+)\]$`)
+)
 
 type information struct {
 	prefix   string
@@ -404,9 +407,15 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD) *r
 func buildRequest(c APIContexter, r *http.Request) Request {
 	req := Request{PlainRequest: r}
 	params := make(map[string][]string)
+	pagination := make(map[string]string)
 	for key, values := range r.URL.Query() {
 		params[key] = strings.Split(values[0], ",")
+		pageMatches := queryPageRegex.FindStringSubmatch(key)
+		if len(pageMatches) > 1 {
+			pagination[pageMatches[1]] = values[0]
+		}
 	}
+	req.Pagination = pagination
 	req.QueryParams = params
 	req.Header = r.Header
 	req.Context = c
@@ -505,26 +514,23 @@ func (res *resource) handleLinked(c APIContexter, api *API, w http.ResponseWrite
 			request.QueryParams[res.name+"ID"] = []string{id}
 			request.QueryParams[res.name+"Name"] = []string{linked.Name}
 
-			// check for pagination, otherwise normal FindAll
-			pagination := newPaginationQueryParams(r)
-			if pagination.isValid() {
-				source, ok := resource.source.(PaginatedFindAll)
-				if !ok {
-					return NewHTTPError(nil, "Resource does not implement the PaginatedFindAll interface", http.StatusNotFound)
-				}
+			if source, ok := resource.source.(PaginatedFindAll); ok {
+				// check for pagination, otherwise normal FindAll
+				pagination := newPaginationQueryParams(r)
+				if pagination.isValid() {
+					var count uint
+					count, response, err := source.PaginatedFindAll(request)
+					if err != nil {
+						return err
+					}
 
-				var count uint
-				count, response, err := source.PaginatedFindAll(request)
-				if err != nil {
-					return err
-				}
+					paginationLinks, err := pagination.getLinks(r, count, info)
+					if err != nil {
+						return err
+					}
 
-				paginationLinks, err := pagination.getLinks(r, count, info)
-				if err != nil {
-					return err
+					return res.respondWithPagination(response, info, http.StatusOK, paginationLinks, w, r)
 				}
-
-				return res.respondWithPagination(response, info, http.StatusOK, paginationLinks, w, r)
 			}
 
 			source, ok := resource.source.(FindAll)
@@ -914,6 +920,15 @@ func (res *resource) respondWith(obj Responder, info information, status int, w 
 	meta := obj.Metadata()
 	if len(meta) > 0 {
 		data.Meta = meta
+	}
+
+	if objWithLinks, ok := obj.(LinksResponder); ok {
+		baseURL := strings.Trim(info.GetBaseURL(), "/")
+		requestURL := fmt.Sprintf("%s%s", baseURL, r.URL.Path)
+		links := objWithLinks.Links(r, requestURL)
+		if len(links) > 0 {
+			data.Links = links
+		}
 	}
 
 	return res.marshalResponse(data, w, status, r)
