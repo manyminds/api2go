@@ -495,9 +495,9 @@ func (n CustomMetaPost) GetReferencedIDs() []ReferenceID {
 }
 
 func (n CustomMetaPost) GetCustomMeta(linkURL string) Metas {
-	meta := map[string]map[string]interface{} {
-		"author": map[string]interface{} {
-			"someMetaKey": "someMetaValue",
+	meta := map[string]map[string]interface{}{
+		"author": {
+			"someMetaKey":      "someMetaValue",
 			"someOtherMetaKey": "someOtherMetaValue",
 		},
 	}

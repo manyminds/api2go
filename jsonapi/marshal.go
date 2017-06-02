@@ -311,7 +311,7 @@ func getStructRelationships(relationer MarshalLinkedRelations, information Serve
 		relationship := Relationship{
 			Data:  &container,
 			Links: links,
-			Meta: meta,
+			Meta:  meta,
 		}
 
 		relationships[name] = relationship
@@ -339,7 +339,7 @@ func getStructRelationships(relationer MarshalLinkedRelations, information Serve
 
 		relationship := Relationship{
 			Links: links,
-			Meta: meta,
+			Meta:  meta,
 		}
 
 		// skip relationship data completely if IsNotLoaded is set
