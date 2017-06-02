@@ -466,6 +466,44 @@ func (n CustomLinksPost) GetCustomLinks(base string) Links {
 	}
 }
 
+type CustomMetaPost struct{}
+
+func (n CustomMetaPost) GetID() string {
+	return "someID"
+}
+
+func (n *CustomMetaPost) SetID(ID string) error {
+	return nil
+}
+
+func (n CustomMetaPost) GetName() string {
+	return "posts"
+}
+
+func (n CustomMetaPost) GetReferences() []Reference {
+	return []Reference{
+		{
+			Type:        "users",
+			Name:        "author",
+			IsNotLoaded: true,
+		},
+	}
+}
+
+func (n CustomMetaPost) GetReferencedIDs() []ReferenceID {
+	return nil
+}
+
+func (n CustomMetaPost) GetCustomMeta(linkURL string) Metas {
+	meta := map[string]map[string]interface{} {
+		"author": map[string]interface{} {
+			"someMetaKey": "someMetaValue",
+			"someOtherMetaKey": "someOtherMetaValue",
+		},
+	}
+	return meta
+}
+
 type NoRelationshipPosts struct{}
 
 func (n NoRelationshipPosts) GetID() string {
