@@ -819,7 +819,12 @@ var _ = Describe("RestHandler", func() {
 			api.Handler().ServeHTTP(rec, req)
 			Expect(err).To(BeNil())
 			Expect(rec.Code).To(Equal(http.StatusNoContent))
-			Expect(rec.Header().Get("Allow")).To(Equal("GET,POST,PATCH,OPTIONS"))
+			Expect(strings.Split(rec.Header().Get("Allow"), ",")).To(Equal([]string{
+				"OPTIONS",
+				"GET",
+				"PATCH",
+				"POST",
+			}))
 		})
 
 		It("OPTIONS on element route", func() {
@@ -827,7 +832,12 @@ var _ = Describe("RestHandler", func() {
 			api.Handler().ServeHTTP(rec, req)
 			Expect(err).To(BeNil())
 			Expect(rec.Code).To(Equal(http.StatusNoContent))
-			Expect(rec.Header().Get("Allow")).To(Equal("GET,PATCH,DELETE,OPTIONS"))
+			Expect(strings.Split(rec.Header().Get("Allow"), ",")).To(Equal([]string{
+				"OPTIONS",
+				"GET",
+				"PATCH",
+				"DELETE",
+			}))
 		})
 
 		It("DELETEs", func() {
