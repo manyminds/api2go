@@ -248,7 +248,7 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source interfac
 		c := api.contextPool.Get().(APIContexter)
 		c.Reset()
 		api.middlewareChain(c, w, r)
-		w.Header().Set("Allow", "GET,POST,PATCH,OPTIONS")
+		w.Header().Set("Allow", strings.Join(getAllowedMethods(source, true), ","))
 		w.WriteHeader(http.StatusNoContent)
 		api.contextPool.Put(c)
 	})
@@ -271,7 +271,7 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source interfac
 			c := api.contextPool.Get().(APIContexter)
 			c.Reset()
 			api.middlewareChain(c, w, r)
-			w.Header().Set("Allow", "GET,PATCH,DELETE,OPTIONS")
+			w.Header().Set("Allow", strings.Join(getAllowedMethods(source, false), ","))
 			w.WriteHeader(http.StatusNoContent)
 			api.contextPool.Put(c)
 		})
@@ -410,6 +410,29 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source interfac
 	api.resources = append(api.resources, res)
 
 	return &res
+}
+
+func getAllowedMethods(source interface{}, collection bool) []string {
+
+	result := []string{http.MethodOptions}
+
+	if _, ok := source.(ResourceGetter); ok {
+		result = append(result, http.MethodGet)
+	}
+
+	if _, ok := source.(ResourceUpdater); ok {
+		result = append(result, http.MethodPatch)
+	}
+
+	if _, ok := source.(ResourceDeleter); ok && !collection {
+		result = append(result, http.MethodDelete)
+	}
+
+	if _, ok := source.(ResourceCreator); ok && collection {
+		result = append(result, http.MethodPost)
+	}
+
+	return result
 }
 
 func buildRequest(c APIContexter, r *http.Request) Request {
