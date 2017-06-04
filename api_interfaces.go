@@ -6,15 +6,15 @@ import (
 	"github.com/manyminds/api2go/jsonapi"
 )
 
-// The CRUDFindOne interface MUST be implemented in order to generate the single GET route and related
-type CRUDFindOne interface {
+// The ResourceGetter interface MUST be implemented in order to generate the single GET route and related
+type ResourceGetter interface {
 	// FindOne returns an object by its ID
 	// Possible Responder success status code 200
 	FindOne(ID string, req Request) (Responder, error)
 }
 
-// The CRUDCreate interface MUST be implemented in order to generate the POST route
-type CRUDCreate interface {
+// The ResourceCreator interface MUST be implemented in order to generate the POST route
+type ResourceCreator interface {
 	// Create a new object. Newly created object/struct must be in Responder.
 	// Possible Responder status codes are:
 	// - 201 Created: Resource was created and needs to be returned
@@ -24,8 +24,8 @@ type CRUDCreate interface {
 	Create(obj interface{}, req Request) (Responder, error)
 }
 
-// The CRUDDelete interface MUST be implemented in order to generate the DELETE route
-type CRUDDelete interface {
+// The ResourceDeleter interface MUST be implemented in order to generate the DELETE route
+type ResourceDeleter interface {
 	// Delete an object
 	// Possible Responder status codes are:
 	// - 200 OK: Deletion was a success, returns meta information, currently not implemented! Do not use this
@@ -34,10 +34,10 @@ type CRUDDelete interface {
 	Delete(id string, req Request) (Responder, error)
 }
 
-// The CRUDUpdate interface MUST be implemented in order to generate the PATCH/PUT routes
-type CRUDUpdate interface {
-	// CRUDFindOne must be implemented along with CRUDUpdate so that api2go can retrieve the single resource before update
-	CRUDFindOne
+// The ResourceUpdater interface MUST be implemented in order to generate the PATCH/PUT routes
+type ResourceUpdater interface {
+	// ResourceGetter must be implemented along with ResourceUpdater so that api2go can retrieve the single resource before update
+	ResourceGetter
 	// Update an object
 	// Possible Responder status codes are:
 	// - 200 OK: Update successful, however some field(s) were changed, returns updates source

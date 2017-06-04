@@ -266,7 +266,7 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source interfac
 		}
 	})
 
-	if _, ok := source.(CRUDFindOne); ok {
+	if _, ok := source.(ResourceGetter); ok {
 		api.router.Handle("OPTIONS", baseURL+"/:id", func(w http.ResponseWriter, r *http.Request, _ map[string]string) {
 			c := api.contextPool.Get().(APIContexter)
 			c.Reset()
@@ -366,7 +366,7 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source interfac
 		}
 	}
 
-	if _, ok := source.(CRUDCreate); ok {
+	if _, ok := source.(ResourceCreator); ok {
 		api.router.Handle("POST", baseURL, func(w http.ResponseWriter, r *http.Request, params map[string]string) {
 			info := requestInfo(r, api)
 			c := api.contextPool.Get().(APIContexter)
@@ -380,7 +380,7 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source interfac
 		})
 	}
 
-	if _, ok := source.(CRUDDelete); ok {
+	if _, ok := source.(ResourceDeleter); ok {
 		api.router.Handle("DELETE", baseURL+"/:id", func(w http.ResponseWriter, r *http.Request, params map[string]string) {
 			c := api.contextPool.Get().(APIContexter)
 			c.Reset()
@@ -393,7 +393,7 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source interfac
 		})
 	}
 
-	if _, ok := source.(CRUDUpdate); ok {
+	if _, ok := source.(ResourceUpdater); ok {
 		api.router.Handle("PATCH", baseURL+"/:id", func(w http.ResponseWriter, r *http.Request, params map[string]string) {
 			info := requestInfo(r, api)
 			c := api.contextPool.Get().(APIContexter)
@@ -476,10 +476,10 @@ func (res *resource) handleIndex(c APIContexter, w http.ResponseWriter, r *http.
 }
 
 func (res *resource) handleRead(c APIContexter, w http.ResponseWriter, r *http.Request, params map[string]string, info information) error {
-	source, ok := res.source.(CRUDFindOne)
+	source, ok := res.source.(ResourceGetter)
 
 	if !ok {
-		return fmt.Errorf("Resource %s does not implement the CRUDFindOne interface", res.name)
+		return fmt.Errorf("Resource %s does not implement the ResourceGetter interface", res.name)
 	}
 
 	id := params["id"]
@@ -494,10 +494,10 @@ func (res *resource) handleRead(c APIContexter, w http.ResponseWriter, r *http.R
 }
 
 func (res *resource) handleReadRelation(c APIContexter, w http.ResponseWriter, r *http.Request, params map[string]string, info information, relation jsonapi.Reference) error {
-	source, ok := res.source.(CRUDFindOne)
+	source, ok := res.source.(ResourceGetter)
 
 	if !ok {
-		return fmt.Errorf("Resource %s does not implement the CRUDFindOne interface", res.name)
+		return fmt.Errorf("Resource %s does not implement the ResourceGetter interface", res.name)
 	}
 
 	id := params["id"]
@@ -575,10 +575,10 @@ func (res *resource) handleLinked(c APIContexter, api *API, w http.ResponseWrite
 
 func (res *resource) handleCreate(c APIContexter, w http.ResponseWriter, r *http.Request, prefix string, info information) error {
 
-	source, ok := res.source.(CRUDCreate)
+	source, ok := res.source.(ResourceCreator)
 
 	if !ok {
-		return fmt.Errorf("Resource %s does not implement the CRUDCreate interface", res.name)
+		return fmt.Errorf("Resource %s does not implement the ResourceCreator interface", res.name)
 	}
 
 	ctx, err := unmarshalRequest(r)
@@ -645,10 +645,10 @@ func (res *resource) handleCreate(c APIContexter, w http.ResponseWriter, r *http
 }
 
 func (res *resource) handleUpdate(c APIContexter, w http.ResponseWriter, r *http.Request, params map[string]string, info information) error {
-	source, ok := res.source.(CRUDUpdate)
+	source, ok := res.source.(ResourceUpdater)
 
 	if !ok {
-		return fmt.Errorf("Resource %s does not implement the CRUDUpdate interface", res.name)
+		return fmt.Errorf("Resource %s does not implement the ResourceUpdater interface", res.name)
 	}
 
 	id := params["id"]
@@ -711,10 +711,10 @@ func (res *resource) handleUpdate(c APIContexter, w http.ResponseWriter, r *http
 }
 
 func (res *resource) handleReplaceRelation(c APIContexter, w http.ResponseWriter, r *http.Request, params map[string]string, relation jsonapi.Reference) error {
-	source, ok := res.source.(CRUDUpdate)
+	source, ok := res.source.(ResourceUpdater)
 
 	if !ok {
-		return fmt.Errorf("Resource %s does not implement the CRUDUpdate interface", res.name)
+		return fmt.Errorf("Resource %s does not implement the ResourceUpdater interface", res.name)
 	}
 
 	var (
@@ -767,10 +767,10 @@ func (res *resource) handleReplaceRelation(c APIContexter, w http.ResponseWriter
 }
 
 func (res *resource) handleAddToManyRelation(c APIContexter, w http.ResponseWriter, r *http.Request, params map[string]string, relation jsonapi.Reference) error {
-	source, ok := res.source.(CRUDUpdate)
+	source, ok := res.source.(ResourceUpdater)
 
 	if !ok {
-		return fmt.Errorf("Resource %s does not implement the CRUDUpdate interface", res.name)
+		return fmt.Errorf("Resource %s does not implement the ResourceUpdater interface", res.name)
 	}
 
 	var (
@@ -845,10 +845,10 @@ func (res *resource) handleAddToManyRelation(c APIContexter, w http.ResponseWrit
 }
 
 func (res *resource) handleDeleteToManyRelation(c APIContexter, w http.ResponseWriter, r *http.Request, params map[string]string, relation jsonapi.Reference) error {
-	source, ok := res.source.(CRUDUpdate)
+	source, ok := res.source.(ResourceUpdater)
 
 	if !ok {
-		return fmt.Errorf("Resource %s does not implement the CRUDUpdate interface", res.name)
+		return fmt.Errorf("Resource %s does not implement the ResourceUpdater interface", res.name)
 	}
 
 	var (
@@ -932,10 +932,10 @@ func getPointerToStruct(oldObj interface{}) interface{} {
 }
 
 func (res *resource) handleDelete(c APIContexter, w http.ResponseWriter, r *http.Request, params map[string]string) error {
-	source, ok := res.source.(CRUDDelete)
+	source, ok := res.source.(ResourceDeleter)
 
 	if !ok {
-		return fmt.Errorf("Resource %s does not implement the CRUDDelete interface", res.name)
+		return fmt.Errorf("Resource %s does not implement the ResourceDeleter interface", res.name)
 	}
 
 	id := params["id"]
