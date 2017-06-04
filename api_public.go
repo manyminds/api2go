@@ -42,7 +42,7 @@ func (api *API) SetContextAllocator(allocator APIContextAllocatorFunc) {
 // At least the CRUD interface must be implemented, all the other interfaces are optional.
 // `resource` should be either an empty struct instance such as `Post{}` or a pointer to
 // a struct such as `&Post{}`. The same type will be used for constructing new elements.
-func (api *API) AddResource(prototype jsonapi.MarshalIdentifier, source CRUD) {
+func (api *API) AddResource(prototype jsonapi.MarshalIdentifier, source interface{}) {
 	api.addResource(prototype, source)
 }
 

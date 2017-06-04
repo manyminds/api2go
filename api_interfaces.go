@@ -6,14 +6,13 @@ import (
 	"github.com/manyminds/api2go/jsonapi"
 )
 
-// The CRUD interface MUST be implemented in order to use the api2go api.
-// Use Responder for success status codes and content/meta data. In case of an error,
-// use the error return value preferrably with an instance of our HTTPError struct.
-type CRUD interface {
+type CRUDFindOne interface {
 	// FindOne returns an object by its ID
 	// Possible Responder success status code 200
 	FindOne(ID string, req Request) (Responder, error)
+}
 
+type CRUDCreate interface {
 	// Create a new object. Newly created object/struct must be in Responder.
 	// Possible Responder status codes are:
 	// - 201 Created: Resource was created and needs to be returned
@@ -21,14 +20,20 @@ type CRUD interface {
 	// - 204 No Content: Resource created with a client generated ID, and no fields were modified by
 	//   the server
 	Create(obj interface{}, req Request) (Responder, error)
+}
 
+type CRUDDelete interface {
 	// Delete an object
 	// Possible Responder status codes are:
 	// - 200 OK: Deletion was a success, returns meta information, currently not implemented! Do not use this
 	// - 202 Accepted: Processing is delayed, return nothing
 	// - 204 No Content: Deletion was successful, return nothing
 	Delete(id string, req Request) (Responder, error)
+}
 
+type CRUDUpdate interface {
+	// CRUDFindOne must be implemented along with CRUDUpdate so that api2go can retrieve the single resource before update
+	CRUDFindOne
 	// Update an object
 	// Possible Responder status codes are:
 	// - 200 OK: Update successful, however some field(s) were changed, returns updates source
