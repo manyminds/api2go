@@ -6,12 +6,14 @@ import (
 	"github.com/manyminds/api2go/jsonapi"
 )
 
+// The CRUDFindOne interface MUST be implemented in order to generate the single GET route and related
 type CRUDFindOne interface {
 	// FindOne returns an object by its ID
 	// Possible Responder success status code 200
 	FindOne(ID string, req Request) (Responder, error)
 }
 
+// The CRUDCreate interface MUST be implemented in order to generate the POST route
 type CRUDCreate interface {
 	// Create a new object. Newly created object/struct must be in Responder.
 	// Possible Responder status codes are:
@@ -22,6 +24,7 @@ type CRUDCreate interface {
 	Create(obj interface{}, req Request) (Responder, error)
 }
 
+// The CRUDDelete interface MUST be implemented in order to generate the DELETE route
 type CRUDDelete interface {
 	// Delete an object
 	// Possible Responder status codes are:
@@ -31,6 +34,7 @@ type CRUDDelete interface {
 	Delete(id string, req Request) (Responder, error)
 }
 
+// The CRUDUpdate interface MUST be implemented in order to generate the PATCH/PUT routes
 type CRUDUpdate interface {
 	// CRUDFindOne must be implemented along with CRUDUpdate so that api2go can retrieve the single resource before update
 	CRUDFindOne
