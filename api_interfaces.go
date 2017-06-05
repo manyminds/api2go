@@ -13,6 +13,13 @@ type ResourceGetter interface {
 	FindOne(ID string, req Request) (Responder, error)
 }
 
+// The CRUD interface embed all interfaces at once: `ResourceCreator`, `ResourceDeleter`, `ResourceUpdater` (which includes `ResourceGetter`)
+type CRUD interface {
+	ResourceCreator
+	ResourceDeleter
+	ResourceUpdater
+}
+
 // The ResourceCreator interface MUST be implemented in order to generate the POST route
 type ResourceCreator interface {
 	// Create a new object. Newly created object/struct must be in Responder.
