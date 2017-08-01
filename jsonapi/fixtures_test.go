@@ -11,7 +11,7 @@ import (
 )
 
 type Magic struct {
-	ID MagicID `jsonapi:"-"`
+	ID MagicID `json:"-"`
 }
 
 func (m Magic) GetID() string {
@@ -25,8 +25,8 @@ func (m MagicID) String() string {
 }
 
 type Comment struct {
-	ID   int `jsonapi:"-"`
-	Text string
+	ID   int    `json:"-"`
+	Text string `json:"text"`
 }
 
 func (c Comment) GetID() string {
@@ -45,9 +45,9 @@ func (c *Comment) SetID(stringID string) error {
 }
 
 type User struct {
-	ID       int `jsonapi:"-"`
-	Name     string
-	Password string `jsonapi:"-"`
+	ID       int    `json:"-"`
+	Name     string `json:"name"`
+	Password string `json:"-"`
 }
 
 func (u User) GetID() string {
@@ -66,13 +66,14 @@ func (u *User) SetID(stringID string) error {
 }
 
 type SimplePost struct {
-	ID          string `jsonapi:"-"`
-	Title, Text string
-	Internal    string `jsonapi:"-"`
-	Size        int
-	Created     time.Time `jsonapi:"name=create-date"`
-	Updated     time.Time `jsonapi:"name=updated-date"`
-	topSecret   string    `jsonapi:"name=top-secret"`
+	ID        string    `json:"-"`
+	Title     string    `json:"title"`
+	Text      string    `json:"text"`
+	Internal  string    `json:"-"`
+	Size      int       `json:"size"`
+	Created   time.Time `json:"created-date"`
+	Updated   time.Time `json:"updated-date"`
+	topSecret string
 }
 
 func (s SimplePost) GetID() string {
@@ -85,15 +86,27 @@ func (s *SimplePost) SetID(ID string) error {
 	return nil
 }
 
+type ErrorIDPost struct {
+	Error error
+}
+
+func (s ErrorIDPost) GetID() string {
+	return ""
+}
+
+func (s *ErrorIDPost) SetID(ID string) error {
+	return s.Error
+}
+
 type Post struct {
-	ID            int `jsonapi:"-"`
-	Title         string
-	Comments      []Comment     `jsonapi:"-"`
-	CommentsIDs   []int         `jsonapi:"-"`
-	CommentsEmpty bool          `jsonapi:"-"`
-	Author        *User         `jsonapi:"-"`
-	AuthorID      sql.NullInt64 `jsonapi:"-"`
-	AuthorEmpty   bool          `jsonapi:"-"`
+	ID            int           `json:"-"`
+	Title         string        `json:"title"`
+	Comments      []Comment     `json:"-"`
+	CommentsIDs   []int         `json:"-"`
+	CommentsEmpty bool          `json:"-"`
+	Author        *User         `json:"-"`
+	AuthorID      sql.NullInt64 `json:"-"`
+	AuthorEmpty   bool          `json:"-"`
 }
 
 func (c Post) GetID() string {
@@ -143,13 +156,16 @@ func (c *Post) SetToOneReferenceID(name, ID string) error {
 func (c *Post) SetToManyReferenceIDs(name string, IDs []string) error {
 	if name == "comments" {
 		commentsIDs := []int{}
+
 		for _, ID := range IDs {
 			intID, err := strconv.ParseInt(ID, 10, 64)
 			if err != nil {
 				return err
 			}
+
 			commentsIDs = append(commentsIDs, int(intID))
 		}
+
 		c.CommentsIDs = commentsIDs
 
 		return nil
@@ -202,12 +218,15 @@ func (c Post) GetReferencedIDs() []ReferenceID {
 
 func (c Post) GetReferencedStructs() []MarshalIdentifier {
 	result := []MarshalIdentifier{}
+
 	if c.Author != nil {
 		result = append(result, c.Author)
 	}
+
 	for key := range c.Comments {
 		result = append(result, c.Comments[key])
 	}
+
 	return result
 }
 
@@ -216,9 +235,9 @@ func (c *Post) SetReferencedStructs(references []UnmarshalIdentifier) error {
 }
 
 type AnotherPost struct {
-	ID       int   `jsonapi:"-"`
-	AuthorID int   `jsonapi:"-"`
-	Author   *User `jsonapi:"-"`
+	ID       int   `json:"-"`
+	AuthorID int   `json:"-"`
+	Author   *User `json:"-"`
 }
 
 func (p AnotherPost) GetID() string {
@@ -245,9 +264,9 @@ func (p AnotherPost) GetReferencedIDs() []ReferenceID {
 }
 
 type ZeroPost struct {
-	ID    string `jsonapi:"-"`
-	Title string
-	Value zero.Float
+	ID    string     `json:"-"`
+	Title string     `json:"title"`
+	Value zero.Float `json:"value"`
 }
 
 func (z ZeroPost) GetID() string {
@@ -255,9 +274,9 @@ func (z ZeroPost) GetID() string {
 }
 
 type ZeroPostPointer struct {
-	ID    string `jsonapi:"-"`
-	Title string
-	Value *zero.Float
+	ID    string      `json:"-"`
+	Title string      `json:"title"`
+	Value *zero.Float `json:"value"`
 }
 
 func (z ZeroPostPointer) GetID() string {
@@ -265,10 +284,10 @@ func (z ZeroPostPointer) GetID() string {
 }
 
 type Question struct {
-	ID                  string `jsonapi:"-"`
-	Text                string
-	InspiringQuestionID sql.NullString `jsonapi:"-"`
-	InspiringQuestion   *Question      `jsonapi:"-"`
+	ID                  string         `json:"-"`
+	Text                string         `json:"text"`
+	InspiringQuestionID sql.NullString `json:"-"`
+	InspiringQuestion   *Question      `json:"-"`
 }
 
 func (q Question) GetID() string {
@@ -286,6 +305,7 @@ func (q Question) GetReferences() []Reference {
 
 func (q Question) GetReferencedIDs() []ReferenceID {
 	result := []ReferenceID{}
+
 	if q.InspiringQuestionID.Valid {
 		result = append(result, ReferenceID{ID: q.InspiringQuestionID.String, Name: "inspiringQuestion", Type: "questions"})
 	}
@@ -295,6 +315,7 @@ func (q Question) GetReferencedIDs() []ReferenceID {
 
 func (q Question) GetReferencedStructs() []MarshalIdentifier {
 	result := []MarshalIdentifier{}
+
 	if q.InspiringQuestion != nil {
 		result = append(result, *q.InspiringQuestion)
 	}
@@ -303,7 +324,7 @@ func (q Question) GetReferencedStructs() []MarshalIdentifier {
 }
 
 type Identity struct {
-	ID     int64    `jsonapi:"-"`
+	ID     int64    `json:"-"`
 	Scopes []string `json:"scopes"`
 }
 
@@ -318,7 +339,7 @@ func (i *Identity) SetID(ID string) error {
 }
 
 type Unicorn struct {
-	UnicornID int64    `json:"unicorn_id"` //Annotations are ignored
+	UnicornID int64    `json:"unicorn_id"` // annotations are ignored
 	Scopes    []string `json:"scopes"`
 }
 
@@ -327,7 +348,7 @@ func (u Unicorn) GetID() string {
 }
 
 type NumberPost struct {
-	ID             string `jsonapi:"-"`
+	ID             string `json:"-"`
 	Title          string
 	Number         int64
 	UnsignedNumber uint64
@@ -335,17 +356,16 @@ type NumberPost struct {
 
 func (n *NumberPost) SetID(ID string) error {
 	n.ID = ID
-
 	return nil
 }
 
 type SQLNullPost struct {
-	ID     string `jsonapi:"-"`
-	Title  zero.String
-	Likes  zero.Int
-	Rating zero.Float
-	IsCool zero.Bool
-	Today  zero.Time
+	ID     string      `json:"-"`
+	Title  zero.String `json:"title"`
+	Likes  zero.Int    `json:"likes"`
+	Rating zero.Float  `json:"rating"`
+	IsCool zero.Bool   `json:"isCool"`
+	Today  zero.Time   `json:"today"`
 }
 
 func (s SQLNullPost) GetID() string {
@@ -359,11 +379,11 @@ func (s *SQLNullPost) SetID(ID string) error {
 
 type RenamedPostWithEmbedding struct {
 	Embedded SQLNullPost
-	ID       string `jsonapi:"-"`
-	Another  string `jsonapi:"name=another"`
-	Field    string `jsonapi:"name=foo"`
-	Other    string `jsonapi:"name=bar-bar"`
-	Ignored  string `jsonapi:"-"`
+	ID       string `json:"-"`
+	Another  string `json:"another"`
+	Field    string `json:"foo"`
+	Other    string `json:"bar-bar"`
+	Ignored  string `json:"-"`
 }
 
 func (p *RenamedPostWithEmbedding) SetID(ID string) error {
@@ -389,7 +409,6 @@ func (r RenamedComment) GetName() string {
 
 type CompleteServerInformation struct{}
 
-const completePrefix = "http://my.domain/v1"
 const baseURL = "http://my.domain"
 const prefix = "v1"
 
@@ -419,4 +438,148 @@ func (i PrefixServerInformation) GetBaseURL() string {
 
 func (i PrefixServerInformation) GetPrefix() string {
 	return prefix
+}
+
+type CustomLinksPost struct{}
+
+func (n CustomLinksPost) GetID() string {
+	return "someID"
+}
+
+func (n *CustomLinksPost) SetID(ID string) error {
+	return nil
+}
+
+func (n CustomLinksPost) GetName() string {
+	return "posts"
+}
+
+func (n CustomLinksPost) GetCustomLinks(base string) Links {
+	return Links{
+		"someLink": Link{Href: base + `/someLink`},
+		"otherLink": Link{
+			Href: base + `/otherLink`,
+			Meta: map[string]interface{}{
+				"method": "GET",
+			},
+		},
+	}
+}
+
+type NoRelationshipPosts struct{}
+
+func (n NoRelationshipPosts) GetID() string {
+	return "someID"
+}
+
+func (n *NoRelationshipPosts) SetID(ID string) error {
+	return nil
+}
+
+func (n NoRelationshipPosts) GetName() string {
+	return "posts"
+}
+
+type ErrorRelationshipPosts struct{}
+
+func (e ErrorRelationshipPosts) GetID() string {
+	return "errorID"
+}
+
+func (e *ErrorRelationshipPosts) SetID(ID string) error {
+	return nil
+}
+
+func (e ErrorRelationshipPosts) GetName() string {
+	return "posts"
+}
+
+func (e ErrorRelationshipPosts) SetToOneReferenceID(name, ID string) error {
+	return errors.New("this never works")
+}
+
+func (e ErrorRelationshipPosts) SetToManyReferenceIDs(name string, IDs []string) error {
+	return errors.New("this also never works")
+}
+
+type Image struct {
+	ID    string      `json:"-"`
+	Ports []ImagePort `json:"image-ports"`
+}
+
+func (i Image) GetID() string {
+	return i.ID
+}
+
+func (i *Image) SetID(ID string) error {
+	i.ID = ID
+	return nil
+}
+
+type ImagePort struct {
+	Protocol string `json:"protocol"`
+	Number   int    `json:"number"`
+}
+
+type Article struct {
+	IDs          []string         `json:"-"`
+	Type         string           `json:"-"`
+	Name         string           `json:"-"`
+	Relationship RelationshipType `json:"-"`
+}
+
+func (a Article) GetID() string {
+	return "id"
+}
+
+func (a Article) GetReferences() []Reference {
+	return []Reference{{Type: a.Type, Name: a.Name, Relationship: a.Relationship}}
+}
+
+func (a Article) GetReferencedIDs() []ReferenceID {
+	referenceIDs := []ReferenceID{}
+
+	for _, id := range a.IDs {
+		referenceIDs = append(referenceIDs, ReferenceID{ID: id, Type: a.Type, Name: a.Name, Relationship: a.Relationship})
+	}
+
+	return referenceIDs
+}
+
+type DeepDedendencies struct {
+	ID            string             `json:"-"`
+	Relationships []DeepDedendencies `json:"-"`
+}
+
+func (d DeepDedendencies) GetID() string {
+	return d.ID
+}
+
+func (DeepDedendencies) GetName() string {
+	return "deep"
+}
+
+func (d DeepDedendencies) GetReferences() []Reference {
+	return []Reference{{Type: "deep", Name: "deps"}}
+}
+
+func (d DeepDedendencies) GetReferencedIDs() []ReferenceID {
+	references := make([]ReferenceID, 0, len(d.Relationships))
+
+	for _, r := range d.Relationships {
+		references = append(references, ReferenceID{ID: r.ID, Type: "deep", Name: "deps"})
+	}
+
+	return references
+}
+
+func (d DeepDedendencies) GetReferencedStructs() []MarshalIdentifier {
+	var structs []MarshalIdentifier
+
+	for _, r := range d.Relationships {
+		structs = append(structs, r)
+		structs = append(structs, r.GetReferencedStructs()...)
+	}
+
+	return structs
 }

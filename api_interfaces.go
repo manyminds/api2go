@@ -1,15 +1,27 @@
 package api2go
 
-import "net/http"
+import (
+	"net/http"
 
-// The CRUD interface MUST be implemented in order to use the api2go api.
-// Use Responder for success status codes and content/meta data. In case of an error,
-// use the error return value preferrably with an instance of our HTTPError struct.
-type CRUD interface {
+	"github.com/manyminds/api2go/jsonapi"
+)
+
+// The ResourceGetter interface MUST be implemented in order to generate the single GET route and related
+type ResourceGetter interface {
 	// FindOne returns an object by its ID
 	// Possible Responder success status code 200
 	FindOne(ID string, req Request) (Responder, error)
+}
 
+// The CRUD interface embed all interfaces at once: `ResourceCreator`, `ResourceDeleter`, `ResourceUpdater` (which includes `ResourceGetter`)
+type CRUD interface {
+	ResourceCreator
+	ResourceDeleter
+	ResourceUpdater
+}
+
+// The ResourceCreator interface MUST be implemented in order to generate the POST route
+type ResourceCreator interface {
 	// Create a new object. Newly created object/struct must be in Responder.
 	// Possible Responder status codes are:
 	// - 201 Created: Resource was created and needs to be returned
@@ -17,14 +29,22 @@ type CRUD interface {
 	// - 204 No Content: Resource created with a client generated ID, and no fields were modified by
 	//   the server
 	Create(obj interface{}, req Request) (Responder, error)
+}
 
+// The ResourceDeleter interface MUST be implemented in order to generate the DELETE route
+type ResourceDeleter interface {
 	// Delete an object
 	// Possible Responder status codes are:
 	// - 200 OK: Deletion was a success, returns meta information, currently not implemented! Do not use this
 	// - 202 Accepted: Processing is delayed, return nothing
 	// - 204 No Content: Deletion was successful, return nothing
 	Delete(id string, req Request) (Responder, error)
+}
 
+// The ResourceUpdater interface MUST be implemented in order to generate the PATCH/PUT routes
+type ResourceUpdater interface {
+	// ResourceGetter must be implemented along with ResourceUpdater so that api2go can retrieve the single resource before update
+	ResourceGetter
 	// Update an object
 	// Possible Responder status codes are:
 	// - 200 OK: Update successful, however some field(s) were changed, returns updates source
@@ -33,15 +53,12 @@ type CRUD interface {
 	Update(obj interface{}, req Request) (Responder, error)
 }
 
-// ContentMarshaler controls how requests from clients are unmarshaled
-// and responses from the server are marshaled. The content marshaler
-// is in charge of encoding and decoding data to and from a particular
-// format (e.g. JSON). The encoding and decoding processes follow the
-// rules of the standard encoding/json package.
-type ContentMarshaler interface {
-	Marshal(i interface{}) ([]byte, error)
-	Unmarshal(data []byte, i interface{}) error
-	MarshalError(error) string
+// Pagination represents information needed to return pagination links
+type Pagination struct {
+	Next  map[string]string
+	Prev  map[string]string
+	First map[string]string
+	Last  map[string]string
 }
 
 // The PaginatedFindAll interface can be optionally implemented to fetch a subset of all records.
@@ -57,6 +74,14 @@ type PaginatedFindAll interface {
 type FindAll interface {
 	// FindAll returns all objects
 	FindAll(req Request) (Responder, error)
+}
+
+// The ObjectInitializer interface can be implemented to have the ability to change
+// a created object before Unmarshal is called. This is currently only called on
+// Create as the other actions go through FindOne or FindAll which are already
+// controlled by the implementer.
+type ObjectInitializer interface {
+	InitializeObject(interface{})
 }
 
 //URLResolver allows you to implement a static
@@ -90,4 +115,11 @@ type Responder interface {
 	Metadata() map[string]interface{}
 	Result() interface{}
 	StatusCode() int
+}
+
+// The LinksResponder interface may be used when the response object is able to return
+// a set of links for the top-level response object.
+type LinksResponder interface {
+	Responder
+	Links(*http.Request, string) jsonapi.Links
 }

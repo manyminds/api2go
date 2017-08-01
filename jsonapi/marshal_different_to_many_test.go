@@ -6,8 +6,8 @@ import (
 )
 
 type ManyParent struct {
-	ID      string `jsonapi:"-"`
-	Content string
+	ID      string `json:"-"`
+	Content string `json:"content"`
 }
 
 func (m ManyParent) GetID() string {
@@ -49,32 +49,30 @@ var _ = Describe("Marshalling toMany relations with the same name and different 
 	})
 
 	It("marshals toMany relationships with different type and same name", func() {
-		result, err := MarshalToJSON(toMarshal)
+		result, err := Marshal(toMarshal)
 		Expect(err).ToNot(HaveOccurred())
-		Expect(result).To(MatchJSON(`
-    {
-      "data": {
-        "attributes": {
-          "content": "test"
-        },
-        "id": "one",
-        "relationships": {
-          "childs": {
-            "data": [
-            {
-              "id": "one",
-              "type": "childs"
-            },
-            {
-              "id": "two",
-              "type": "other-childs"
-            }
-            ]
-          }
-        },
-        "type": "manyParents"
-      }
-    }
-  `))
+		Expect(result).To(MatchJSON(`{
+      		"data": {
+        		"attributes": {
+          			"content": "test"
+        		},
+        		"id": "one",
+        		"relationships": {
+          			"childs": {
+            			"data": [
+            				{
+              					"id": "one",
+              					"type": "childs"
+            				},
+            				{
+              					"id": "two",
+              					"type": "other-childs"
+            				}
+            			]
+          			}
+        		},
+        		"type": "manyParents"
+      		}
+    	}`))
 	})
 })

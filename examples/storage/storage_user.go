@@ -1,8 +1,11 @@
 package storage
 
 import (
+	"errors"
 	"fmt"
+	"net/http"
 
+	"github.com/manyminds/api2go"
 	"github.com/manyminds/api2go/examples/model"
 )
 
@@ -28,8 +31,8 @@ func (s UserStorage) GetOne(id string) (model.User, error) {
 	if ok {
 		return *user, nil
 	}
-
-	return model.User{}, fmt.Errorf("User for id %s not found", id)
+	errMessage := fmt.Sprintf("User for id %s not found", id)
+	return model.User{}, api2go.NewHTTPError(errors.New(errMessage), errMessage, http.StatusNotFound)
 }
 
 // Insert a user

@@ -176,6 +176,65 @@ var _ = Describe("CrudExample", func() {
 		`))
 	}
 
+	It("Creates a user with references chocolates", func() {
+		createChocolate()
+
+		rec = httptest.NewRecorder()
+		req, err := http.NewRequest("POST", "/v0/users", strings.NewReader(`
+    {
+      "data": {
+        "type": "users",
+        "attributes": {
+          "user-name": "marvin"
+        },
+        "relationships": {
+          "sweets": {
+            "data": [
+            {
+              "id": "1",
+              "type": "chocolates"
+            }
+            ]
+          }
+        }
+      }
+    }
+		`))
+		Expect(err).ToNot(HaveOccurred())
+		api.Handler().ServeHTTP(rec, req)
+		Expect(rec.Code).To(Equal(http.StatusCreated))
+		Expect(rec.Body.String()).To(MatchJSON(`
+          {
+            "meta": {
+              "author": "The api2go examples crew",
+              "license": "wtfpl",
+              "license-url": "http://www.wtfpl.net"
+            },
+            "data": {
+              "id": "1",
+              "type": "users",
+              "attributes": {
+                "user-name": "marvin"
+              },
+              "relationships": {
+                "sweets": {
+                  "data": [
+                    {
+                      "id": "1",
+                      "type": "chocolates"
+                    }
+                  ],
+                  "links": {
+                    "related": "http://localhost:31415/v0/users/1/sweets",
+                    "self": "http://localhost:31415/v0/users/1/relationships/sweets"
+                  }
+                }
+              }
+            }
+          }
+          `))
+	})
+
 	It("Replaces users sweets", func() {
 		createUser()
 		createChocolate()
@@ -421,6 +480,32 @@ var _ = Describe("CrudExample", func() {
 						"id": "1",
 						"type": "chocolates"
 					}
+				]
+			}
+			`))
+		})
+
+		It("Directly loading the sweets", func() {
+			req, err := http.NewRequest("GET", "/v0/users/1/sweets", nil)
+			Expect(err).ToNot(HaveOccurred())
+			api.Handler().ServeHTTP(rec, req)
+			Expect(rec.Code).To(Equal(http.StatusOK))
+			Expect(rec.Body.String()).To(MatchJSON(`
+			{
+				"meta": {
+					"author": "The api2go examples crew",
+					"license": "wtfpl",
+					"license-url": "http://www.wtfpl.net"
+				},
+				"data": [
+				{
+					"type": "chocolates",
+					"id": "1",
+					"attributes": {
+						"name": "Ritter Sport",
+						"taste": "Very Good"
+					}
+				}
 				]
 			}
 			`))

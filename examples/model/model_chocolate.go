@@ -2,9 +2,9 @@ package model
 
 // Chocolate is the chocolate that a user consumes in order to get fat and happy
 type Chocolate struct {
-	ID    string `jsonapi:"-"`
-	Name  string
-	Taste string
+	ID    string `json:"-"`
+	Name  string `json:"name"`
+	Taste string `json:"taste"`
 }
 
 // GetID to satisfy jsonapi.MarshalIdentifier interface

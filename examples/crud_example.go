@@ -5,7 +5,7 @@ To play with this example server you can run some of the following curl requests
 In order to demonstrate dynamic baseurl handling for requests, apply the --header="REQUEST_URI:https://www.your.domain.example.com" parameter to any of the commands.
 
 Create a new user:
-	curl -X POST http://localhost:31415/v0/users -d '{"data" : [{"type" : "users" , "attributes": {"user-name" : "marvin"}}]}'
+	curl -X POST http://localhost:31415/v0/users -d '{"data" : {"type" : "users" , "attributes": {"user-name" : "marvin"}}}'
 
 List users:
 	curl -X GET http://localhost:31415/v0/users
@@ -22,10 +22,10 @@ Delete:
 	curl -vX DELETE http://localhost:31415/v0/users/2
 
 Create a chocolate with the name sweet
-	curl -X POST http://localhost:31415/v0/chocolates -d '{"data" : [{"type" : "chocolates" , "attributes": {"name" : "Ritter Sport", "taste": "Very Good"}}]}'
+	curl -X POST http://localhost:31415/v0/chocolates -d '{"data" : {"type" : "chocolates" , "attributes": {"name" : "Ritter Sport", "taste": "Very Good"}}}'
 
 Create a user with a sweet
-	curl -X POST http://localhost:31415/v0/users -d '{"data" : [{"type" : "users" , "attributes": {"user-name" : "marvin"}, "relationships": {"sweets": {"data": [{"type": "chocolates", "id": "1"}]}}}]}'
+	curl -X POST http://localhost:31415/v0/users -d '{"data" : {"type" : "users" , "attributes": {"user-name" : "marvin"}, "relationships": {"sweets": {"data": [{"type": "chocolates", "id": "1"}]}}}}'
 
 List a users sweets
 	curl -X GET http://localhost:31415/v0/users/1/sweets
@@ -42,7 +42,6 @@ Remove a sweet
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -54,32 +53,9 @@ import (
 	"github.com/manyminds/api2go/examples/storage"
 )
 
-// PrettyJSONContentMarshaler for JSON in a human readable format
-type PrettyJSONContentMarshaler struct{}
-
-// Marshal marshals to pretty JSON
-func (m PrettyJSONContentMarshaler) Marshal(i interface{}) ([]byte, error) {
-	return json.MarshalIndent(i, "", "    ")
-}
-
-// Unmarshal the JSON
-func (m PrettyJSONContentMarshaler) Unmarshal(data []byte, i interface{}) error {
-	return json.Unmarshal(data, i)
-}
-
-// MarshalError to configure error marshaling
-func (m PrettyJSONContentMarshaler) MarshalError(err error) string {
-	jsonmarshaler := api2go.JSONContentMarshaler{}
-	return jsonmarshaler.MarshalError(err)
-}
-
 func main() {
-	marshalers := map[string]api2go.ContentMarshaler{
-		"application/vnd.api+json": PrettyJSONContentMarshaler{},
-	}
-
 	port := 31415
-	api := api2go.NewAPIWithMarshalling("v0", &resolver.RequestURL{Port: port}, marshalers)
+	api := api2go.NewAPIWithResolver("v0", &resolver.RequestURL{Port: port})
 	userStorage := storage.NewUserStorage()
 	chocStorage := storage.NewChocolateStorage()
 	api.AddResource(model.User{}, resource.UserResource{ChocStorage: chocStorage, UserStorage: userStorage})

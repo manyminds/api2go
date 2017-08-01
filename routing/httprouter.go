@@ -32,7 +32,7 @@ func (h HTTPRouter) Handler() http.Handler {
 
 // SetRedirectTrailingSlash wraps this internal functionality of
 // the julienschmidt router.
-func (h HTTPRouter) SetRedirectTrailingSlash(enabled bool) {
+func (h *HTTPRouter) SetRedirectTrailingSlash(enabled bool) {
 	h.router.RedirectTrailingSlash = enabled
 }
 
