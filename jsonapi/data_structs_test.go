@@ -195,7 +195,7 @@ var _ = Describe("JSONAPI Struct tests", func() {
 		It("unmarshals from an object", func() {
 			expected := Link{
 				Href: "test link",
-				Meta: map[string]interface{}{
+				Meta: Meta{
 					"test": "data",
 				},
 			}

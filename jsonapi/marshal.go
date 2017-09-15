@@ -84,7 +84,7 @@ type MarshalCustomLinks interface {
 // want a custom meta in a relationship.
 type MarshalCustomRelationshipMeta interface {
 	MarshalIdentifier
-	GetCustomMeta(string) Metas
+	GetCustomMeta(string) map[string]Meta
 }
 
 // A ServerInformation implementor can be passed to MarshalWithURLs to generate

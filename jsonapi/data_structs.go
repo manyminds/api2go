@@ -51,8 +51,8 @@ func (c *DataContainer) MarshalJSON() ([]byte, error) {
 
 // Link represents a link for return in the document.
 type Link struct {
-	Href string                 `json:"href"`
-	Meta map[string]interface{} `json:"meta,omitempty"`
+	Href string `json:"href"`
+	Meta Meta   `json:"meta,omitempty"`
 }
 
 // UnmarshalJSON marshals a string value into the Href field or marshals an
@@ -73,6 +73,7 @@ func (l *Link) UnmarshalJSON(payload []byte) error {
 		if !ok {
 			return errors.New(`link object expects a "href" key`)
 		}
+
 		l.Meta, _ = obj["meta"].(map[string]interface{})
 		return nil
 	}
@@ -95,8 +96,8 @@ func (l Link) MarshalJSON() ([]byte, error) {
 // Links contains a map of custom Link objects as given by an element.
 type Links map[string]Link
 
-// Metas contains a map of maps of meta objects as given by an element.
-type Metas map[string]map[string]interface{}
+// Meta contains unstructured metadata
+type Meta map[string]interface{}
 
 // Data is a general struct for document data and included data.
 type Data struct {

@@ -459,7 +459,7 @@ func (n CustomLinksPost) GetCustomLinks(base string) Links {
 		"someLink": Link{Href: base + `/someLink`},
 		"otherLink": Link{
 			Href: base + `/otherLink`,
-			Meta: map[string]interface{}{
+			Meta: Meta{
 				"method": "GET",
 			},
 		},
@@ -494,8 +494,8 @@ func (n CustomMetaPost) GetReferencedIDs() []ReferenceID {
 	return nil
 }
 
-func (n CustomMetaPost) GetCustomMeta(linkURL string) Metas {
-	meta := map[string]map[string]interface{}{
+func (n CustomMetaPost) GetCustomMeta(linkURL string) map[string]Meta {
+	meta := map[string]Meta{
 		"author": {
 			"someMetaKey":      "someMetaValue",
 			"someOtherMetaKey": "someOtherMetaValue",
