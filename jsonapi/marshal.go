@@ -80,6 +80,13 @@ type MarshalCustomLinks interface {
 	GetCustomLinks(string) Links
 }
 
+// The MarshalCustomRelationshipMeta interface can be implemented if the struct should
+// want a custom meta in a relationship.
+type MarshalCustomRelationshipMeta interface {
+	MarshalIdentifier
+	GetCustomMeta(string) map[string]Meta
+}
+
 // A ServerInformation implementor can be passed to MarshalWithURLs to generate
 // the `self` and `related` urls inside `links`.
 type ServerInformation interface {
@@ -240,6 +247,19 @@ func isToMany(relationshipType RelationshipType, name string) bool {
 	return relationshipType == ToManyRelationship
 }
 
+func getMetaForRelation(metaSource MarshalCustomRelationshipMeta, name string, information ServerInformation) map[string]interface{} {
+	meta := make(map[string]interface{})
+	base := getLinkBaseURL(metaSource, information)
+	if metaMap, ok := metaSource.GetCustomMeta(base)[name]; ok {
+		for k, v := range metaMap {
+			if _, ok := meta[k]; !ok {
+				meta[k] = v
+			}
+		}
+	}
+	return meta
+}
+
 func getStructRelationships(relationer MarshalLinkedRelations, information ServerInformation) map[string]Relationship {
 	referencedIDs := relationer.GetReferencedIDs()
 	sortedResults := map[string][]ReferenceID{}
@@ -282,9 +302,16 @@ func getStructRelationships(relationer MarshalLinkedRelations, information Serve
 		// set URLs if necessary
 		links := getLinksForServerInformation(relationer, name, information)
 
+		// get the custom meta for this relationship
+		var meta map[string]interface{}
+		if customMetaSource, ok := relationer.(MarshalCustomRelationshipMeta); ok {
+			meta = getMetaForRelation(customMetaSource, name, information)
+		}
+
 		relationship := Relationship{
 			Data:  &container,
 			Links: links,
+			Meta:  meta,
 		}
 
 		relationships[name] = relationship
@@ -303,8 +330,16 @@ func getStructRelationships(relationer MarshalLinkedRelations, information Serve
 		}
 
 		links := getLinksForServerInformation(relationer, name, information)
+
+		// get the custom meta for this relationship
+		var meta map[string]interface{}
+		if customMetaSource, ok := relationer.(MarshalCustomRelationshipMeta); ok {
+			meta = getMetaForRelation(customMetaSource, name, information)
+		}
+
 		relationship := Relationship{
 			Links: links,
+			Meta:  meta,
 		}
 
 		// skip relationship data completely if IsNotLoaded is set

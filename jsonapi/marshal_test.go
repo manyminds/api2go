@@ -243,6 +243,33 @@ var _ = Describe("Marshalling", func() {
 		})
 	})
 
+	Context("When marshaling objects with custom meta", func() {
+		It("contains the custom meta in the marshaled data", func() {
+			post := CustomMetaPost{}
+			i, err := MarshalWithURLs(post, CompleteServerInformation{})
+			Expect(err).To(BeNil())
+			Expect(i).To(MatchJSON(`{
+				"data": {
+					"type": "posts",
+					"id": "someID",
+					"attributes": {},
+					"relationships": {
+							"author": {
+								"links": {
+									"self": "http://my.domain/v1/posts/someID/relationships/author",
+									"related": "http://my.domain/v1/posts/someID/author"
+								},
+								"meta": {
+									"someMetaKey": "someMetaValue",
+									"someOtherMetaKey": "someOtherMetaValue"
+								}
+							}
+					}
+				}
+			}`))
+		})
+	})
+
 	Context("When marshaling compound objects", func() {
 		It("marshals nested objects", func() {
 			comment1 := Comment{ID: 1, Text: "First!"}

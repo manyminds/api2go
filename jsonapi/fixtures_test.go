@@ -459,11 +459,49 @@ func (n CustomLinksPost) GetCustomLinks(base string) Links {
 		"someLink": Link{Href: base + `/someLink`},
 		"otherLink": Link{
 			Href: base + `/otherLink`,
-			Meta: map[string]interface{}{
+			Meta: Meta{
 				"method": "GET",
 			},
 		},
 	}
+}
+
+type CustomMetaPost struct{}
+
+func (n CustomMetaPost) GetID() string {
+	return "someID"
+}
+
+func (n *CustomMetaPost) SetID(ID string) error {
+	return nil
+}
+
+func (n CustomMetaPost) GetName() string {
+	return "posts"
+}
+
+func (n CustomMetaPost) GetReferences() []Reference {
+	return []Reference{
+		{
+			Type:        "users",
+			Name:        "author",
+			IsNotLoaded: true,
+		},
+	}
+}
+
+func (n CustomMetaPost) GetReferencedIDs() []ReferenceID {
+	return nil
+}
+
+func (n CustomMetaPost) GetCustomMeta(linkURL string) map[string]Meta {
+	meta := map[string]Meta{
+		"author": {
+			"someMetaKey":      "someMetaValue",
+			"someOtherMetaKey": "someOtherMetaValue",
+		},
+	}
+	return meta
 }
 
 type NoRelationshipPosts struct{}
