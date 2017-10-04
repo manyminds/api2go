@@ -372,7 +372,9 @@ If you need api2go with any different go framework, just send a PR with the acco
 
 ## Building a REST API
 
-First, write an implementation of `api2go.CRUD`. You have to implement at least these 4 methods:
+First, write an implementation of either `api2go.ResourceGetter`, `api2go.ResourceCreator`, `api2go.ResourceUpdater`,  `api2go.ResourceDeleter`, or any combination of them.
+You can also write an implementation the `CRUD` interface which embed all of them.
+You have to implement at least one of these 4 methods:
 
 ```go
 type fixtureSource struct {}
@@ -469,7 +471,7 @@ type EditToManyRelations interface {
 
 All PATCH, POST and DELETE routes do a `FindOne` and update the values/relations in the previously found struct. This
 struct will then be passed on to the `Update` method of a resource struct. So you get all these routes "for free" and just
-have to implement the CRUD Update method.
+have to implement the `ResourceUpdater` `Update` method.
 
 ### Query Params
 To support all the features mentioned in the `Fetching Resources` section of Jsonapi:

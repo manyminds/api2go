@@ -177,7 +177,7 @@ func (n notAllowedHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 type resource struct {
 	resourceType reflect.Type
-	source       CRUD
+	source       interface{}
 	name         string
 	api          *API
 }
@@ -194,7 +194,7 @@ func (api *API) allocateDefaultContext() APIContexter {
 	return &APIContext{}
 }
 
-func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD) *resource {
+func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source interface{}) *resource {
 	resourceType := reflect.TypeOf(prototype)
 	if resourceType.Kind() != reflect.Struct && resourceType.Kind() != reflect.Ptr {
 		panic("pass an empty resource struct or a struct pointer to AddResource!")
@@ -248,16 +248,7 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD) *r
 		c := api.contextPool.Get().(APIContexter)
 		c.Reset()
 		api.middlewareChain(c, w, r)
-		w.Header().Set("Allow", "GET,POST,PATCH,OPTIONS")
-		w.WriteHeader(http.StatusNoContent)
-		api.contextPool.Put(c)
-	})
-
-	api.router.Handle("OPTIONS", baseURL+"/:id", func(w http.ResponseWriter, r *http.Request, _ map[string]string) {
-		c := api.contextPool.Get().(APIContexter)
-		c.Reset()
-		api.middlewareChain(c, w, r)
-		w.Header().Set("Allow", "GET,PATCH,DELETE,OPTIONS")
+		w.Header().Set("Allow", strings.Join(getAllowedMethods(source, true), ","))
 		w.WriteHeader(http.StatusNoContent)
 		api.contextPool.Put(c)
 	})
@@ -275,17 +266,28 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD) *r
 		}
 	})
 
-	api.router.Handle("GET", baseURL+"/:id", func(w http.ResponseWriter, r *http.Request, params map[string]string) {
-		info := requestInfo(r, api)
-		c := api.contextPool.Get().(APIContexter)
-		c.Reset()
-		api.middlewareChain(c, w, r)
-		err := res.handleRead(c, w, r, params, *info)
-		api.contextPool.Put(c)
-		if err != nil {
-			api.handleError(err, w, r)
-		}
-	})
+	if _, ok := source.(ResourceGetter); ok {
+		api.router.Handle("OPTIONS", baseURL+"/:id", func(w http.ResponseWriter, r *http.Request, _ map[string]string) {
+			c := api.contextPool.Get().(APIContexter)
+			c.Reset()
+			api.middlewareChain(c, w, r)
+			w.Header().Set("Allow", strings.Join(getAllowedMethods(source, false), ","))
+			w.WriteHeader(http.StatusNoContent)
+			api.contextPool.Put(c)
+		})
+
+		api.router.Handle("GET", baseURL+"/:id", func(w http.ResponseWriter, r *http.Request, params map[string]string) {
+			info := requestInfo(r, api)
+			c := api.contextPool.Get().(APIContexter)
+			c.Reset()
+			api.middlewareChain(c, w, r)
+			err := res.handleRead(c, w, r, params, *info)
+			api.contextPool.Put(c)
+			if err != nil {
+				api.handleError(err, w, r)
+			}
+		})
+	}
 
 	// generate all routes for linked relations if there are relations
 	casted, ok := prototype.(jsonapi.MarshalReferences)
@@ -364,44 +366,73 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source CRUD) *r
 		}
 	}
 
-	api.router.Handle("POST", baseURL, func(w http.ResponseWriter, r *http.Request, params map[string]string) {
-		info := requestInfo(r, api)
-		c := api.contextPool.Get().(APIContexter)
-		c.Reset()
-		api.middlewareChain(c, w, r)
-		err := res.handleCreate(c, w, r, info.prefix, *info)
-		api.contextPool.Put(c)
-		if err != nil {
-			api.handleError(err, w, r)
-		}
-	})
+	if _, ok := source.(ResourceCreator); ok {
+		api.router.Handle("POST", baseURL, func(w http.ResponseWriter, r *http.Request, params map[string]string) {
+			info := requestInfo(r, api)
+			c := api.contextPool.Get().(APIContexter)
+			c.Reset()
+			api.middlewareChain(c, w, r)
+			err := res.handleCreate(c, w, r, info.prefix, *info)
+			api.contextPool.Put(c)
+			if err != nil {
+				api.handleError(err, w, r)
+			}
+		})
+	}
 
-	api.router.Handle("DELETE", baseURL+"/:id", func(w http.ResponseWriter, r *http.Request, params map[string]string) {
-		c := api.contextPool.Get().(APIContexter)
-		c.Reset()
-		api.middlewareChain(c, w, r)
-		err := res.handleDelete(c, w, r, params)
-		api.contextPool.Put(c)
-		if err != nil {
-			api.handleError(err, w, r)
-		}
-	})
+	if _, ok := source.(ResourceDeleter); ok {
+		api.router.Handle("DELETE", baseURL+"/:id", func(w http.ResponseWriter, r *http.Request, params map[string]string) {
+			c := api.contextPool.Get().(APIContexter)
+			c.Reset()
+			api.middlewareChain(c, w, r)
+			err := res.handleDelete(c, w, r, params)
+			api.contextPool.Put(c)
+			if err != nil {
+				api.handleError(err, w, r)
+			}
+		})
+	}
 
-	api.router.Handle("PATCH", baseURL+"/:id", func(w http.ResponseWriter, r *http.Request, params map[string]string) {
-		info := requestInfo(r, api)
-		c := api.contextPool.Get().(APIContexter)
-		c.Reset()
-		api.middlewareChain(c, w, r)
-		err := res.handleUpdate(c, w, r, params, *info)
-		api.contextPool.Put(c)
-		if err != nil {
-			api.handleError(err, w, r)
-		}
-	})
+	if _, ok := source.(ResourceUpdater); ok {
+		api.router.Handle("PATCH", baseURL+"/:id", func(w http.ResponseWriter, r *http.Request, params map[string]string) {
+			info := requestInfo(r, api)
+			c := api.contextPool.Get().(APIContexter)
+			c.Reset()
+			api.middlewareChain(c, w, r)
+			err := res.handleUpdate(c, w, r, params, *info)
+			api.contextPool.Put(c)
+			if err != nil {
+				api.handleError(err, w, r)
+			}
+		})
+	}
 
 	api.resources = append(api.resources, res)
 
 	return &res
+}
+
+func getAllowedMethods(source interface{}, collection bool) []string {
+
+	result := []string{http.MethodOptions}
+
+	if _, ok := source.(ResourceGetter); ok {
+		result = append(result, http.MethodGet)
+	}
+
+	if _, ok := source.(ResourceUpdater); ok {
+		result = append(result, http.MethodPatch)
+	}
+
+	if _, ok := source.(ResourceDeleter); ok && !collection {
+		result = append(result, http.MethodDelete)
+	}
+
+	if _, ok := source.(ResourceCreator); ok && collection {
+		result = append(result, http.MethodPost)
+	}
+
+	return result
 }
 
 func buildRequest(c APIContexter, r *http.Request) Request {
@@ -468,9 +499,15 @@ func (res *resource) handleIndex(c APIContexter, w http.ResponseWriter, r *http.
 }
 
 func (res *resource) handleRead(c APIContexter, w http.ResponseWriter, r *http.Request, params map[string]string, info information) error {
+	source, ok := res.source.(ResourceGetter)
+
+	if !ok {
+		return fmt.Errorf("Resource %s does not implement the ResourceGetter interface", res.name)
+	}
+
 	id := params["id"]
 
-	response, err := res.source.FindOne(id, buildRequest(c, r))
+	response, err := source.FindOne(id, buildRequest(c, r))
 
 	if err != nil {
 		return err
@@ -480,9 +517,15 @@ func (res *resource) handleRead(c APIContexter, w http.ResponseWriter, r *http.R
 }
 
 func (res *resource) handleReadRelation(c APIContexter, w http.ResponseWriter, r *http.Request, params map[string]string, info information, relation jsonapi.Reference) error {
+	source, ok := res.source.(ResourceGetter)
+
+	if !ok {
+		return fmt.Errorf("Resource %s does not implement the ResourceGetter interface", res.name)
+	}
+
 	id := params["id"]
 
-	obj, err := res.source.FindOne(id, buildRequest(c, r))
+	obj, err := source.FindOne(id, buildRequest(c, r))
 	if err != nil {
 		return err
 	}
@@ -554,6 +597,13 @@ func (res *resource) handleLinked(c APIContexter, api *API, w http.ResponseWrite
 }
 
 func (res *resource) handleCreate(c APIContexter, w http.ResponseWriter, r *http.Request, prefix string, info information) error {
+
+	source, ok := res.source.(ResourceCreator)
+
+	if !ok {
+		return fmt.Errorf("Resource %s does not implement the ResourceCreator interface", res.name)
+	}
+
 	ctx, err := unmarshalRequest(r)
 	if err != nil {
 		return err
@@ -569,7 +619,7 @@ func (res *resource) handleCreate(c APIContexter, w http.ResponseWriter, r *http
 
 	// Call InitializeObject if available to allow implementers change the object
 	// before calling Unmarshal.
-	if initSource, ok := res.source.(ObjectInitializer); ok {
+	if initSource, ok := source.(ObjectInitializer); ok {
 		initSource.InitializeObject(newObj)
 	}
 
@@ -582,9 +632,9 @@ func (res *resource) handleCreate(c APIContexter, w http.ResponseWriter, r *http
 
 	if res.resourceType.Kind() == reflect.Struct {
 		// we have to dereference the pointer if user wants to use non pointer values
-		response, err = res.source.Create(reflect.ValueOf(newObj).Elem().Interface(), buildRequest(c, r))
+		response, err = source.Create(reflect.ValueOf(newObj).Elem().Interface(), buildRequest(c, r))
 	} else {
-		response, err = res.source.Create(newObj, buildRequest(c, r))
+		response, err = source.Create(newObj, buildRequest(c, r))
 	}
 	if err != nil {
 		return err
@@ -618,8 +668,14 @@ func (res *resource) handleCreate(c APIContexter, w http.ResponseWriter, r *http
 }
 
 func (res *resource) handleUpdate(c APIContexter, w http.ResponseWriter, r *http.Request, params map[string]string, info information) error {
+	source, ok := res.source.(ResourceUpdater)
+
+	if !ok {
+		return fmt.Errorf("Resource %s does not implement the ResourceUpdater interface", res.name)
+	}
+
 	id := params["id"]
-	obj, err := res.source.FindOne(id, buildRequest(c, r))
+	obj, err := source.FindOne(id, buildRequest(c, r))
 	if err != nil {
 		return err
 	}
@@ -643,7 +699,7 @@ func (res *resource) handleUpdate(c APIContexter, w http.ResponseWriter, r *http
 		return NewHTTPError(nil, err.Error(), http.StatusNotAcceptable)
 	}
 
-	response, err := res.source.Update(updatingObj.Interface(), buildRequest(c, r))
+	response, err := source.Update(updatingObj.Interface(), buildRequest(c, r))
 
 	if err != nil {
 		return err
@@ -653,7 +709,7 @@ func (res *resource) handleUpdate(c APIContexter, w http.ResponseWriter, r *http
 	case http.StatusOK:
 		updated := response.Result()
 		if updated == nil {
-			internalResponse, err := res.source.FindOne(id, buildRequest(c, r))
+			internalResponse, err := source.FindOne(id, buildRequest(c, r))
 			if err != nil {
 				return err
 			}
@@ -678,6 +734,12 @@ func (res *resource) handleUpdate(c APIContexter, w http.ResponseWriter, r *http
 }
 
 func (res *resource) handleReplaceRelation(c APIContexter, w http.ResponseWriter, r *http.Request, params map[string]string, relation jsonapi.Reference) error {
+	source, ok := res.source.(ResourceUpdater)
+
+	if !ok {
+		return fmt.Errorf("Resource %s does not implement the ResourceUpdater interface", res.name)
+	}
+
 	var (
 		err     error
 		editObj interface{}
@@ -685,7 +747,7 @@ func (res *resource) handleReplaceRelation(c APIContexter, w http.ResponseWriter
 
 	id := params["id"]
 
-	response, err := res.source.FindOne(id, buildRequest(c, r))
+	response, err := source.FindOne(id, buildRequest(c, r))
 	if err != nil {
 		return err
 	}
@@ -718,9 +780,9 @@ func (res *resource) handleReplaceRelation(c APIContexter, w http.ResponseWriter
 	}
 
 	if resType == reflect.Struct {
-		_, err = res.source.Update(reflect.ValueOf(editObj).Elem().Interface(), buildRequest(c, r))
+		_, err = source.Update(reflect.ValueOf(editObj).Elem().Interface(), buildRequest(c, r))
 	} else {
-		_, err = res.source.Update(editObj, buildRequest(c, r))
+		_, err = source.Update(editObj, buildRequest(c, r))
 	}
 
 	w.WriteHeader(http.StatusNoContent)
@@ -728,6 +790,12 @@ func (res *resource) handleReplaceRelation(c APIContexter, w http.ResponseWriter
 }
 
 func (res *resource) handleAddToManyRelation(c APIContexter, w http.ResponseWriter, r *http.Request, params map[string]string, relation jsonapi.Reference) error {
+	source, ok := res.source.(ResourceUpdater)
+
+	if !ok {
+		return fmt.Errorf("Resource %s does not implement the ResourceUpdater interface", res.name)
+	}
+
 	var (
 		err     error
 		editObj interface{}
@@ -735,7 +803,7 @@ func (res *resource) handleAddToManyRelation(c APIContexter, w http.ResponseWrit
 
 	id := params["id"]
 
-	response, err := res.source.FindOne(id, buildRequest(c, r))
+	response, err := source.FindOne(id, buildRequest(c, r))
 	if err != nil {
 		return err
 	}
@@ -789,9 +857,9 @@ func (res *resource) handleAddToManyRelation(c APIContexter, w http.ResponseWrit
 	targetObj.AddToManyIDs(relation.Name, newIDs)
 
 	if resType == reflect.Struct {
-		_, err = res.source.Update(reflect.ValueOf(targetObj).Elem().Interface(), buildRequest(c, r))
+		_, err = source.Update(reflect.ValueOf(targetObj).Elem().Interface(), buildRequest(c, r))
 	} else {
-		_, err = res.source.Update(targetObj, buildRequest(c, r))
+		_, err = source.Update(targetObj, buildRequest(c, r))
 	}
 
 	w.WriteHeader(http.StatusNoContent)
@@ -800,6 +868,12 @@ func (res *resource) handleAddToManyRelation(c APIContexter, w http.ResponseWrit
 }
 
 func (res *resource) handleDeleteToManyRelation(c APIContexter, w http.ResponseWriter, r *http.Request, params map[string]string, relation jsonapi.Reference) error {
+	source, ok := res.source.(ResourceUpdater)
+
+	if !ok {
+		return fmt.Errorf("Resource %s does not implement the ResourceUpdater interface", res.name)
+	}
+
 	var (
 		err     error
 		editObj interface{}
@@ -807,7 +881,7 @@ func (res *resource) handleDeleteToManyRelation(c APIContexter, w http.ResponseW
 
 	id := params["id"]
 
-	response, err := res.source.FindOne(id, buildRequest(c, r))
+	response, err := source.FindOne(id, buildRequest(c, r))
 	if err != nil {
 		return err
 	}
@@ -862,9 +936,9 @@ func (res *resource) handleDeleteToManyRelation(c APIContexter, w http.ResponseW
 	targetObj.DeleteToManyIDs(relation.Name, obsoleteIDs)
 
 	if resType == reflect.Struct {
-		_, err = res.source.Update(reflect.ValueOf(targetObj).Elem().Interface(), buildRequest(c, r))
+		_, err = source.Update(reflect.ValueOf(targetObj).Elem().Interface(), buildRequest(c, r))
 	} else {
-		_, err = res.source.Update(targetObj, buildRequest(c, r))
+		_, err = source.Update(targetObj, buildRequest(c, r))
 	}
 
 	w.WriteHeader(http.StatusNoContent)
@@ -881,8 +955,14 @@ func getPointerToStruct(oldObj interface{}) interface{} {
 }
 
 func (res *resource) handleDelete(c APIContexter, w http.ResponseWriter, r *http.Request, params map[string]string) error {
+	source, ok := res.source.(ResourceDeleter)
+
+	if !ok {
+		return fmt.Errorf("Resource %s does not implement the ResourceDeleter interface", res.name)
+	}
+
 	id := params["id"]
-	response, err := res.source.Delete(id, buildRequest(c, r))
+	response, err := source.Delete(id, buildRequest(c, r))
 	if err != nil {
 		return err
 	}
