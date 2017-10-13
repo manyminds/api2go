@@ -48,6 +48,6 @@ func (h HTTPRouter) GetRouteParameter(r http.Request, param string) string {
 func NewHTTPRouter(prefix string, notAllowedHandler http.Handler) Routeable {
 	router := httprouter.New()
 	router.HandleMethodNotAllowed = true
-	router.MethodNotAllowed = notAllowedHandler
+	router.MethodNotAllowed = notAllowedHandler.(http.HandlerFunc)
 	return &HTTPRouter{router: router}
 }
