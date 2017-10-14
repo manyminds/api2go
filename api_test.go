@@ -1758,4 +1758,141 @@ var _ = Describe("RestHandler", func() {
 			Expect(error.Errors).To(ContainElement(expectedError("pink", "users")))
 		})
 	})
+
+	Context("Works with multiple API verisons", func() {
+		var (
+			source, source2 *fixtureSource
+			mainAPI, apiV2  *API
+			rec             *httptest.ResponseRecorder
+		)
+
+		BeforeEach(func() {
+			author := User{ID: "666", Name: "Tester", Info: "Is curious about testing"}
+			source = &fixtureSource{map[string]*Post{
+				"1": {ID: "1", Title: "Nice Post", Value: null.FloatFrom(13.37), Author: &author},
+			}, false}
+			mainAPI = NewAPI("v1")
+			mainAPI.AddResource(Post{}, source)
+
+			author2 := User{ID: "888", Name: "Version 2 Tester", Info: "Is the next version"}
+			source2 = &fixtureSource{map[string]*Post{
+				"1": {ID: "1", Title: "Even better post", Value: null.FloatFrom(13.37), Author: &author2},
+			}, false}
+			apiV2 = mainAPI.NewAPIVersion("v2")
+			apiV2.AddResource(Post{}, source2)
+			rec = httptest.NewRecorder()
+		})
+
+		It("Works for v1", func() {
+			req, err := http.NewRequest("GET", "/v1/posts", nil)
+			Expect(err).ToNot(HaveOccurred())
+			mainAPI.Handler().ServeHTTP(rec, req)
+			Expect(rec.Code).To(Equal(http.StatusOK))
+			Expect(rec.Body.Bytes()).To(MatchJSON(`
+			{
+				"data": [
+				{
+					"type": "posts",
+					"id": "1",
+					"attributes": {
+						"title": "Nice Post",
+						"value": 13.37
+					},
+					"relationships": {
+						"author": {
+							"links": {
+								"related": "/v1/posts/1/author",
+								"self": "/v1/posts/1/relationships/author"
+							},
+							"data": {
+								"type": "users",
+								"id": "666"
+							}
+						},
+						"bananas": {
+							"links": {
+								"related": "/v1/posts/1/bananas",
+								"self": "/v1/posts/1/relationships/bananas"
+							},
+							"data": []
+						},
+						"comments": {
+							"links": {
+								"related": "/v1/posts/1/comments",
+								"self": "/v1/posts/1/relationships/comments"
+							},
+							"data": []
+						}
+					}
+				}
+				],
+				"included": [
+				{
+					"type": "users",
+					"id": "666",
+					"attributes": {
+						"name": "Tester",
+						"info": "Is curious about testing"
+					}
+				}
+				]
+			}`))
+		})
+
+		It("Works for v2", func() {
+			req, err := http.NewRequest("GET", "/v2/posts", nil)
+			Expect(err).ToNot(HaveOccurred())
+			mainAPI.Handler().ServeHTTP(rec, req)
+			Expect(rec.Code).To(Equal(http.StatusOK))
+			Expect(rec.Body.Bytes()).To(MatchJSON(`
+			{
+				"data": [
+				{
+					"type": "posts",
+					"id": "1",
+					"attributes": {
+						"title": "Even better post",
+						"value": 13.37
+					},
+					"relationships": {
+						"author": {
+							"links": {
+								"related": "/v2/posts/1/author",
+								"self": "/v2/posts/1/relationships/author"
+							},
+							"data": {
+								"type": "users",
+								"id": "888"
+							}
+						},
+						"bananas": {
+							"links": {
+								"related": "/v2/posts/1/bananas",
+								"self": "/v2/posts/1/relationships/bananas"
+							},
+							"data": []
+						},
+						"comments": {
+							"links": {
+								"related": "/v2/posts/1/comments",
+								"self": "/v2/posts/1/relationships/comments"
+							},
+							"data": []
+						}
+					}
+				}
+				],
+				"included": [
+				{
+					"type": "users",
+					"id": "888",
+					"attributes": {
+						"name": "Version 2 Tester",
+						"info": "Is the next version"
+					}
+				}
+				]
+			}`))
+		})
+	})
 })
