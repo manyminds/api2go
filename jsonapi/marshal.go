@@ -136,6 +136,27 @@ func MarshalToStruct(data interface{}, information ServerInformation) (*Document
 	}
 }
 
+func recursivelyEmbedIncludes(input []MarshalIdentifier) []MarshalIdentifier {
+	var referencedStructs []MarshalIdentifier
+
+	for _, referencedStruct := range input {
+		included, ok := referencedStruct.(MarshalIncludedRelations)
+		if ok {
+			referencedStructs = append(referencedStructs, included.GetReferencedStructs()...)
+		}
+	}
+
+	if len(referencedStructs) == 0 {
+		return input
+	}
+
+	childStructs := recursivelyEmbedIncludes(referencedStructs)
+	referencedStructs = append(referencedStructs, childStructs...)
+	referencedStructs = append(input, referencedStructs...)
+
+	return referencedStructs
+}
+
 func marshalSlice(data interface{}, information ServerInformation) (*Document, error) {
 	result := &Document{}
 
@@ -161,7 +182,8 @@ func marshalSlice(data interface{}, information ServerInformation) (*Document, e
 		}
 	}
 
-	includedElements, err := filterDuplicates(referencedStructs, information)
+	allReferencedStructs := recursivelyEmbedIncludes(referencedStructs)
+	includedElements, err := filterDuplicates(allReferencedStructs, information)
 	if err != nil {
 		return nil, err
 	}
@@ -395,7 +417,7 @@ func marshalStruct(data MarshalIdentifier, information ServerInformation) (*Docu
 
 	included, ok := data.(MarshalIncludedRelations)
 	if ok {
-		included, err := filterDuplicates(included.GetReferencedStructs(), information)
+		included, err := filterDuplicates(recursivelyEmbedIncludes(included.GetReferencedStructs()), information)
 		if err != nil {
 			return nil, err
 		}
