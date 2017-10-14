@@ -25,8 +25,10 @@ func (m MagicID) String() string {
 }
 
 type Comment struct {
-	ID   int    `json:"-"`
-	Text string `json:"text"`
+	ID               int       `json:"-"`
+	Text             string    `json:"text"`
+	SubComments      []Comment `json:"-"`
+	SubCommentsEmpty bool      `json:"-"`
 }
 
 func (c Comment) GetID() string {
@@ -42,6 +44,37 @@ func (c *Comment) SetID(stringID string) error {
 	c.ID = id
 
 	return nil
+}
+
+func (c Comment) GetReferences() []Reference {
+	return []Reference{
+		{
+			Type:        "comments",
+			Name:        "comments",
+			IsNotLoaded: c.SubCommentsEmpty,
+		},
+	}
+}
+
+func (c Comment) GetReferencedIDs() []ReferenceID {
+	result := []ReferenceID{}
+
+	for _, comment := range c.SubComments {
+		commentID := ReferenceID{Type: "comments", Name: "comments", ID: comment.GetID()}
+		result = append(result, commentID)
+	}
+
+	return result
+}
+
+func (c Comment) GetReferencedStructs() []MarshalIdentifier {
+	result := []MarshalIdentifier{}
+
+	for _, comment := range c.SubComments {
+		result = append(result, comment)
+	}
+
+	return result
 }
 
 type User struct {
