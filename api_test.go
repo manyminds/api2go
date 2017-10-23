@@ -863,8 +863,8 @@ var _ = Describe("RestHandler", func() {
 			Expect(err).To(BeNil())
 			api.Handler().ServeHTTP(rec, req)
 			// It's up to the user how to implement this. Api2go just checks if the type is correct
-			Expect(rec.Code).To(Equal(http.StatusNotFound))
-			Expect(string(rec.Body.Bytes())).To(MatchJSON(`{"errors":[{"status":"404","title":"post not found"}]}`))
+			Expect(rec.Code).To(Equal(http.StatusConflict))
+			Expect(string(rec.Body.Bytes())).To(MatchJSON(`{"errors":[{"status":"409","title":"id in the resource does not match servers endpoint"}]}`))
 		})
 
 		It("POST without type returns 406", func() {
@@ -894,6 +894,15 @@ var _ = Describe("RestHandler", func() {
 				Expect(source.posts["1"].Title).To(Equal("New Title"))
 				Expect(target.Title).To(Equal("New Title"))
 				Expect(target.Value).To(Equal(null.FloatFrom(2)))
+			})
+
+			It("Update fails with incorrect id in payload", func() {
+				reqBody := strings.NewReader(`{"data": {"id": "2", "attributes": {"title": "New Title"}, "type": "posts"}}`)
+				req, err := http.NewRequest("PATCH", "/v1/posts/1", reqBody)
+				Expect(err).To(BeNil())
+				api.Handler().ServeHTTP(rec, req)
+				Expect(rec.Code).To(Equal(http.StatusConflict))
+				Expect(string(rec.Body.Bytes())).To(MatchJSON(`{"errors":[{"status":"409","title":"id in the resource does not match servers endpoint"}]}`))
 			})
 
 			It("UPDATEs correctly using null.* values", func() {
