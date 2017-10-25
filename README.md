@@ -333,14 +333,16 @@ In order to use omitempty with those types, you need to specify them as pointers
 If you want to use api2go with [gin](https://github.com/gin-gonic/gin) you need to use a different router than the default one.
 Get the according adapter using:
 
-```go get github.com/manyminds/api2go-adapter/gingonic```
+```go get -tags=gingonic github.com/manyminds/api2go```
+
+Currently the supported tags are: `gingonic` or `gorillamux`.
 
 After that you can bootstrap api2go the following way:
 ```go
   import (
     "github.com/gin-gonic/gin"
     "github.com/manyminds/api2go"
-    "github.com/manyminds/api2go-adapter/gingonic"
+    "github.com/manyminds/api2go/routing"
     "github.com/manyminds/api2go/examples/model"
     "github.com/manyminds/api2go/examples/resource"
     "github.com/manyminds/api2go/examples/storage"
@@ -351,7 +353,7 @@ After that you can bootstrap api2go the following way:
     api := api2go.NewAPIWithRouting(
       "api",
       api2go.NewStaticResolver("/"),
-      gingonic.New(r),
+      routing.Gin(r),
     )
 
     userStorage := storage.NewUserStorage()
