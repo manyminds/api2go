@@ -12,6 +12,12 @@ import (
 func newTestRouter() routing.Routeable {
 	gin.SetMode(gin.ReleaseMode)
 	gg := gin.Default()
+	notFound := func(c *gin.Context) {
+		notAllowedHandler{}.ServeHTTP(c.Writer, c.Request)
+	}
+
+	gg.NoRoute(notFound)
+
 	return routing.Gin(gg)
 }
 

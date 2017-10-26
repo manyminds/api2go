@@ -1410,15 +1410,15 @@ var _ = Describe("RestHandler", func() {
 		})
 
 		Context("error codes", func() {
-			PIt("Should return the correct header on method not allowed", func() {
+			It("Should return the correct header on method not allowed", func() {
 				reqBody := strings.NewReader("")
 				req, err := http.NewRequest("PATCH", "/v1/posts", reqBody)
 				Expect(err).To(BeNil())
 				api.Handler().ServeHTTP(rec, req)
-				expected := `{"errors":[{"status":"405","title":"Method Not Allowed"}]}`
-				Expect(rec.Body.String()).To(MatchJSON(expected))
 				Expect(rec.Header().Get("Content-Type")).To(Equal(defaultContentTypHeader))
 				Expect(rec.Code).To(Equal(http.StatusMethodNotAllowed))
+				expected := `{"errors":[{"status":"405","title":"Method Not Allowed"}]}`
+				Expect(rec.Body.String()).To(MatchJSON(expected))
 			})
 		})
 

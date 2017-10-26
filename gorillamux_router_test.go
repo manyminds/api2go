@@ -10,7 +10,9 @@ import (
 )
 
 func newTestRouter() routing.Routeable {
-	return routing.Gorilla(mux.NewRouter())
+	router := mux.NewRouter()
+	router.MethodNotAllowedHandler = notAllowedHandler{}
+	return routing.Gorilla(router)
 }
 
 func init() {
