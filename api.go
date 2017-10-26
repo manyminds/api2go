@@ -419,7 +419,6 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source interfac
 }
 
 func getAllowedMethods(source interface{}, collection bool) []string {
-
 	result := []string{http.MethodOptions}
 
 	if _, ok := source.(ResourceGetter); ok {
@@ -603,7 +602,6 @@ func (res *resource) handleLinked(c APIContexter, api *API, w http.ResponseWrite
 }
 
 func (res *resource) handleCreate(c APIContexter, w http.ResponseWriter, r *http.Request, prefix string, info information) error {
-
 	source, ok := res.source.(ResourceCreator)
 
 	if !ok {

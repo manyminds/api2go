@@ -1465,7 +1465,7 @@ var _ = Describe("RestHandler", func() {
 				"1": {ID: "1", Title: "Hello, World!"},
 			}, false}
 
-			api = NewAPI("v1")
+			api = NewAPIWithRouting(testPrefix, NewStaticResolver(""), newTestRouter())
 			api.AddResource(Post{}, source)
 			MiddleTest := func(c APIContexter, w http.ResponseWriter, r *http.Request) {
 				w.Header().Add("x-test", "test123")
@@ -1499,7 +1499,7 @@ var _ = Describe("RestHandler", func() {
 				"1": {ID: "1", Title: "Hello, World!"},
 			}, false}
 
-			api = NewAPI("v1")
+			api = NewAPIWithRouting(testPrefix, NewStaticResolver(""), newTestRouter())
 			api.AddResource(Post{}, source)
 			api.SetContextAllocator(func(api *API) APIContexter {
 				customContextCalled = true
@@ -1782,7 +1782,7 @@ var _ = Describe("RestHandler", func() {
 			source = &fixtureSource{map[string]*Post{
 				"1": {ID: "1", Title: "Nice Post", Value: null.FloatFrom(13.37), Author: &author},
 			}, false}
-			mainAPI = NewAPI("v1")
+			mainAPI = NewAPIWithRouting(testPrefix, NewStaticResolver(""), newTestRouter())
 			mainAPI.AddResource(Post{}, source)
 
 			author2 := User{ID: "888", Name: "Version 2 Tester", Info: "Is the next version"}
