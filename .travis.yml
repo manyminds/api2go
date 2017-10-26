@@ -20,8 +20,8 @@ install:
 
 script:
   - ginkgo -r -cover --randomizeAllSpecs --randomizeSuites --failOnPending --trace --race --progress
-  - go test -test.v -tags=gorillamux ./...
-  - go test -test.v -tags=gingonic ./...
+  - ginkgo -tags=gorillamux -r --randomizeSuites --failOnPending --trace --race
+  - ginkgo -tags=gingonic -r --randomizeSuites --failOnPending --trace --race
   - rm examples/examples.coverprofile
   - bash scripts/fmtpolice
   - gover
