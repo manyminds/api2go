@@ -17,6 +17,8 @@ import (
 	"gopkg.in/guregu/null.v2"
 )
 
+const testPrefix = "v1"
+
 type requestURLResolver struct {
 	r     http.Request
 	calls int
@@ -1236,7 +1238,7 @@ var _ = Describe("RestHandler", func() {
 				"7": {ID: "7", Title: "Hello, World!"},
 			}, false}
 
-			api = NewAPI("v1")
+			api = NewAPIWithRouting(testPrefix, NewStaticResolver(""), newTestRouter())
 			api.AddResource(Post{}, source)
 
 			rec = httptest.NewRecorder()
@@ -1413,10 +1415,10 @@ var _ = Describe("RestHandler", func() {
 				req, err := http.NewRequest("PATCH", "/v1/posts", reqBody)
 				Expect(err).To(BeNil())
 				api.Handler().ServeHTTP(rec, req)
-				expected := `{"errors":[{"status":"405","title":"Method Not Allowed"}]}`
-				Expect(rec.Body.String()).To(MatchJSON(expected))
 				Expect(rec.Header().Get("Content-Type")).To(Equal(defaultContentTypHeader))
 				Expect(rec.Code).To(Equal(http.StatusMethodNotAllowed))
+				expected := `{"errors":[{"status":"405","title":"Method Not Allowed"}]}`
+				Expect(rec.Body.String()).To(MatchJSON(expected))
 			})
 		})
 
@@ -1463,7 +1465,7 @@ var _ = Describe("RestHandler", func() {
 				"1": {ID: "1", Title: "Hello, World!"},
 			}, false}
 
-			api = NewAPI("v1")
+			api = NewAPIWithRouting(testPrefix, NewStaticResolver(""), newTestRouter())
 			api.AddResource(Post{}, source)
 			MiddleTest := func(c APIContexter, w http.ResponseWriter, r *http.Request) {
 				w.Header().Add("x-test", "test123")
@@ -1497,7 +1499,7 @@ var _ = Describe("RestHandler", func() {
 				"1": {ID: "1", Title: "Hello, World!"},
 			}, false}
 
-			api = NewAPI("v1")
+			api = NewAPIWithRouting(testPrefix, NewStaticResolver(""), newTestRouter())
 			api.AddResource(Post{}, source)
 			api.SetContextAllocator(func(api *API) APIContexter {
 				customContextCalled = true
@@ -1780,7 +1782,7 @@ var _ = Describe("RestHandler", func() {
 			source = &fixtureSource{map[string]*Post{
 				"1": {ID: "1", Title: "Nice Post", Value: null.FloatFrom(13.37), Author: &author},
 			}, false}
-			mainAPI = NewAPI("v1")
+			mainAPI = NewAPIWithRouting(testPrefix, NewStaticResolver(""), newTestRouter())
 			mainAPI.AddResource(Post{}, source)
 
 			author2 := User{ID: "888", Name: "Version 2 Tester", Info: "Is the next version"}
