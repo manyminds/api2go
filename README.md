@@ -335,7 +335,7 @@ Get the according adapter using:
 
 ```go get -tags=gingonic github.com/manyminds/api2go```
 
-Currently the supported tags are: `gingonic` or `gorillamux`.
+Currently the supported tags are: `gingonic`,`gorillamux`, or `echo`.
 
 After that you can bootstrap api2go the following way:
 ```go

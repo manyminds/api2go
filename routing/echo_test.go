@@ -1,4 +1,4 @@
-// +build gingonic,!gorillamux,!echo
+// +build echo,!gingonic,!gorillamux
 
 package routing_test
 
@@ -9,7 +9,7 @@ import (
 	"net/http/httptest"
 	"strings"
 
-	"github.com/gin-gonic/gin"
+	"github.com/labstack/echo"
 	"github.com/manyminds/api2go"
 	"github.com/manyminds/api2go/examples/model"
 	"github.com/manyminds/api2go/examples/resource"
@@ -20,18 +20,17 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("api2go with gingonic router adapter", func() {
+var _ = Describe("api2go with echo router adapter", func() {
 	var (
 		router routing.Routeable
-		gg     *gin.Engine
+		e      *echo.Echo
 		api    *api2go.API
 		rec    *httptest.ResponseRecorder
 	)
 
 	BeforeSuite(func() {
-		gin.SetMode(gin.ReleaseMode)
-		gg = gin.Default()
-		router = routing.Gin(gg)
+		e = echo.New()
+		router = routing.Echo(e)
 		api = api2go.NewAPIWithRouting(
 			"api",
 			api2go.NewStaticResolver("/"),
@@ -54,7 +53,7 @@ var _ = Describe("api2go with gingonic router adapter", func() {
 			reqBody := strings.NewReader(`{"data": {"attributes": {"user-name": "Sansa Stark"}, "id": "1", "type": "users"}}`)
 			req, err := http.NewRequest("POST", "/api/users", reqBody)
 			Expect(err).To(BeNil())
-			gg.ServeHTTP(rec, req)
+			e.ServeHTTP(rec, req)
 			Expect(rec.Code).To(Equal(http.StatusCreated))
 		})
 
@@ -81,7 +80,7 @@ var _ = Describe("api2go with gingonic router adapter", func() {
 
 			req, err := http.NewRequest("GET", "/api/users/1", nil)
 			Expect(err).To(BeNil())
-			gg.ServeHTTP(rec, req)
+			e.ServeHTTP(rec, req)
 			Expect(rec.Code).To(Equal(http.StatusOK))
 			Expect(string(rec.Body.Bytes())).To(MatchJSON((expectedUser)))
 		})
@@ -96,7 +95,7 @@ var _ = Describe("api2go with gingonic router adapter", func() {
 			reqBody := strings.NewReader(`{"data": {"id": "1", "attributes": {"user-name": "Alayne"}, "type" : "users"}}`)
 			req, err := http.NewRequest("PATCH", "/api/users/1", reqBody)
 			Expect(err).To(BeNil())
-			gg.ServeHTTP(rec, req)
+			e.ServeHTTP(rec, req)
 			Expect(rec.Code).To(Equal(http.StatusNoContent))
 		})
 
@@ -123,7 +122,7 @@ var _ = Describe("api2go with gingonic router adapter", func() {
 
 			req, err := http.NewRequest("GET", "/api/users/1", nil)
 			Expect(err).To(BeNil())
-			gg.ServeHTTP(rec, req)
+			e.ServeHTTP(rec, req)
 			Expect(rec.Code).To(Equal(http.StatusOK))
 			Expect(string(rec.Body.Bytes())).To(MatchJSON((expectedUser)))
 		})
@@ -131,7 +130,7 @@ var _ = Describe("api2go with gingonic router adapter", func() {
 		It("will delete her", func() {
 			req, err := http.NewRequest("DELETE", "/api/users/1", nil)
 			Expect(err).To(BeNil())
-			gg.ServeHTTP(rec, req)
+			e.ServeHTTP(rec, req)
 			Expect(rec.Code).To(Equal(http.StatusNoContent))
 		})
 
@@ -139,7 +138,7 @@ var _ = Describe("api2go with gingonic router adapter", func() {
 			expected := `{"errors":[{"status":"404","title":"http error (404) User for id 1 not found and 0 more errors, User for id 1 not found"}]}`
 			req, err := http.NewRequest("GET", "/api/users/1", nil)
 			Expect(err).To(BeNil())
-			gg.ServeHTTP(rec, req)
+			e.ServeHTTP(rec, req)
 			Expect(rec.Code).To(Equal(http.StatusNotFound))
 			Expect(string(rec.Body.Bytes())).To(MatchJSON(expected))
 		})
