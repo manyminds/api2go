@@ -2,7 +2,6 @@ package jsonapi
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -132,7 +131,7 @@ func MarshalToStruct(data interface{}, information ServerInformation) (*Document
 	case reflect.Struct, reflect.Ptr:
 		return marshalStruct(data.(MarshalIdentifier), information)
 	default:
-		return nil, errors.New("Marshal only accepts slice, struct or ptr types")
+		return nil, ErrInvalidMarshalType
 	}
 }
 
@@ -168,7 +167,7 @@ func marshalSlice(data interface{}, information ServerInformation) (*Document, e
 		k := val.Index(i).Interface()
 		element, ok := k.(MarshalIdentifier)
 		if !ok {
-			return nil, errors.New("all elements within the slice must implement api2go.MarshalIdentifier")
+			return nil, ErrNonHomogenousSlice
 		}
 
 		err := marshalData(element, &dataElements[i], information)
@@ -228,7 +227,7 @@ func filterDuplicates(input []MarshalIdentifier, information ServerInformation) 
 func marshalData(element MarshalIdentifier, data *Data, information ServerInformation) error {
 	refValue := reflect.ValueOf(element)
 	if refValue.Kind() == reflect.Ptr && refValue.IsNil() {
-		return errors.New("MarshalIdentifier must not be nil")
+		return ErrNonNilElement
 	}
 
 	attributes, err := json.Marshal(element)

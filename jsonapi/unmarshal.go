@@ -2,7 +2,6 @@ package jsonapi
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"reflect"
 )
@@ -80,11 +79,11 @@ type EditToManyRelations interface {
 // must implement the `UnmarshalIdentifier` interface.
 func Unmarshal(data []byte, target interface{}) error {
 	if target == nil {
-		return errors.New("target must not be nil")
+		return ErrNilTarget
 	}
 
 	if reflect.TypeOf(target).Kind() != reflect.Ptr {
-		return errors.New("target must be a ptr")
+		return ErrNonPointerTarget
 	}
 
 	ctx := &Document{}
@@ -95,7 +94,7 @@ func Unmarshal(data []byte, target interface{}) error {
 	}
 
 	if ctx.Data == nil {
-		return errors.New(`Source JSON is empty and has no "attributes" payload object`)
+		return ErrEmptySource
 	}
 
 	if ctx.Data.DataObject != nil {
@@ -118,8 +117,9 @@ func Unmarshal(data []byte, target interface{}) error {
 			for i := 0; i < targetValue.Len(); i++ {
 				marshalCasted, ok := targetValue.Index(i).Interface().(MarshalIdentifier)
 				if !ok {
-					return errors.New("existing structs must implement interface MarshalIdentifier")
+					return ErrInvalidStruct
 				}
+
 				if record.ID == marshalCasted.GetID() {
 					targetRecord = targetValue.Index(i).Addr()
 					break
@@ -150,11 +150,11 @@ func Unmarshal(data []byte, target interface{}) error {
 func setDataIntoTarget(data *Data, target interface{}) error {
 	castedTarget, ok := target.(UnmarshalIdentifier)
 	if !ok {
-		return errors.New("target must implement UnmarshalIdentifier interface")
+		return ErrInvalidUnmarshalType
 	}
 
 	if data.Type == "" {
-		return errors.New("invalid record, no type was specified")
+		return ErrMissingType
 	}
 
 	err := checkType(data.Type, castedTarget)
