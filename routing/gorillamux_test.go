@@ -1,4 +1,4 @@
-// +build gorillamux,!gingonic
+// +build gorillamux,!gingonic,!echo
 
 package routing_test
 

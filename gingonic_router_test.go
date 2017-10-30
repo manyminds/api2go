@@ -1,4 +1,4 @@
-// +build gingonic,!gorillamux
+// +build gingonic,!gorillamux,!echo
 
 package api2go
 
