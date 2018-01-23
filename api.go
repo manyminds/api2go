@@ -435,12 +435,29 @@ func getAllowedMethods(source interface{}, collection bool) []string {
 	return result
 }
 
+func spiltWithUrlEncodedCheck(paramStr string) []string {
+	// mappings
+	escapeToUrlEncode := map[string]string{"\\,": "%5c%2c"}
+	urlEncodeToAscii := map[string]string{"%5c%2c": ","}
+
+	// replace all urlencoded characters necessary
+	s := strings.Replace(paramStr, "\\,", escapeToUrlEncode["\\,"], -1)
+
+	split := strings.Split(s, ",")
+
+	// revert url encoded values changed
+	for i, subStr := range split {
+		split[i] = strings.Replace(subStr, "%5c%2c", urlEncodeToAscii["%5c%2c"], -1)
+	}
+	return split
+}
+
 func buildRequest(c APIContexter, r *http.Request) Request {
 	req := Request{PlainRequest: r}
 	params := make(map[string][]string)
 	pagination := make(map[string]string)
 	for key, values := range r.URL.Query() {
-		params[key] = strings.Split(values[0], ",")
+		params[key] = spiltWithUrlEncodedCheck(values[0])
 		pageMatches := queryPageRegex.FindStringSubmatch(key)
 		if len(pageMatches) > 1 {
 			pagination[pageMatches[1]] = values[0]
