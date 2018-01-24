@@ -46,11 +46,11 @@ import (
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
-	"github.com/manyminds/api2go"
-	"github.com/manyminds/api2go/examples/model"
-	"github.com/manyminds/api2go/examples/resolver"
-	"github.com/manyminds/api2go/examples/resource"
-	"github.com/manyminds/api2go/examples/storage"
+	"github.com/digitallumens/api2go"
+	"github.com/digitallumens/api2go/examples/model"
+	"github.com/digitallumens/api2go/examples/resolver"
+	"github.com/digitallumens/api2go/examples/resource"
+	"github.com/digitallumens/api2go/examples/storage"
 )
 
 func main() {

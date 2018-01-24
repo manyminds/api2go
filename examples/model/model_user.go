@@ -3,7 +3,7 @@ package model
 import (
 	"errors"
 
-	"github.com/manyminds/api2go/jsonapi"
+	"github.com/digitallumens/api2go/jsonapi"
 )
 
 // User is a generic database user
