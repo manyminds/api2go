@@ -243,10 +243,37 @@ var _ = Describe("Marshalling", func() {
 		})
 	})
 
+	Context("When marshaling objects with custom meta", func() {
+		It("contains the custom meta in the marshaled data", func() {
+			post := CustomMetaPost{}
+			i, err := MarshalWithURLs(post, CompleteServerInformation{})
+			Expect(err).To(BeNil())
+			Expect(i).To(MatchJSON(`{
+				"data": {
+					"type": "posts",
+					"id": "someID",
+					"attributes": {},
+					"relationships": {
+							"author": {
+								"links": {
+									"self": "http://my.domain/v1/posts/someID/relationships/author",
+									"related": "http://my.domain/v1/posts/someID/author"
+								},
+								"meta": {
+									"someMetaKey": "someMetaValue",
+									"someOtherMetaKey": "someOtherMetaValue"
+								}
+							}
+					}
+				}
+			}`))
+		})
+	})
+
 	Context("When marshaling compound objects", func() {
 		It("marshals nested objects", func() {
-			comment1 := Comment{ID: 1, Text: "First!"}
-			comment2 := Comment{ID: 2, Text: "Second!"}
+			comment1 := Comment{ID: 1, Text: "First!", SubCommentsEmpty: true}
+			comment2 := Comment{ID: 2, Text: "Second!", SubCommentsEmpty: true}
 			author := User{ID: 1, Name: "Test Author"}
 			post1 := Post{ID: 1, Title: "Foobar", Comments: []Comment{comment1, comment2}, Author: &author}
 			post2 := Post{ID: 2, Title: "Foobarbarbar", Comments: []Comment{comment1, comment2}, Author: &author}
@@ -342,6 +369,14 @@ var _ = Describe("Marshalling", func() {
 						"id": "1",
 						"attributes": {
 							"text": "First!"
+						},
+						"relationships": {
+							"comments": {
+								"links": {
+									"related": "http://my.domain/v1/comments/1/comments",
+									"self": "http://my.domain/v1/comments/1/relationships/comments"
+								}
+							}
 						}
 					},
 					{
@@ -349,11 +384,319 @@ var _ = Describe("Marshalling", func() {
 						"id": "2",
 						"attributes": {
 							"text": "Second!"
+						},
+						"relationships": {
+							"comments": {
+								"links": {
+									"related": "http://my.domain/v1/comments/2/comments",
+									"self": "http://my.domain/v1/comments/2/relationships/comments"
+								}
+							}
 						}
 					}
 				]
 			}`
 			Expect(i).To(MatchJSON(expected))
+		})
+
+		It("recursively marshals includes for slices", func() {
+			comment1SubComment1 := Comment{ID: 3, Text: "No you are wrong!", SubCommentsEmpty: true}
+			comment1SubComment2 := Comment{ID: 4, Text: "Nah, he's right!", SubCommentsEmpty: true}
+			comment1 := Comment{ID: 1, Text: "First!", SubComments: []Comment{comment1SubComment1, comment1SubComment2}}
+			comment2 := Comment{ID: 2, Text: "Second!", SubCommentsEmpty: true}
+			author := User{ID: 1, Name: "Test Author"}
+			post1 := Post{ID: 1, Title: "Foobar", Comments: []Comment{comment1, comment2}, Author: &author}
+			post2 := Post{ID: 2, Title: "Foobarbarbar", Comments: []Comment{comment1, comment2}, Author: &author}
+
+			posts := []Post{post1, post2}
+
+			i, err := MarshalWithURLs(posts, CompleteServerInformation{})
+			Expect(err).To(BeNil())
+			Expect(i).To(MatchJSON(`
+			{
+				"data": [
+				{
+					"type": "posts",
+					"id": "1",
+					"attributes": {
+						"title": "Foobar"
+					},
+					"relationships": {
+						"author": {
+							"links": {
+								"related": "http://my.domain/v1/posts/1/author",
+								"self": "http://my.domain/v1/posts/1/relationships/author"
+							},
+							"data": {
+								"type": "users",
+								"id": "1"
+							}
+						},
+						"comments": {
+							"links": {
+								"related": "http://my.domain/v1/posts/1/comments",
+								"self": "http://my.domain/v1/posts/1/relationships/comments"
+							},
+							"data": [
+							{
+								"type": "comments",
+								"id": "1"
+							},
+							{
+								"type": "comments",
+								"id": "2"
+							}
+							]
+						}
+					}
+				},
+				{
+					"type": "posts",
+					"id": "2",
+					"attributes": {
+						"title": "Foobarbarbar"
+					},
+					"relationships": {
+						"author": {
+							"links": {
+								"related": "http://my.domain/v1/posts/2/author",
+								"self": "http://my.domain/v1/posts/2/relationships/author"
+							},
+							"data": {
+								"type": "users",
+								"id": "1"
+							}
+						},
+						"comments": {
+							"links": {
+								"related": "http://my.domain/v1/posts/2/comments",
+								"self": "http://my.domain/v1/posts/2/relationships/comments"
+							},
+							"data": [
+							{
+								"type": "comments",
+								"id": "1"
+							},
+							{
+								"type": "comments",
+								"id": "2"
+							}
+							]
+						}
+					}
+				}
+				],
+				"included": [
+				{
+					"type": "users",
+					"id": "1",
+					"attributes": {
+						"name": "Test Author"
+					}
+				},
+				{
+					"type": "comments",
+					"id": "1",
+					"attributes": {
+						"text": "First!"
+					},
+					"relationships": {
+						"comments": {
+							"links": {
+								"related": "http://my.domain/v1/comments/1/comments",
+								"self": "http://my.domain/v1/comments/1/relationships/comments"
+							},
+							"data": [
+							{
+								"type": "comments",
+								"id": "3"
+							},
+							{
+								"type": "comments",
+								"id": "4"
+							}
+							]
+						}
+					}
+				},
+				{
+					"type": "comments",
+					"id": "2",
+					"attributes": {
+						"text": "Second!"
+					},
+					"relationships": {
+						"comments": {
+							"links": {
+								"related": "http://my.domain/v1/comments/2/comments",
+								"self": "http://my.domain/v1/comments/2/relationships/comments"
+							}
+						}
+					}
+				},
+				{
+					"type": "comments",
+					"id": "3",
+					"attributes": {
+						"text": "No you are wrong!"
+					},
+					"relationships": {
+						"comments": {
+							"links": {
+								"related": "http://my.domain/v1/comments/3/comments",
+								"self": "http://my.domain/v1/comments/3/relationships/comments"
+							}
+						}
+					}
+				},
+				{
+					"type": "comments",
+					"id": "4",
+					"attributes": {
+						"text": "Nah, he's right!"
+					},
+					"relationships": {
+						"comments": {
+							"links": {
+								"related": "http://my.domain/v1/comments/4/comments",
+								"self": "http://my.domain/v1/comments/4/relationships/comments"
+							}
+						}
+					}
+				}
+				]
+			}
+			`))
+		})
+
+		It("recursively marshals includes for structs", func() {
+			comment1SubComment1 := Comment{ID: 3, Text: "No you are wrong!", SubCommentsEmpty: true}
+			comment1SubComment2 := Comment{ID: 4, Text: "Nah, he's right!", SubCommentsEmpty: true}
+			comment1 := Comment{ID: 1, Text: "First!", SubComments: []Comment{comment1SubComment1, comment1SubComment2}}
+			comment2 := Comment{ID: 2, Text: "Second!", SubCommentsEmpty: true}
+			author := User{ID: 1, Name: "Test Author"}
+			post1 := Post{ID: 1, Title: "Foobar", Comments: []Comment{comment1, comment2}, Author: &author}
+
+			i, err := MarshalWithURLs(post1, CompleteServerInformation{})
+			Expect(err).To(BeNil())
+			Expect(i).To(MatchJSON(`
+			{
+				"data": {
+					"type": "posts",
+					"id": "1",
+					"attributes": {
+						"title": "Foobar"
+					},
+					"relationships": {
+						"author": {
+							"links": {
+								"related": "http://my.domain/v1/posts/1/author",
+								"self": "http://my.domain/v1/posts/1/relationships/author"
+							},
+							"data": {
+								"type": "users",
+								"id": "1"
+							}
+						},
+						"comments": {
+							"links": {
+								"related": "http://my.domain/v1/posts/1/comments",
+								"self": "http://my.domain/v1/posts/1/relationships/comments"
+							},
+							"data": [
+							{
+								"type": "comments",
+								"id": "1"
+							},
+							{
+								"type": "comments",
+								"id": "2"
+							}
+							]
+						}
+					}
+				},
+				"included": [
+				{
+					"type": "users",
+					"id": "1",
+					"attributes": {
+						"name": "Test Author"
+					}
+				},
+				{
+					"type": "comments",
+					"id": "1",
+					"attributes": {
+						"text": "First!"
+					},
+					"relationships": {
+						"comments": {
+							"links": {
+								"related": "http://my.domain/v1/comments/1/comments",
+								"self": "http://my.domain/v1/comments/1/relationships/comments"
+							},
+							"data": [
+							{
+								"type": "comments",
+								"id": "3"
+							},
+							{
+								"type": "comments",
+								"id": "4"
+							}
+							]
+						}
+					}
+				},
+				{
+					"type": "comments",
+					"id": "2",
+					"attributes": {
+						"text": "Second!"
+					},
+					"relationships": {
+						"comments": {
+							"links": {
+								"related": "http://my.domain/v1/comments/2/comments",
+								"self": "http://my.domain/v1/comments/2/relationships/comments"
+							}
+						}
+					}
+				},
+				{
+					"type": "comments",
+					"id": "3",
+					"attributes": {
+						"text": "No you are wrong!"
+					},
+					"relationships": {
+						"comments": {
+							"links": {
+								"related": "http://my.domain/v1/comments/3/comments",
+								"self": "http://my.domain/v1/comments/3/relationships/comments"
+							}
+						}
+					}
+				},
+				{
+					"type": "comments",
+					"id": "4",
+					"attributes": {
+						"text": "Nah, he's right!"
+					},
+					"relationships": {
+						"comments": {
+							"links": {
+								"related": "http://my.domain/v1/comments/4/comments",
+								"self": "http://my.domain/v1/comments/4/relationships/comments"
+							}
+						}
+					}
+				}
+				]
+			}
+			`))
 		})
 
 		It("adds IDs", func() {
@@ -395,7 +738,7 @@ var _ = Describe("Marshalling", func() {
 		})
 
 		It("prefers nested structs when given both, structs and IDs", func() {
-			comment := Comment{ID: 1}
+			comment := Comment{ID: 1, SubCommentsEmpty: true}
 			author := User{ID: 1, Name: "Tester"}
 			post := Post{ID: 1, Comments: []Comment{comment}, CommentsIDs: []int{2}, Author: &author, AuthorID: sql.NullInt64{Int64: 1337}}
 			i, err := Marshal(post)
@@ -438,6 +781,9 @@ var _ = Describe("Marshalling", func() {
 						"id": "1",
 						"attributes": {
 							"text": ""
+						},
+						"relationships": {
+							"comments": {}
 						}
 					}
 				]

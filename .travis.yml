@@ -2,6 +2,8 @@ language: go
 
 go:
   - 1.7
+  - 1.8
+  - 1.9
   - tip
 
 sudo: false
@@ -12,9 +14,16 @@ install:
   - go get -u github.com/golang/lint/golint
   - go get -u github.com/modocache/gover
   - go get -u github.com/mattn/goveralls
+    # optional dependencies
+  - go get -u github.com/gin-gonic/gin
+  - go get -u github.com/gorilla/mux
+  - go get -u github.com/labstack/echo/...
 
 script:
   - ginkgo -r -cover --randomizeAllSpecs --randomizeSuites --failOnPending --trace --race --progress
+  - ginkgo -tags=gorillamux -r --randomizeSuites --failOnPending --trace --race
+  - ginkgo -tags=gingonic -r --randomizeSuites --failOnPending --trace --race
+  - ginkgo -tags=echo -r --randomizeSuites --failOnPending --trace --race
   - rm examples/examples.coverprofile
   - bash scripts/fmtpolice
   - gover

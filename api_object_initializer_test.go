@@ -40,7 +40,7 @@ var _ = Describe("Test resource implementing the ObjectInitializer interface", f
 		body *strings.Reader
 	)
 	BeforeEach(func() {
-		api = NewAPI("v1")
+		api = NewAPIWithRouting(testPrefix, NewStaticResolver(""), newTestRouter())
 		api.AddResource(Post{}, ObjectInitializerResource{})
 		rec = httptest.NewRecorder()
 		body = strings.NewReader(`

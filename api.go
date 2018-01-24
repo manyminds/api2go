@@ -172,7 +172,13 @@ type notAllowedHandler struct {
 func (n notAllowedHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	err := NewHTTPError(nil, "Method Not Allowed", http.StatusMethodNotAllowed)
 	w.WriteHeader(http.StatusMethodNotAllowed)
-	n.API.handleError(err, w, r)
+
+	contentType := defaultContentTypHeader
+	if n.API != nil {
+		contentType = n.API.ContentType
+	}
+
+	handleError(err, w, r, contentType)
 }
 
 type resource struct {
@@ -262,7 +268,7 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source interfac
 		err := res.handleIndex(c, w, r, *info)
 		api.contextPool.Put(c)
 		if err != nil {
-			api.handleError(err, w, r)
+			handleError(err, w, r, api.ContentType)
 		}
 	})
 
@@ -284,7 +290,7 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source interfac
 			err := res.handleRead(c, w, r, params, *info)
 			api.contextPool.Put(c)
 			if err != nil {
-				api.handleError(err, w, r)
+				handleError(err, w, r, api.ContentType)
 			}
 		})
 	}
@@ -303,7 +309,7 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source interfac
 					err := res.handleReadRelation(c, w, r, params, *info, relation)
 					api.contextPool.Put(c)
 					if err != nil {
-						api.handleError(err, w, r)
+						handleError(err, w, r, api.ContentType)
 					}
 				}
 			}(relation))
@@ -317,7 +323,7 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source interfac
 					err := res.handleLinked(c, api, w, r, params, relation, *info)
 					api.contextPool.Put(c)
 					if err != nil {
-						api.handleError(err, w, r)
+						handleError(err, w, r, api.ContentType)
 					}
 				}
 			}(relation))
@@ -330,7 +336,7 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source interfac
 					err := res.handleReplaceRelation(c, w, r, params, relation)
 					api.contextPool.Put(c)
 					if err != nil {
-						api.handleError(err, w, r)
+						handleError(err, w, r, api.ContentType)
 					}
 				}
 			}(relation))
@@ -345,7 +351,7 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source interfac
 						err := res.handleAddToManyRelation(c, w, r, params, relation)
 						api.contextPool.Put(c)
 						if err != nil {
-							api.handleError(err, w, r)
+							handleError(err, w, r, api.ContentType)
 						}
 					}
 				}(relation))
@@ -358,7 +364,7 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source interfac
 						err := res.handleDeleteToManyRelation(c, w, r, params, relation)
 						api.contextPool.Put(c)
 						if err != nil {
-							api.handleError(err, w, r)
+							handleError(err, w, r, api.ContentType)
 						}
 					}
 				}(relation))
@@ -375,7 +381,7 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source interfac
 			err := res.handleCreate(c, w, r, info.prefix, *info)
 			api.contextPool.Put(c)
 			if err != nil {
-				api.handleError(err, w, r)
+				handleError(err, w, r, api.ContentType)
 			}
 		})
 	}
@@ -388,7 +394,7 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source interfac
 			err := res.handleDelete(c, w, r, params)
 			api.contextPool.Put(c)
 			if err != nil {
-				api.handleError(err, w, r)
+				handleError(err, w, r, api.ContentType)
 			}
 		})
 	}
@@ -402,7 +408,7 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source interfac
 			err := res.handleUpdate(c, w, r, params, *info)
 			api.contextPool.Put(c)
 			if err != nil {
-				api.handleError(err, w, r)
+				handleError(err, w, r, api.ContentType)
 			}
 		})
 	}
@@ -413,7 +419,6 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source interfac
 }
 
 func getAllowedMethods(source interface{}, collection bool) []string {
-
 	result := []string{http.MethodOptions}
 
 	if _, ok := source.(ResourceGetter); ok {
@@ -614,7 +619,6 @@ func (res *resource) handleLinked(c APIContexter, api *API, w http.ResponseWrite
 }
 
 func (res *resource) handleCreate(c APIContexter, w http.ResponseWriter, r *http.Request, prefix string, info information) error {
-
 	source, ok := res.source.(ResourceCreator)
 
 	if !ok {
@@ -714,6 +718,12 @@ func (res *resource) handleUpdate(c APIContexter, w http.ResponseWriter, r *http
 	}
 	if err != nil {
 		return NewHTTPError(nil, err.Error(), http.StatusNotAcceptable)
+	}
+
+	identifiable, ok := updatingObj.Interface().(jsonapi.MarshalIdentifier)
+	if !ok || identifiable.GetID() != id {
+		conflictError := errors.New("id in the resource does not match servers endpoint")
+		return NewHTTPError(conflictError, conflictError.Error(), http.StatusConflict)
 	}
 
 	response, err := source.Update(updatingObj.Interface(), buildRequest(c, r))
@@ -1162,16 +1172,16 @@ func replaceAttributes(query *map[string][]string, entry *jsonapi.Data) map[stri
 	return nil
 }
 
-func (api *API) handleError(err error, w http.ResponseWriter, r *http.Request) {
+func handleError(err error, w http.ResponseWriter, r *http.Request, contentType string) {
 	log.Println(err)
 	if e, ok := err.(HTTPError); ok {
-		writeResult(w, []byte(marshalHTTPError(e)), e.status, api.ContentType)
+		writeResult(w, []byte(marshalHTTPError(e)), e.status, contentType)
 		return
 
 	}
 
 	e := NewHTTPError(err, err.Error(), http.StatusInternalServerError)
-	writeResult(w, []byte(marshalHTTPError(e)), http.StatusInternalServerError, api.ContentType)
+	writeResult(w, []byte(marshalHTTPError(e)), http.StatusInternalServerError, contentType)
 }
 
 // TODO: this can also be replaced with a struct into that we directly json.Unmarshal

@@ -52,6 +52,13 @@ func (api *API) UseMiddleware(middleware ...HandlerFunc) {
 	api.middlewares = append(api.middlewares, middleware...)
 }
 
+// NewAPIVersion can be used to chain an additional API version to the routing of a previous
+// one. Use this if you have multiple version prefixes and want to combine all
+// your different API versions. This reuses the baseURL or URLResolver
+func (api *API) NewAPIVersion(prefix string) *API {
+	return newAPI(prefix, api.info.resolver, api.router)
+}
+
 // NewAPIWithResolver can be used to create an API with a custom URL resolver.
 func NewAPIWithResolver(prefix string, resolver URLResolver) *API {
 	handler := notAllowedHandler{}

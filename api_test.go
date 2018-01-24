@@ -17,6 +17,8 @@ import (
 	"gopkg.in/guregu/null.v2"
 )
 
+const testPrefix = "v1"
+
 type requestURLResolver struct {
 	r     http.Request
 	calls int
@@ -863,8 +865,8 @@ var _ = Describe("RestHandler", func() {
 			Expect(err).To(BeNil())
 			api.Handler().ServeHTTP(rec, req)
 			// It's up to the user how to implement this. Api2go just checks if the type is correct
-			Expect(rec.Code).To(Equal(http.StatusNotFound))
-			Expect(string(rec.Body.Bytes())).To(MatchJSON(`{"errors":[{"status":"404","title":"post not found"}]}`))
+			Expect(rec.Code).To(Equal(http.StatusConflict))
+			Expect(string(rec.Body.Bytes())).To(MatchJSON(`{"errors":[{"status":"409","title":"id in the resource does not match servers endpoint"}]}`))
 		})
 
 		It("POST without type returns 406", func() {
@@ -894,6 +896,15 @@ var _ = Describe("RestHandler", func() {
 				Expect(source.posts["1"].Title).To(Equal("New Title"))
 				Expect(target.Title).To(Equal("New Title"))
 				Expect(target.Value).To(Equal(null.FloatFrom(2)))
+			})
+
+			It("Update fails with incorrect id in payload", func() {
+				reqBody := strings.NewReader(`{"data": {"id": "2", "attributes": {"title": "New Title"}, "type": "posts"}}`)
+				req, err := http.NewRequest("PATCH", "/v1/posts/1", reqBody)
+				Expect(err).To(BeNil())
+				api.Handler().ServeHTTP(rec, req)
+				Expect(rec.Code).To(Equal(http.StatusConflict))
+				Expect(string(rec.Body.Bytes())).To(MatchJSON(`{"errors":[{"status":"409","title":"id in the resource does not match servers endpoint"}]}`))
 			})
 
 			It("UPDATEs correctly using null.* values", func() {
@@ -1227,7 +1238,7 @@ var _ = Describe("RestHandler", func() {
 				"7": {ID: "7", Title: "Hello, World!"},
 			}, false}
 
-			api = NewAPI("v1")
+			api = NewAPIWithRouting(testPrefix, NewStaticResolver(""), newTestRouter())
 			api.AddResource(Post{}, source)
 
 			rec = httptest.NewRecorder()
@@ -1404,10 +1415,10 @@ var _ = Describe("RestHandler", func() {
 				req, err := http.NewRequest("PATCH", "/v1/posts", reqBody)
 				Expect(err).To(BeNil())
 				api.Handler().ServeHTTP(rec, req)
-				expected := `{"errors":[{"status":"405","title":"Method Not Allowed"}]}`
-				Expect(rec.Body.String()).To(MatchJSON(expected))
 				Expect(rec.Header().Get("Content-Type")).To(Equal(defaultContentTypHeader))
 				Expect(rec.Code).To(Equal(http.StatusMethodNotAllowed))
+				expected := `{"errors":[{"status":"405","title":"Method Not Allowed"}]}`
+				Expect(rec.Body.String()).To(MatchJSON(expected))
 			})
 		})
 
@@ -1454,7 +1465,7 @@ var _ = Describe("RestHandler", func() {
 				"1": {ID: "1", Title: "Hello, World!"},
 			}, false}
 
-			api = NewAPI("v1")
+			api = NewAPIWithRouting(testPrefix, NewStaticResolver(""), newTestRouter())
 			api.AddResource(Post{}, source)
 			MiddleTest := func(c APIContexter, w http.ResponseWriter, r *http.Request) {
 				w.Header().Add("x-test", "test123")
@@ -1488,7 +1499,7 @@ var _ = Describe("RestHandler", func() {
 				"1": {ID: "1", Title: "Hello, World!"},
 			}, false}
 
-			api = NewAPI("v1")
+			api = NewAPIWithRouting(testPrefix, NewStaticResolver(""), newTestRouter())
 			api.AddResource(Post{}, source)
 			api.SetContextAllocator(func(api *API) APIContexter {
 				customContextCalled = true
@@ -1756,6 +1767,143 @@ var _ = Describe("RestHandler", func() {
 			Expect(error.Errors).To(ContainElement(expectedError("title", "users")))
 			Expect(error.Errors).To(ContainElement(expectedError("fluffy", "users")))
 			Expect(error.Errors).To(ContainElement(expectedError("pink", "users")))
+		})
+	})
+
+	Context("Works with multiple API verisons", func() {
+		var (
+			source, source2 *fixtureSource
+			mainAPI, apiV2  *API
+			rec             *httptest.ResponseRecorder
+		)
+
+		BeforeEach(func() {
+			author := User{ID: "666", Name: "Tester", Info: "Is curious about testing"}
+			source = &fixtureSource{map[string]*Post{
+				"1": {ID: "1", Title: "Nice Post", Value: null.FloatFrom(13.37), Author: &author},
+			}, false}
+			mainAPI = NewAPIWithRouting(testPrefix, NewStaticResolver(""), newTestRouter())
+			mainAPI.AddResource(Post{}, source)
+
+			author2 := User{ID: "888", Name: "Version 2 Tester", Info: "Is the next version"}
+			source2 = &fixtureSource{map[string]*Post{
+				"1": {ID: "1", Title: "Even better post", Value: null.FloatFrom(13.37), Author: &author2},
+			}, false}
+			apiV2 = mainAPI.NewAPIVersion("v2")
+			apiV2.AddResource(Post{}, source2)
+			rec = httptest.NewRecorder()
+		})
+
+		It("Works for v1", func() {
+			req, err := http.NewRequest("GET", "/v1/posts", nil)
+			Expect(err).ToNot(HaveOccurred())
+			mainAPI.Handler().ServeHTTP(rec, req)
+			Expect(rec.Code).To(Equal(http.StatusOK))
+			Expect(rec.Body.Bytes()).To(MatchJSON(`
+			{
+				"data": [
+				{
+					"type": "posts",
+					"id": "1",
+					"attributes": {
+						"title": "Nice Post",
+						"value": 13.37
+					},
+					"relationships": {
+						"author": {
+							"links": {
+								"related": "/v1/posts/1/author",
+								"self": "/v1/posts/1/relationships/author"
+							},
+							"data": {
+								"type": "users",
+								"id": "666"
+							}
+						},
+						"bananas": {
+							"links": {
+								"related": "/v1/posts/1/bananas",
+								"self": "/v1/posts/1/relationships/bananas"
+							},
+							"data": []
+						},
+						"comments": {
+							"links": {
+								"related": "/v1/posts/1/comments",
+								"self": "/v1/posts/1/relationships/comments"
+							},
+							"data": []
+						}
+					}
+				}
+				],
+				"included": [
+				{
+					"type": "users",
+					"id": "666",
+					"attributes": {
+						"name": "Tester",
+						"info": "Is curious about testing"
+					}
+				}
+				]
+			}`))
+		})
+
+		It("Works for v2", func() {
+			req, err := http.NewRequest("GET", "/v2/posts", nil)
+			Expect(err).ToNot(HaveOccurred())
+			mainAPI.Handler().ServeHTTP(rec, req)
+			Expect(rec.Code).To(Equal(http.StatusOK))
+			Expect(rec.Body.Bytes()).To(MatchJSON(`
+			{
+				"data": [
+				{
+					"type": "posts",
+					"id": "1",
+					"attributes": {
+						"title": "Even better post",
+						"value": 13.37
+					},
+					"relationships": {
+						"author": {
+							"links": {
+								"related": "/v2/posts/1/author",
+								"self": "/v2/posts/1/relationships/author"
+							},
+							"data": {
+								"type": "users",
+								"id": "888"
+							}
+						},
+						"bananas": {
+							"links": {
+								"related": "/v2/posts/1/bananas",
+								"self": "/v2/posts/1/relationships/bananas"
+							},
+							"data": []
+						},
+						"comments": {
+							"links": {
+								"related": "/v2/posts/1/comments",
+								"self": "/v2/posts/1/relationships/comments"
+							},
+							"data": []
+						}
+					}
+				}
+				],
+				"included": [
+				{
+					"type": "users",
+					"id": "888",
+					"attributes": {
+						"name": "Version 2 Tester",
+						"info": "Is the next version"
+					}
+				}
+				]
+			}`))
 		})
 	})
 })
