@@ -232,6 +232,7 @@ var _ = Describe("Marshalling", func() {
 					"id": "someID",
 					"attributes": {},
 					"links": {
+						"nothingInHere": null,
 						"someLink": "http://my.domain/v1/posts/someID/someLink",
 						"otherLink": {
 							"href": "http://my.domain/v1/posts/someID/otherLink",

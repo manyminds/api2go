@@ -240,19 +240,4 @@ var _ = Describe("JSONAPI Struct tests", func() {
 			}
 		})
 	})
-
-	Context("Marshal and Unmarshal sets of links", func() {
-		It("unmarshals and excludes empty links", func() {
-			payload := []byte(`{"someLink":null,"otherLink":"hello"}`)
-			target := Links{}
-			expected := Links{
-				"otherLink": Link{
-					Href: "hello",
-				},
-			}
-			err := json.Unmarshal(payload, &target)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(target).To(Equal(expected))
-		})
-	})
 })

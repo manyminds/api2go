@@ -90,6 +90,9 @@ func (l *Link) UnmarshalJSON(payload []byte) error {
 // MarshalJSON returns the JSON encoding of only the Href field if the Meta
 // field is empty, otherwise it marshals the whole struct.
 func (l Link) MarshalJSON() ([]byte, error) {
+	if l.Empty() {
+		return json.Marshal(nil)
+	}
 	if len(l.Meta) == 0 {
 		return json.Marshal(l.Href)
 	}
@@ -99,43 +102,13 @@ func (l Link) MarshalJSON() ([]byte, error) {
 	})
 }
 
-// empty returns true if the link has no href and no metadata.
-func (l Link) empty() bool {
+// Empty returns true if the link has no href and no metadata.
+func (l Link) Empty() bool {
 	return len(l.Meta) == 0 && l.Href == ""
 }
 
 // Links contains a map of custom Link objects as given by an element.
 type Links map[string]Link
-
-// MarshalJSON returns the JSON encoding of all links which contain any data.
-// Any links which had no href and no metadata will be omitted.
-func (l Links) MarshalJSON() ([]byte, error) {
-	links := make(map[string]Link)
-	for name, link := range l {
-		if !link.empty() {
-			links[name] = link
-		}
-	}
-
-	return json.Marshal(links)
-}
-
-// UnmarshalJSON decodes all links in the given payload onto the structure.
-// Any links which have no metadata and no href will be skipped.
-func (l Links) UnmarshalJSON(payload []byte) error {
-	links := make(map[string]Link)
-	if err := json.Unmarshal(payload, &links); err != nil {
-		return err
-	}
-
-	for name, link := range links {
-		if !link.empty() {
-			l[name] = link
-		}
-	}
-
-	return nil
-}
 
 // Meta contains unstructured metadata
 type Meta map[string]interface{}
