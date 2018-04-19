@@ -208,6 +208,14 @@ var _ = Describe("JSONAPI Struct tests", func() {
 			Expect(target).To(Equal(expected))
 		})
 
+		It("unmarshals from null", func() {
+			expected := Link{}
+			target := Link{}
+			err := json.Unmarshal([]byte(`null`), &target)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(target).To(Equal(expected))
+		})
+
 		It("unmarshals with an error when href is missing", func() {
 			err := json.Unmarshal([]byte(`{}`), &Link{})
 			Expect(err).To(HaveOccurred())
@@ -224,7 +232,7 @@ var _ = Describe("JSONAPI Struct tests", func() {
 		})
 
 		It("unmarshals with an error for wrong types", func() {
-			badPayloads := []string{`null`, `13`, `[]`}
+			badPayloads := []string{`13`, `[]`}
 			for _, payload := range badPayloads {
 				err := json.Unmarshal([]byte(payload), &Link{})
 				Expect(err).To(HaveOccurred())

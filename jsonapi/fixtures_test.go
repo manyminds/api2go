@@ -489,7 +489,8 @@ func (n CustomLinksPost) GetName() string {
 
 func (n CustomLinksPost) GetCustomLinks(base string) Links {
 	return Links{
-		"someLink": Link{Href: base + `/someLink`},
+		"nothingInHere": Link{},
+		"someLink":      Link{Href: base + `/someLink`},
 		"otherLink": Link{
 			Href: base + `/otherLink`,
 			Meta: Meta{
