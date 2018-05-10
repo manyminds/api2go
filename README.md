@@ -1,12 +1,16 @@
 # api2go
 
-[![Join the chat at https://gitter.im/manyminds/api2go](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/manyminds/api2go?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-[![GoDoc](https://godoc.org/github.com/manyminds/api2go?status.svg)](https://godoc.org/github.com/manyminds/api2go)
-[![Build Status](https://travis-ci.org/manyminds/api2go.svg?branch=master)](https://travis-ci.org/manyminds/api2go)
-[![Coverage Status](https://coveralls.io/repos/github/manyminds/api2go/badge.svg?branch=master)](https://coveralls.io/github/manyminds/api2go?branch=master)
-[![Go Report Card](https://goreportcard.com/badge/manyminds/api2go)](https://goreportcard.com/report/manyminds/api2go)
+[![Join the chat at https://gitter.im/BixData/api2go](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/BixData/api2go?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![GoDoc](https://godoc.org/github.com/BixData/api2go?status.svg)](https://godoc.org/github.com/BixData/api2go)
+[![Build Status](https://travis-ci.org/BixData/api2go.svg?branch=master)](https://travis-ci.org/BixData/api2go)
+[![Coverage Status](https://coveralls.io/repos/github/BixData/api2go/badge.svg?branch=master)](https://coveralls.io/github/BixData/api2go?branch=master)
+[![Go Report Card](https://goreportcard.com/badge/BixData/api2go)](https://goreportcard.com/report/BixData/api2go)
 
 A [JSON API](http://jsonapi.org) Implementation for Go, to be used e.g. as server for [Ember Data](https://github.com/emberjs/data).
+
+## nubix fork
+
+This fork was originally created to allow for specifying a 'jsonapi' struct tag annotation instead of using the default 'json' struct tags.
 
 ## TOC
 - [Installation](#installation)
@@ -35,12 +39,12 @@ A [JSON API](http://jsonapi.org) Implementation for Go, to be used e.g. as serve
 
 For the complete api2go package use:
 ```go
-go get github.com/manyminds/api2go
+go get github.com/BixData/api2go
 ```
 
 If you only need marshalling and/or unmarshalling:
 ```
-go get github.com/manyminds/api2go/jsonapi 
+go get github.com/BixData/api2go/jsonapi
 ```
 
 ## Basic functionality
@@ -93,7 +97,7 @@ All the additional information is retrieved by implementing some interfaces.
 
 ## Examples
 
-- Basic Examples can be found [here](https://github.com/manyminds/api2go/blob/master/examples/crud_example.go).
+- Basic Examples can be found [here](https://github.com/BixData/api2go/blob/master/examples/crud_example.go).
 - For a more real life example implementation of api2go using [jinzhu/gorm](https://github.com/jinzhu/gorm) and [gin-gonic/gin](https://github.com/gin-gonic/gin) you can have a look at hnakamur's [repository](https://github.com/hnakamur/api2go-gorm-gin-crud-example)
 
 ## Interfaces to implement
@@ -119,12 +123,12 @@ You must at least implement the [MarshalIdentifier](#marshalidentifier) interfac
 that you want to marshal/unmarshal. This is because of the huge variety of types that you could  use for the primary ID. For example a string,
 a UUID or a BSON Object for MongoDB etc...
 
-In the Post example struct, the `ID` field is ignored because api2go will use the `GetID` method that you implemented 
+In the Post example struct, the `ID` field is ignored because api2go will use the `GetID` method that you implemented
 for your struct to fetch the ID of the struct.
 Every field inside a struct will be marshalled into the `attributes` object in
 the json. In our example, we just want to have the `Title` field there.
 
-Don't forget to name all your fields with the `json:"yourName"` tag. 
+Don't forget to name all your fields with the `json:"yourName"` tag.
 
 ### Responder
 ```go
@@ -209,7 +213,7 @@ type MarshalIncludedRelations interface {
 }
 ```
 
-Implementing those interfaces is not mandatory and depends on your use cases. If your API has any relationships, 
+Implementing those interfaces is not mandatory and depends on your use cases. If your API has any relationships,
 you must at least implement `MarshalReferences` and `MarshalLinkedRelations`.
 
 `MarshalReferences` must be implemented in order for api2go to know which relations are possible for your struct.
@@ -225,7 +229,7 @@ result inside the `included` object.
 
 ### Unmarshalling with references to other structs
 Incoming jsons can also contain reference IDs. In order to unmarshal them correctly, you have to implement the following interfaces. If you only have to-one
-relationships, the `UnmarshalToOneRelations` interface is enough. 
+relationships, the `UnmarshalToOneRelations` interface is enough.
 
 ```go
 // UnmarshalToOneRelations must be implemented to unmarshal to-one relations
@@ -244,7 +248,7 @@ type UnmarshalToManyRelations interface {
 ## Manual marshalling / unmarshalling
 Please keep in mind that this only works if you implemented the previously mentioned interfaces. Manual marshalling and
 unmarshalling makes sense, if you do not want to use our API that automatically generates all the necessary routes for you. You
-can directly use our sub-package `github.com/manyminds/api2go/jsonapi` 
+can directly use our sub-package `github.com/BixData/api2go/jsonapi`
 
 ```go
 comment1 = Comment{ID: 1, Text: "First!"}
@@ -333,7 +337,7 @@ In order to use omitempty with those types, you need to specify them as pointers
 If you want to use api2go with [gin](https://github.com/gin-gonic/gin) you need to use a different router than the default one.
 Get the according adapter using:
 
-```go get -tags=gingonic github.com/manyminds/api2go```
+```go get -tags=gingonic github.com/BixData/api2go```
 
 Currently the supported tags are: `gingonic`,`gorillamux`, or `echo`.
 
@@ -341,11 +345,11 @@ After that you can bootstrap api2go the following way:
 ```go
   import (
     "github.com/gin-gonic/gin"
-    "github.com/manyminds/api2go"
-    "github.com/manyminds/api2go/routing"
-    "github.com/manyminds/api2go/examples/model"
-    "github.com/manyminds/api2go/examples/resource"
-    "github.com/manyminds/api2go/examples/storage"
+    "github.com/BixData/api2go"
+    "github.com/BixData/api2go/routing"
+    "github.com/BixData/api2go/examples/model"
+    "github.com/BixData/api2go/examples/resource"
+    "github.com/BixData/api2go/examples/storage"
   )
 
   func main() {
@@ -633,14 +637,14 @@ a `APIContextAllocatorFunc` and set it with `func (api *API) SetContextAllocator
 But in most cases, this is not needed.
 
 To use a middleware, it is needed to implement our
-`type HandlerFunc func(APIContexter, http.ResponseWriter, *http.Request)`. A `HandlerFunc` can then be 
-registered with `func (api *API) UseMiddleware(middleware ...HandlerFunc)`. You can either pass one or many middlewares 
+`type HandlerFunc func(APIContexter, http.ResponseWriter, *http.Request)`. A `HandlerFunc` can then be
+registered with `func (api *API) UseMiddleware(middleware ...HandlerFunc)`. You can either pass one or many middlewares
 that will be executed in order before any other api2go routes. Use this to set up database connections, user authentication
 and so on.
 
 ### Dynamic URL handling
 If you have different TLDs for one api, or want to use different domains in development and production, you can implement a custom
-URLResolver in api2go. 
+URLResolver in api2go.
 
 There is a simple interface, which can be used if you get TLD information from the database, the server environment, or anything else
 that's not request dependant:

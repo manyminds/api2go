@@ -1,7 +1,7 @@
 package main_test
 
 import (
-	"github.com/manyminds/api2go"
+	"github.com/BixData/api2go"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 

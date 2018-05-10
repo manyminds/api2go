@@ -7,7 +7,7 @@ import (
 	"net/http"
 
 	"github.com/labstack/echo"
-	"github.com/manyminds/api2go/routing"
+	"github.com/BixData/api2go/routing"
 )
 
 func customHTTPErrorHandler(err error, c echo.Context) {
@@ -20,7 +20,7 @@ func customHTTPErrorHandler(err error, c echo.Context) {
 
 func newTestRouter() routing.Routeable {
 	e := echo.New()
-	// not found handler, this needs to be fixed as well: see: https://github.com/manyminds/api2go/issues/301
+	// not found handler, this needs to be fixed as well: see: https://github.com/BixData/api2go/issues/301
 	e.HTTPErrorHandler = customHTTPErrorHandler
 	return routing.Echo(e)
 }

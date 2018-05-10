@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/manyminds/api2go"
-	"github.com/manyminds/api2go/examples/model"
+	"github.com/BixData/api2go"
+	"github.com/BixData/api2go/examples/model"
 )
 
 // NewUserStorage initializes the storage

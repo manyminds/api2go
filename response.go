@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/manyminds/api2go/jsonapi"
+	"github.com/BixData/api2go/jsonapi"
 )
 
 // The Response struct implements api2go.Responder and can be used as a default
