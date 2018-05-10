@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/manyminds/api2go/examples/model"
+	"github.com/BixData/api2go/examples/model"
 )
 
 // sorting
