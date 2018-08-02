@@ -184,23 +184,7 @@ var _ = Describe("api2go with gingonic router adapter", func() {
 			Expect(keys).To(Equal(map[string]interface{}{contextKey: *contextValue}))
 		})
 
-		It("context value is not present for user resource", func() {
-			tempVal := "1"
-			contextValue = &tempVal
-			expected := `{"data":[],"meta":{"author": "The api2go examples crew", "license": "wtfpl", "license-url": "http://www.wtfpl.net"}}`
-			req, err := http.NewRequest("GET", "/api/users", strings.NewReader(""))
-			Expect(err).To(BeNil())
-			gg.ServeHTTP(rec, req)
-			Expect(rec.Code).To(Equal(http.StatusOK))
-			Expect(string(rec.Body.Bytes())).To(MatchJSON(expected))
-
-			rawKeys := reflect.ValueOf(&apiContext).Elem().Field(0)
-			keys := reflect.NewAt(rawKeys.Type(), unsafe.Pointer(rawKeys.UnsafeAddr())).Elem().Interface().(map[string]interface{})
-
-			Expect(keys).To(BeNil())
-		})
-
-		It("context value is not present for user resource", func() {
+		It("context value is not present for chocolate resource", func() {
 			expected := `{"data":[],"meta":{"author": "The api2go examples crew", "license": "wtfpl", "license-url": "http://www.wtfpl.net"}}`
 			req, err := http.NewRequest("GET", "/api/chocolates", strings.NewReader(""))
 			Expect(err).To(BeNil())
