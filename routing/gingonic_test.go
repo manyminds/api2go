@@ -7,7 +7,9 @@ import (
 	"log"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"strings"
+	"unsafe"
 
 	"github.com/gin-gonic/gin"
 	"github.com/manyminds/api2go"
@@ -22,10 +24,13 @@ import (
 
 var _ = Describe("api2go with gingonic router adapter", func() {
 	var (
-		router routing.Routeable
-		gg     *gin.Engine
-		api    *api2go.API
-		rec    *httptest.ResponseRecorder
+		router       routing.Routeable
+		gg           *gin.Engine
+		api          *api2go.API
+		rec          *httptest.ResponseRecorder
+		contextKey   = "userID"
+		contextValue *string
+		apiContext   api2go.APIContext
 	)
 
 	BeforeSuite(func() {
@@ -38,9 +43,22 @@ var _ = Describe("api2go with gingonic router adapter", func() {
 			router,
 		)
 
+		// Define the ApiContext to allow for access.
+		apiContext = api2go.APIContext{}
+		api.SetContextAllocator(func(*api2go.API) api2go.APIContexter {
+			return &apiContext
+		})
+
 		userStorage := storage.NewUserStorage()
 		chocStorage := storage.NewChocolateStorage()
 		api.AddResource(model.User{}, resource.UserResource{ChocStorage: chocStorage, UserStorage: userStorage})
+
+		gg.Use(func(c *gin.Context) {
+			if contextValue != nil {
+				c.Set(contextKey, *contextValue)
+			}
+		})
+
 		api.AddResource(model.Chocolate{}, resource.ChocolateResource{ChocStorage: chocStorage, UserStorage: userStorage})
 	})
 
@@ -142,6 +160,42 @@ var _ = Describe("api2go with gingonic router adapter", func() {
 			gg.ServeHTTP(rec, req)
 			Expect(rec.Code).To(Equal(http.StatusNotFound))
 			Expect(string(rec.Body.Bytes())).To(MatchJSON(expected))
+		})
+	})
+
+	Context("Gin Context Key Copy Tests", func() {
+		BeforeEach(func() {
+			contextValue = nil
+		})
+
+		It("context value is present for chocolate resource", func() {
+			tempVal := "1"
+			contextValue = &tempVal
+			expected := `{"data":[],"meta":{"author": "The api2go examples crew", "license": "wtfpl", "license-url": "http://www.wtfpl.net"}}`
+			req, err := http.NewRequest("GET", "/api/chocolates", strings.NewReader(""))
+			Expect(err).To(BeNil())
+			gg.ServeHTTP(rec, req)
+			Expect(rec.Code).To(Equal(http.StatusOK))
+			Expect(string(rec.Body.Bytes())).To(MatchJSON(expected))
+
+			rawKeys := reflect.ValueOf(&apiContext).Elem().Field(0)
+			keys := reflect.NewAt(rawKeys.Type(), unsafe.Pointer(rawKeys.UnsafeAddr())).Elem().Interface().(map[string]interface{})
+
+			Expect(keys).To(Equal(map[string]interface{}{contextKey: *contextValue}))
+		})
+
+		It("context value is not present for chocolate resource", func() {
+			expected := `{"data":[],"meta":{"author": "The api2go examples crew", "license": "wtfpl", "license-url": "http://www.wtfpl.net"}}`
+			req, err := http.NewRequest("GET", "/api/chocolates", strings.NewReader(""))
+			Expect(err).To(BeNil())
+			gg.ServeHTTP(rec, req)
+			Expect(rec.Code).To(Equal(http.StatusOK))
+			Expect(string(rec.Body.Bytes())).To(MatchJSON(expected))
+
+			rawKeys := reflect.ValueOf(&apiContext).Elem().Field(0)
+			keys := reflect.NewAt(rawKeys.Type(), unsafe.Pointer(rawKeys.UnsafeAddr())).Elem().Interface().(map[string]interface{})
+
+			Expect(keys).To(BeNil())
 		})
 	})
 })
