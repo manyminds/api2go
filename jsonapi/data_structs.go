@@ -120,13 +120,14 @@ type Data struct {
 	Attributes    json.RawMessage         `json:"attributes"`
 	Relationships map[string]Relationship `json:"relationships,omitempty"`
 	Links         Links                   `json:"links,omitempty"`
+	Meta          Meta                    `json:"meta,omitempty"`
 }
 
 // Relationship contains reference IDs to the related structs
 type Relationship struct {
 	Links Links                      `json:"links,omitempty"`
 	Data  *RelationshipDataContainer `json:"data,omitempty"`
-	Meta  map[string]interface{}     `json:"meta,omitempty"`
+	Meta  Meta                       `json:"meta,omitempty"`
 }
 
 // A RelationshipDataContainer is used to marshal and unmarshal single relationship
