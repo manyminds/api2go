@@ -84,7 +84,7 @@ type MarshalCustomLinks interface {
 // want any meta.
 type MarshalMeta interface {
 	MarshalIdentifier
-	GetMeta() Meta
+	Meta() Meta
 }
 
 // The MarshalCustomRelationshipMeta interface can be implemented if the struct should
@@ -262,7 +262,7 @@ func marshalData(element MarshalIdentifier, data *Data, information ServerInform
 	}
 
 	if casteMetaTarget, ok := element.(MarshalMeta); ok {
-		meta := casteMetaTarget.GetMeta()
+		meta := casteMetaTarget.Meta()
 		data.Meta, err = json.Marshal(meta)
 		if err != nil {
 			return err

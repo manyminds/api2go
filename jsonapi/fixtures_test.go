@@ -514,7 +514,7 @@ func (n CustomResourceMetaPost) GetName() string {
 	return "posts"
 }
 
-func (n CustomResourceMetaPost) GetMeta() Meta {
+func (n CustomResourceMetaPost) Meta() Meta {
 	return Meta{"access_count": 15}
 }
 
