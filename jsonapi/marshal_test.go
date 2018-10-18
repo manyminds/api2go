@@ -271,6 +271,22 @@ var _ = Describe("Marshalling", func() {
 		})
 	})
 
+	Context("When marshaling objects with data meta", func() {
+		It("contains the meta in the marshaled data object", func() {
+			post := CustomResourceMetaPost{}
+			i, err := Marshal(post)
+			Expect(err).To(BeNil())
+			Expect(i).To(MatchJSON(`{
+				"data": {
+					"type": "posts",
+					"id": "someID",
+					"attributes": {},
+					"meta": { "access_count": 15 }
+				}
+			}`))
+		})
+	})
+
 	Context("When marshaling compound objects", func() {
 		It("marshals nested objects", func() {
 			comment1 := Comment{ID: 1, Text: "First!", SubCommentsEmpty: true}

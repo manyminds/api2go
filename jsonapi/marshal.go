@@ -261,8 +261,12 @@ func marshalData(element MarshalIdentifier, data *Data, information ServerInform
 		}
 	}
 
-	if meta, ok := element.(MarshalMeta); ok {
-		data.Meta = meta.GetMeta()
+	if casteMetaTarget, ok := element.(MarshalMeta); ok {
+		meta := casteMetaTarget.GetMeta()
+		data.Meta, err = json.Marshal(meta)
+		if err != nil {
+			return err
+		}
 	}
 
 	if references, ok := element.(MarshalLinkedRelations); ok {
