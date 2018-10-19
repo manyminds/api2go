@@ -500,6 +500,24 @@ func (n CustomLinksPost) GetCustomLinks(base string) Links {
 	}
 }
 
+type CustomResourceMetaPost struct{}
+
+func (n CustomResourceMetaPost) GetID() string {
+	return "someID"
+}
+
+func (n *CustomResourceMetaPost) SetID(ID string) error {
+	return nil
+}
+
+func (n CustomResourceMetaPost) GetName() string {
+	return "posts"
+}
+
+func (n CustomResourceMetaPost) Meta() Meta {
+	return Meta{"access_count": 15}
+}
+
 type CustomMetaPost struct{}
 
 func (n CustomMetaPost) GetID() string {

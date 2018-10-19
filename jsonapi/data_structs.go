@@ -120,6 +120,7 @@ type Data struct {
 	Attributes    json.RawMessage         `json:"attributes"`
 	Relationships map[string]Relationship `json:"relationships,omitempty"`
 	Links         Links                   `json:"links,omitempty"`
+	Meta          json.RawMessage         `json:"meta,omitempty"`
 }
 
 // Relationship contains reference IDs to the related structs
