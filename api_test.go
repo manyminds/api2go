@@ -1051,8 +1051,7 @@ var _ = Describe("RestHandler", func() {
 
 	Context("marshal errors correctly", func() {
 		var (
-			source    *fixtureSource
-			post1Json map[string]interface{}
+			source *fixtureSource
 
 			api *API
 			rec *httptest.ResponseRecorder
@@ -1062,12 +1061,6 @@ var _ = Describe("RestHandler", func() {
 			source = &fixtureSource{map[string]*Post{
 				"1": {ID: "1", Title: "Hello, World!"},
 			}, false}
-
-			post1Json = map[string]interface{}{
-				"id":    "1",
-				"title": "Hello, World!",
-				"value": nil,
-			}
 
 			api = NewAPI("")
 			api.AddResource(Post{}, source)
