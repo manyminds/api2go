@@ -412,16 +412,15 @@ var _ = Describe("Test partial CRUD implementation : Updater", func() {
 
 var _ = Describe("Test partial CRUD implementation : Deleter", func() {
 	var (
-		api                *API
-		rec                *httptest.ResponseRecorder
-		payload, payloadID SomeData
+		api     *API
+		rec     *httptest.ResponseRecorder
+		payload SomeData
 	)
 
 	BeforeEach(func() {
 		api = NewAPI("v1")
 		api.AddResource(SomeData{}, ResourceDeletionOnly{})
 		rec = httptest.NewRecorder()
-		payloadID = SomeData{ID: "12345", Data: "A Brezzn"}
 		payload = SomeData{Data: "A Brezzn"}
 	})
 
