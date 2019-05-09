@@ -174,11 +174,14 @@ func (c Post) GetReferences() []Reference {
 
 func (c *Post) SetToOneReferenceID(name, ID string) error {
 	if name == "author" {
-		intID, err := strconv.ParseInt(ID, 10, 64)
-		if err != nil {
-			return err
+		// Ignore empty author relationships
+		if ID != "" {
+			intID, err := strconv.ParseInt(ID, 10, 64)
+			if err != nil {
+				return err
+			}
+			c.AuthorID = sql.NullInt64{Valid: true, Int64: intID}
 		}
-		c.AuthorID = sql.NullInt64{Valid: true, Int64: intID}
 
 		return nil
 	}
