@@ -1241,7 +1241,10 @@ func processRelationshipsData(data interface{}, linkName string, target interfac
 			return errors.New("target struct must implement interface UnmarshalToOneRelations")
 		}
 
-		target.SetToOneReferenceID(linkName, hasOneID)
+		err := target.SetToOneReferenceID(linkName, hasOneID)
+		if err != nil {
+			return err
+		}
 	} else if data == nil {
 		// this means that a to-one relationship must be deleted
 		target, ok := target.(jsonapi.UnmarshalToOneRelations)
@@ -1249,7 +1252,10 @@ func processRelationshipsData(data interface{}, linkName string, target interfac
 			return errors.New("target struct must implement interface UnmarshalToOneRelations")
 		}
 
-		target.SetToOneReferenceID(linkName, "")
+		err := target.SetToOneReferenceID(linkName, "")
+		if err != nil {
+			return err
+		}
 	} else {
 		hasMany, ok := data.([]interface{})
 		if !ok {
@@ -1276,7 +1282,10 @@ func processRelationshipsData(data interface{}, linkName string, target interfac
 			hasManyIDs = append(hasManyIDs, dataID)
 		}
 
-		target.SetToManyReferenceIDs(linkName, hasManyIDs)
+		err := target.SetToManyReferenceIDs(linkName, hasManyIDs)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

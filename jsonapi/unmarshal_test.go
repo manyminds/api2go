@@ -480,6 +480,28 @@ var _ = Describe("Unmarshal", func() {
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(Equal("this never works"))
 			})
+
+			datalessPostJSON := []byte(`{
+				"data": {
+					"id":   "3",
+					"type": "posts",
+					"attributes": {
+						"title": "Test"
+					},
+					"relationships": {
+						"author": {
+							"data": null
+						}
+					}
+				}
+			}`)
+
+			It("returns an error if SetToOneReferenceID returned an error, even for a relationship without a data field", func() {
+				post := ErrorRelationshipPosts{}
+				err := Unmarshal(datalessPostJSON, &post)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(Equal("this never works"))
+			})
 		})
 
 		Context("UnmarshalToManyRelations error handling", func() {
