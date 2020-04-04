@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"time"
 
-	"gopkg.in/guregu/null.v2/zero"
+	"gopkg.in/guregu/null.v3/zero"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -1314,7 +1314,7 @@ var _ = Describe("Marshalling", func() {
 	})
 
 	// In order to use the SQL Null-Types the Marshal/Unmarshal interfaces for these types must be implemented.
-	// The library "gopkg.in/guregu/null.v2/zero" can be used for that.
+	// The library "gopkg.in/guregu/null.v3/zero" can be used for that.
 	Context("SQL Null-Types", func() {
 		var nullPost SQLNullPost
 

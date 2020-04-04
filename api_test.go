@@ -14,7 +14,7 @@ import (
 	"github.com/manyminds/api2go/routing"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"gopkg.in/guregu/null.v2"
+	"gopkg.in/guregu/null.v3"
 )
 
 const testPrefix = "v1"

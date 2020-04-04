@@ -324,7 +324,7 @@ The Problem is, that they internally manage the `null` value behavior by using a
 these values, it is required to implement the `json.Marshaller` and `json.Unmarshaller` interfaces of the go standard library.
 
 But you dont have to do this by yourself! There already is a library that did the work for you. We recommend that you use the types
-of this library: http://gopkg.in/guregu/null.v2/zero
+of this library: http://gopkg.in/guregu/null.v3/zero
 
 In order to use omitempty with those types, you need to specify them as pointers in your struct.
 

@@ -12,5 +12,5 @@ require (
 	github.com/onsi/ginkgo v1.12.0
 	github.com/onsi/gomega v1.9.0
 	golang.org/x/crypto v0.0.0-20200403201458-baeed622b8d8 // indirect
-	gopkg.in/guregu/null.v2 v2.1.2
+	gopkg.in/guregu/null.v3 v3.4.0
 )
