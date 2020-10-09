@@ -54,6 +54,7 @@ func (s *PublishStatus) UnmarshalJSON(data []byte) error {
 
 type EnumPost struct {
 	ID     string        `json:"-"`
+	LID    string        `json:"-"`
 	Title  string        `json:"title"`
 	Status PublishStatus `json:"status"`
 }
@@ -62,7 +63,17 @@ func (e EnumPost) GetID() string {
 	return e.ID
 }
 
+func (e EnumPost) GetLID() string {
+	return e.LID
+}
+
 func (e *EnumPost) SetID(ID string) error {
+	e.ID = ID
+
+	return nil
+}
+
+func (e *EnumPost) SetLID(ID string) error {
 	e.ID = ID
 
 	return nil

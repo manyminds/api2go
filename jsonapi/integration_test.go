@@ -9,6 +9,7 @@ import (
 
 type Book struct {
 	ID       string      `json:"-"`
+	LID      string      `json:"-"`
 	Author   *StupidUser `json:"-"`
 	AuthorID string      `json:"-"`
 	Pages    []Page      `json:"-"`
@@ -19,8 +20,18 @@ func (b Book) GetID() string {
 	return b.ID
 }
 
+func (b Book) GetLID() string {
+	return b.LID
+}
+
 func (b *Book) SetID(ID string) error {
 	b.ID = ID
+
+	return nil
+}
+
+func (b *Book) SetLID(ID string) error {
+	b.LID = ID
 
 	return nil
 }
@@ -103,6 +114,10 @@ func (s StupidUser) GetID() string {
 	return s.ID
 }
 
+func (s StupidUser) GetLID() string {
+	return ""
+}
+
 type Page struct {
 	ID      string `json:"-"`
 	Content string `json:"content"`
@@ -110,6 +125,10 @@ type Page struct {
 
 func (p Page) GetID() string {
 	return p.ID
+}
+
+func (p Page) GetLID() string {
+	return ""
 }
 
 var _ = Describe("Test for the public api of this package", func() {

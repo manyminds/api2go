@@ -23,8 +23,24 @@ var _ = Describe("Marshalling", func() {
 			secondPost = SimplePost{ID: "second", Title: "Second Post", Text: "Getting more advanced!", Created: created, Updated: created}
 		})
 
-		It("marshals single object without relationships", func() {
-			user := User{ID: 100, Name: "Nino", Password: "babymaus"}
+		It("marshals single object without relationships with lid", func() {
+			user := User{ID: 100, LID: 99, Name: "Nino", Password: "babymaus"}
+			i, err := Marshal(user)
+			Expect(err).To(BeNil())
+			Expect(i).To(MatchJSON(`{
+				"data": {
+					"type": "users",
+					"id": "100",
+					"lid": "99",
+					"attributes": {
+						"name": "Nino"
+					}
+				}
+			}`))
+		})
+
+		It("marshals single object without relationships without lid", func() {
+			user := User{ID: 100, LID: 0, Name: "Nino", Password: "babymaus"}
 			i, err := Marshal(user)
 			Expect(err).To(BeNil())
 			Expect(i).To(MatchJSON(`{
@@ -590,8 +606,8 @@ var _ = Describe("Marshalling", func() {
 			comment1SubComment1 := Comment{ID: 3, Text: "No you are wrong!", SubCommentsEmpty: true}
 			comment1SubComment2 := Comment{ID: 4, Text: "Nah, he's right!", SubCommentsEmpty: true}
 			comment1 := Comment{ID: 1, Text: "First!", SubComments: []Comment{comment1SubComment1, comment1SubComment2}}
-			comment2 := Comment{ID: 2, Text: "Second!", SubCommentsEmpty: true}
-			author := User{ID: 1, Name: "Test Author"}
+			comment2 := Comment{ID: 2, LID: 2, Text: "Second!", SubCommentsEmpty: true}
+			author := User{ID: 1, LID: 1, Name: "Test Author"}
 			post1 := Post{ID: 1, Title: "Foobar", Comments: []Comment{comment1, comment2}, Author: &author}
 
 			i, err := MarshalWithURLs(post1, CompleteServerInformation{})
@@ -612,7 +628,8 @@ var _ = Describe("Marshalling", func() {
 							},
 							"data": {
 								"type": "users",
-								"id": "1"
+								"id": "1",
+								"lid": "1"
 							}
 						},
 						"comments": {
@@ -627,7 +644,8 @@ var _ = Describe("Marshalling", func() {
 							},
 							{
 								"type": "comments",
-								"id": "2"
+								"id": "2",
+								"lid": "2"
 							}
 							]
 						}
@@ -637,6 +655,7 @@ var _ = Describe("Marshalling", func() {
 				{
 					"type": "users",
 					"id": "1",
+					"lid": "1",
 					"attributes": {
 						"name": "Test Author"
 					}
@@ -669,6 +688,7 @@ var _ = Describe("Marshalling", func() {
 				{
 					"type": "comments",
 					"id": "2",
+					"lid": "2",
 					"attributes": {
 						"text": "Second!"
 					},
@@ -1145,13 +1165,30 @@ var _ = Describe("Marshalling", func() {
 	})
 
 	Context("Slice fields", func() {
-		It("Marshalls the slice field correctly", func() {
-			marshalled, err := Marshal(Identity{1234, []string{"user_global"}})
+		It("Marshalls the slice field correctly without lid", func() {
+			marshalled, err := Marshal(Identity{1234, 0, []string{"user_global"}})
 			Expect(err).To(BeNil())
 			Expect(marshalled).To(MatchJSON(`{
 				"data": {
 					"type": "identities",
 					"id": "1234",
+					"attributes": {
+						"scopes": [
+						"user_global"
+						]
+					}
+				}
+			}`))
+		})
+
+		It("Marshalls the slice field correctly with lid", func() {
+			marshalled, err := Marshal(Identity{1234, 1, []string{"user_global"}})
+			Expect(err).To(BeNil())
+			Expect(marshalled).To(MatchJSON(`{
+				"data": {
+					"type": "identities",
+					"id": "1234",
+					"lid": "1",
 					"attributes": {
 						"scopes": [
 						"user_global"
@@ -1230,6 +1267,7 @@ var _ = Describe("Marshalling", func() {
 						{
 							ID:   "1",
 							Type: "comments",
+							LID:  "",
 						},
 					},
 				},

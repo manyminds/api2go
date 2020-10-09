@@ -7,11 +7,16 @@ import (
 
 type ManyParent struct {
 	ID      string `json:"-"`
+	LID     string `json:"-"`
 	Content string `json:"content"`
 }
 
 func (m ManyParent) GetID() string {
 	return m.ID
+}
+
+func (m ManyParent) GetLID() string {
+	return m.LID
 }
 
 func (m ManyParent) GetReferences() []Reference {

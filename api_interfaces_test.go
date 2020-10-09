@@ -14,6 +14,7 @@ import (
 
 type SomeData struct {
 	ID         string `json:"-"`
+	LID        string `json:"-"`
 	Data       string `json:"data"`
 	CustomerID string `json:"customerId"`
 }
@@ -22,8 +23,17 @@ func (s SomeData) GetID() string {
 	return s.ID
 }
 
+func (s SomeData) GetLID() string {
+	return s.LID
+}
+
 func (s *SomeData) SetID(ID string) error {
 	s.ID = ID
+	return nil
+}
+
+func (s *SomeData) SetLID(ID string) error {
+	s.LID = ID
 	return nil
 }
 

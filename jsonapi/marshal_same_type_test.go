@@ -7,6 +7,7 @@ import (
 
 type Node struct {
 	ID                string   `json:"-"`
+	LID               string   `json:"-"`
 	Content           string   `json:"content"`
 	MotherID          string   `json:"-"`
 	ChildIDs          []string `json:"-"`
@@ -15,6 +16,10 @@ type Node struct {
 
 func (n *Node) GetID() string {
 	return n.ID
+}
+
+func (n *Node) GetLID() string {
+	return n.LID
 }
 
 func (n *Node) GetReferences() []Reference {

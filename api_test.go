@@ -41,8 +41,13 @@ func (i invalid) GetID() string {
 	return "invalid"
 }
 
+func (i invalid) GetLID() string {
+	return "invalid"
+}
+
 type Post struct {
 	ID       string     `json:"-"`
+	LID      string     `json:"-"`
 	Title    string     `json:"title"`
 	Value    null.Float `json:"value"`
 	Author   *User      `json:"-"`
@@ -54,8 +59,17 @@ func (p Post) GetID() string {
 	return p.ID
 }
 
+func (p Post) GetLID() string {
+	return p.LID
+}
+
 func (p *Post) SetID(ID string) error {
 	p.ID = ID
+	return nil
+}
+
+func (p *Post) SetLID(ID string) error {
+	p.LID = ID
 	return nil
 }
 
@@ -187,6 +201,7 @@ func (p Post) GetReferencedStructs() []jsonapi.MarshalIdentifier {
 
 type Comment struct {
 	ID    string `json:"-"`
+	LID   string `json:"-"`
 	Value string `json:"value"`
 }
 
@@ -194,8 +209,13 @@ func (c Comment) GetID() string {
 	return c.ID
 }
 
+func (c Comment) GetLID() string {
+	return c.LID
+}
+
 type Banana struct {
 	ID   string `jnson:"-"`
+	LID  string `jnson:"-"`
 	Name string
 }
 
@@ -203,14 +223,23 @@ func (b Banana) GetID() string {
 	return b.ID
 }
 
+func (b Banana) GetLID() string {
+	return b.LID
+}
+
 type User struct {
 	ID   string `json:"-"`
+	LID  string `json:"-"`
 	Name string `json:"name"`
 	Info string `json:"info"`
 }
 
 func (u User) GetID() string {
 	return u.ID
+}
+
+func (u User) GetLID() string {
+	return u.LID
 }
 
 type fixtureSource struct {

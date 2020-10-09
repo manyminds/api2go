@@ -11,6 +11,7 @@ import (
 // unmarshalling.
 type UnmarshalIdentifier interface {
 	SetID(string) error
+	SetLID(string) error
 }
 
 // The UnmarshalToOneRelations interface must be implemented to unmarshal
