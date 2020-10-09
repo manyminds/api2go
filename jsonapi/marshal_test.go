@@ -221,6 +221,86 @@ var _ = Describe("Marshalling", func() {
 		})
 	})
 
+	Context("When marshaling simple objects with local id", func() {
+		var (
+			firstPost, secondPost SimplePostWithLID
+			created               time.Time
+		)
+
+		BeforeEach(func() {
+			created, _ = time.Parse(time.RFC3339, "2014-11-10T16:30:48.823Z")
+			firstPost = SimplePostWithLID{SimplePost: SimplePost{ID: "first", Title: "First Post", Text: "Lipsum", Created: created}, LID: "same_as_id"}
+			secondPost = SimplePostWithLID{SimplePost: SimplePost{ID: "second", Title: "Second Post", Text: "Getting more advanced!", Created: created, Updated: created}, LID: ""}
+		})
+
+		It("marshals single object without relationships", func() {
+			user := UserWithLID{ID: 100, Name: "Nino", Password: "babymaus", LID: 100}
+			i, err := Marshal(user)
+			Expect(err).To(BeNil())
+			Expect(i).To(MatchJSON(`{
+				"data": {
+					"type": "userWithLIDs",
+					"id": "100",
+					"lid": "100",
+					"attributes": {
+						"name": "Nino"
+					}
+				}
+			}`))
+		})
+
+		It("marshals single object", func() {
+			i, err := Marshal(firstPost)
+			Expect(err).To(BeNil())
+			Expect(i).To(MatchJSON(`{
+				"data": {
+					"type": "simplePostWithLIDs",
+					"id": "first",
+					"lid": "same_as_id",
+					"attributes": {
+						"title": "First Post",
+						"text": "Lipsum",
+						"created-date": "2014-11-10T16:30:48.823Z",
+						"updated-date": "0001-01-01T00:00:00Z",
+						"size": 0
+					}
+				}
+			}`))
+		})
+
+		It("marshals collections object", func() {
+			i, err := Marshal([]SimplePostWithLID{firstPost, secondPost})
+			Expect(err).To(BeNil())
+			Expect(i).To(MatchJSON(`{
+				"data": [
+					{
+              			"type": "simplePostWithLIDs",
+						"id": "first",
+						"lid": "same_as_id",
+						"attributes": {
+							"title": "First Post",
+							"text": "Lipsum",
+							"size": 0,
+							"created-date": "2014-11-10T16:30:48.823Z",
+							"updated-date": "0001-01-01T00:00:00Z"
+						}
+					},
+					{
+              			"type": "simplePostWithLIDs",
+						"id": "second",
+						"attributes": {
+							"title": "Second Post",
+							"text": "Getting more advanced!",
+							"size": 0,
+							"created-date": "2014-11-10T16:30:48.823Z",
+							"updated-date": "2014-11-10T16:30:48.823Z"
+						}
+					}
+				]
+			}`))
+		})
+	})
+
 	Context("When marshaling objects with custom links", func() {
 		It("contains the custom links in the marshaled data", func() {
 			post := CustomLinksPost{}
@@ -407,6 +487,145 @@ var _ = Describe("Marshalling", func() {
 								"links": {
 									"related": "http://my.domain/v1/comments/2/comments",
 									"self": "http://my.domain/v1/comments/2/relationships/comments"
+								}
+							}
+						}
+					}
+				]
+			}`
+			Expect(i).To(MatchJSON(expected))
+		})
+
+		It("marshals nested objects with local ids", func() {
+			comment1 := CommentWithLID{ID: 1, LID: 1, Text: "First!", SubCommentsEmpty: true}
+			comment2 := CommentWithLID{ID: 2, LID: 2, Text: "Second!", SubCommentsEmpty: true}
+			author := UserWithLID{ID: 1, Name: "Test Author", LID: 1}
+			post1 := PostWithLID{ID: 1, LID: 1, Title: "Foobar", Comments: []CommentWithLID{comment1, comment2}, Author: &author}
+			post2 := PostWithLID{ID: 2, LID: 2, Title: "Foobarbarbar", Comments: []CommentWithLID{comment1, comment2}, Author: &author}
+
+			posts := []PostWithLID{post1, post2}
+
+			i, err := MarshalWithURLs(posts, CompleteServerInformation{})
+			Expect(err).To(BeNil())
+
+			expected := `{
+				"data": [
+					{
+						"type": "postWithLIDs",
+						"id": "1",
+						"lid": "1",
+						"attributes": {
+							"title": "Foobar"
+						},
+						"relationships": {
+							"author": {
+								"links": {
+									"related": "http://my.domain/v1/postWithLIDs/1/author",
+									"self": "http://my.domain/v1/postWithLIDs/1/relationships/author"
+								},
+								"data": {
+									"type": "userWithLIDs",
+									"id": "1",
+									"lid": "1"
+								}
+							},
+							"comments": {
+								"links": {
+									"related": "http://my.domain/v1/postWithLIDs/1/comments",
+									"self": "http://my.domain/v1/postWithLIDs/1/relationships/comments"
+								},
+								"data": [
+									{
+										"type": "commentWithLIDs",
+										"id": "1",
+										"lid": "1"
+									},
+									{
+										"type": "commentWithLIDs",
+										"id": "2",
+										"lid": "2"
+									}
+								]
+							}
+						}
+					},
+					{
+						"type": "postWithLIDs",
+						"id": "2",
+						"lid": "2",
+						"attributes": {
+							"title": "Foobarbarbar"
+						},
+						"relationships": {
+							"author": {
+								"links": {
+									"related": "http://my.domain/v1/postWithLIDs/2/author",
+									"self": "http://my.domain/v1/postWithLIDs/2/relationships/author"
+								},
+								"data": {
+									"type": "userWithLIDs",
+									"id": "1",
+									"lid": "1"
+								}
+							},
+							"comments": {
+								"links": {
+									"self": "http://my.domain/v1/postWithLIDs/2/relationships/comments",
+									"related": "http://my.domain/v1/postWithLIDs/2/comments"
+								},
+								"data": [
+									{
+										"type": "commentWithLIDs",
+										"id": "1",
+										"lid": "1"
+									},
+									{
+										"type": "commentWithLIDs",
+										"id": "2",
+										"lid": "2"
+									}
+								]
+							}
+						}
+					}
+				],
+				"included": [
+					{
+						"type": "userWithLIDs",
+						"id": "1",
+						"lid": "1",
+						"attributes": {
+							"name": "Test Author"
+						}
+					},
+					{
+						"type": "commentWithLIDs",
+						"id": "1",
+						"lid": "1",
+						"attributes": {
+							"text": "First!"
+						},
+						"relationships": {
+							"comments": {
+								"links": {
+									"related": "http://my.domain/v1/commentWithLIDs/1/comments",
+									"self": "http://my.domain/v1/commentWithLIDs/1/relationships/comments"
+								}
+							}
+						}
+					},
+					{
+						"type": "commentWithLIDs",
+						"id": "2",
+						"lid": "2",
+						"attributes": {
+							"text": "Second!"
+						},
+						"relationships": {
+							"comments": {
+								"links": {
+									"related": "http://my.domain/v1/commentWithLIDs/2/comments",
+									"self": "http://my.domain/v1/commentWithLIDs/2/relationships/comments"
 								}
 							}
 						}
@@ -1136,6 +1355,48 @@ var _ = Describe("Marshalling", func() {
 										"id": "4"
 									}
 								]
+							}
+						}
+					}
+				]
+			}`))
+		})
+	})
+
+	Context("When marshalling objects linking to other instances of the same type with lid", func() {
+		question1 := QuestionWithLID{ID: "1", LID: "1", Text: "This question is being added"}
+		question2 := QuestionWithLID{ID: "2", Text: "This question already exist", InspiringQuestionID: sql.NullString{String: "1", Valid: true}, InspiringQuestion: &question1}
+		It("Correctly marshalls question2 and sets question1 into included", func() {
+			marshalled, err := Marshal(question2)
+			Expect(err).To(BeNil())
+			Expect(marshalled).To(MatchJSON(`{
+				"data": {
+					"type": "questionWithLIDs",
+					"id": "2",
+					"attributes": {
+						"text": "This question already exist"
+					},
+					"relationships": {
+						"inspiringQuestion": {
+							"data": {
+								"type": "questionWithLIDs",
+								"id": "1",
+								"lid": "1"
+							}
+						}
+					}
+				},
+				"included": [
+					{
+						"type": "questionWithLIDs",
+						"id": "1",
+						"lid": "1",
+						"attributes": {
+							"text": "This question is being added"
+						},
+						"relationships": {
+							"inspiringQuestion": {
+								"data": null
 							}
 						}
 					}

@@ -1,5 +1,7 @@
 module github.com/manyminds/api2go
 
+go 1.14
+
 require (
 	github.com/gedex/inflector v0.0.0-20170307190818-16278e9db813
 	github.com/gin-gonic/gin v1.4.0

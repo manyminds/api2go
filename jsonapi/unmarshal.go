@@ -13,6 +13,12 @@ type UnmarshalIdentifier interface {
 	SetID(string) error
 }
 
+// The UnmarshalLocalIdentifier interface must be implemented to set the LID during
+// unmarshalling.
+type UnmarshalLocalIdentifier interface {
+	SetLID(string) error
+}
+
 // The UnmarshalToOneRelations interface must be implemented to unmarshal
 // to-one relations.
 type UnmarshalToOneRelations interface {
@@ -124,6 +130,14 @@ func Unmarshal(data []byte, target interface{}) error {
 					targetRecord = targetValue.Index(i).Addr()
 					break
 				}
+				marshalCastedWithLID, ok := targetValue.Index(i).Interface().(MarshalLocalIdentifier)
+				if !ok {
+					continue
+				}
+				if record.LID == marshalCastedWithLID.GetLID() {
+					targetRecord = targetValue.Index(i).Addr()
+					break
+				}
 			}
 
 			if targetRecord == emptyValue || targetRecord.IsNil() {
@@ -173,6 +187,13 @@ func setDataIntoTarget(data *Data, target interface{}) error {
 		return err
 	}
 
+	if castedTargetWithLid, ok := target.(UnmarshalLocalIdentifier); ok {
+		if err := castedTargetWithLid.SetLID(data.LID); err != nil {
+			return err
+		}
+		castedTarget, _ = castedTargetWithLid.(UnmarshalIdentifier)
+	}
+
 	return setRelationshipIDs(data.Relationships, castedTarget)
 }
 
@@ -200,7 +221,13 @@ func setRelationshipIDs(relationships map[string]Relationship, target UnmarshalI
 			if !ok {
 				return fmt.Errorf("struct %s does not implement UnmarshalToOneRelations", reflect.TypeOf(target))
 			}
-			err := castedToOne.SetToOneReferenceID(name, rel.Data.DataObject.ID)
+
+			var err error
+			if rel.Data.DataObject.ID == "" {
+				err = castedToOne.SetToOneReferenceID(name, rel.Data.DataObject.LID)
+			} else {
+				err = castedToOne.SetToOneReferenceID(name, rel.Data.DataObject.ID)
+			}
 			if err != nil {
 				return err
 			}
@@ -215,6 +242,9 @@ func setRelationshipIDs(relationships map[string]Relationship, target UnmarshalI
 			IDs := make([]string, len(rel.Data.DataArray))
 			for index, relData := range rel.Data.DataArray {
 				IDs[index] = relData.ID
+				if relData.ID == "" {
+					IDs[index] = relData.LID
+				}
 			}
 			err := castedToMany.SetToManyReferenceIDs(name, IDs)
 			if err != nil {

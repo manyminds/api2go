@@ -317,6 +317,64 @@ var _ = Describe("Unmarshal", func() {
 		})
 	})
 
+	Context("When unmarshaling simple objects wtih local id", func() {
+		t, _ := time.Parse(time.RFC3339, "2014-11-10T16:30:48.823Z")
+		firstPost := SimplePostWithLID{SimplePost: SimplePost{ID: "1", Title: "First Post", Text: "Lipsum", Created: t}, LID: "1"}
+		secondPost := SimplePostWithLID{SimplePost: SimplePost{ID: "2", Title: "Second Post", Text: "Foobar!", Created: t, Updated: t}, LID: ""}
+
+		singlePostJSON := []byte(`{
+			"data": {
+				"id": "1",
+				"lid": "1",
+				"type": "simplePostWithLIDs",
+				"attributes": {
+					"title": "First Post",
+					"text": "Lipsum",
+					"created-date": "2014-11-10T16:30:48.823Z"
+				}
+			}
+		}`)
+
+		multiplePostJSON := []byte(`{
+			"data": [
+				{
+					"id": "1",
+					"lid": "1",
+					"type": "simplePostWithLIDs",
+					"attributes": {
+						"title": "First Post",
+						"text": "Lipsum",
+						"created-date": "2014-11-10T16:30:48.823Z"
+					}
+				},
+				{
+					"id": "2",
+					"type": "simplePostWithLIDs",
+					"attributes": {
+						"title": "Second Post",
+						"text": "Foobar!",
+						"created-date": "2014-11-10T16:30:48.823Z",
+						"updated-date": "2014-11-10T16:30:48.823Z"
+					}
+				}
+			]
+		}`)
+
+		It("unmarshals single object into a struct", func() {
+			var post SimplePostWithLID
+			err := Unmarshal(singlePostJSON, &post)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(post).To(Equal(firstPost))
+		})
+
+		It("unmarshals multiple objects into a slice", func() {
+			var posts []SimplePostWithLID
+			err := Unmarshal(multiplePostJSON, &posts)
+			Expect(err).To(BeNil())
+			Expect(posts).To(Equal([]SimplePostWithLID{firstPost, secondPost}))
+		})
+	})
+
 	Context("when unmarshaling objects with relationships", func() {
 		It("unmarshals to-many relationship IDs", func() {
 			expectedPost := Post{ID: 1, CommentsIDs: []int{1}}
@@ -536,6 +594,86 @@ var _ = Describe("Unmarshal", func() {
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(Equal("this also never works"))
 			})
+		})
+	})
+
+	Context("when unmarshaling objects with relationships with local ids", func() {
+		It("unmarshals to-one and to-many relationship IDs", func() {
+			expectedPost := PostWithLID{ID: 1, LID: 1, AuthorID: sql.NullInt64{Valid: true, Int64: 1}, CommentsIDs: []int{1}}
+			postJSON := []byte(`{
+				"data": {
+					"id": "1",
+					"lid": "1",
+					"type": "postWithLIDs",
+					"attributes": {},
+					"relationships": {
+						"author": {
+							"data": {
+								"lid":   "1",
+								"type": "userWithLIDs"
+							}
+						},
+						"comments": {
+							"data": [
+							{
+								"id":   "1",
+								"type": "links"
+							}]
+						}
+					}
+				}
+			}`)
+			var post PostWithLID
+			err := Unmarshal(postJSON, &post)
+			Expect(err).To(BeNil())
+			Expect(expectedPost).To(Equal(post))
+		})
+
+		It("unmarshals to-one and to-many relationship IDs when included", func() {
+			expectedPost := PostWithLID{ID: 1, LID: 1, AuthorID: sql.NullInt64{Valid: true, Int64: 1}, CommentsIDs: []int{1}}
+			postJSON := []byte(`{
+				"data": {
+					"id": "1",
+					"lid": "1",
+					"type": "postWithLIDs",
+					"attributes": {},
+					"relationships": {
+						"author": {
+							"data": {
+								"lid":   "1",
+								"type": "userWithLIDs"
+							}
+						},
+						"comments": {
+							"data": [
+							{
+								"lid":   "1",
+								"type": "commentWithLIDs"
+							}]
+						}
+					}
+				},
+				"included": [
+					{
+						"type": "userWithLIDs",
+						"lid": "1",
+						"attributes": {
+							"name": "new user"
+						}
+					},
+					{
+						"type": "commentWithLIDs",
+						"lid": "1",
+						"attributes": {
+							"text": "Does this test work?"
+						}
+					}
+				]
+			}`)
+			var post PostWithLID
+			err := Unmarshal(postJSON, &post)
+			Expect(err).To(BeNil())
+			Expect(expectedPost).To(Equal(post))
 		})
 	})
 

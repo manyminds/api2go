@@ -77,6 +77,78 @@ func (c Comment) GetReferencedStructs() []MarshalIdentifier {
 	return result
 }
 
+type CommentWithLID struct {
+	ID               int              `json:"-"`
+	LID              int              `json:"-"`
+	Text             string           `json:"text"`
+	SubComments      []CommentWithLID `json:"-"`
+	SubCommentsEmpty bool             `json:"-"`
+}
+
+func (c CommentWithLID) GetID() string {
+	return fmt.Sprintf("%d", c.ID)
+}
+
+func (c CommentWithLID) GetLID() string {
+	if c.LID == 0 {
+		return ""
+	}
+	return fmt.Sprintf("%d", c.LID)
+}
+
+func (c *CommentWithLID) SetID(stringID string) error {
+	id, err := strconv.Atoi(stringID)
+	if err != nil {
+		return err
+	}
+
+	c.ID = id
+
+	return nil
+}
+
+func (c *CommentWithLID) SetLID(stringlID string) error {
+	lid, err := strconv.Atoi(stringlID)
+	if err != nil {
+		return err
+	}
+
+	c.LID = lid
+
+	return nil
+}
+
+func (c CommentWithLID) GetReferences() []Reference {
+	return []Reference{
+		{
+			Type:        "comments",
+			Name:        "comments",
+			IsNotLoaded: c.SubCommentsEmpty,
+		},
+	}
+}
+
+func (c CommentWithLID) GetReferencedIDs() []ReferenceID {
+	result := []ReferenceID{}
+
+	for _, comment := range c.SubComments {
+		commentID := ReferenceID{Type: "comments", Name: "comments", ID: comment.GetID(), LID: comment.GetLID()}
+		result = append(result, commentID)
+	}
+
+	return result
+}
+
+func (c CommentWithLID) GetReferencedStructs() []MarshalIdentifier {
+	result := []MarshalIdentifier{}
+
+	for _, comment := range c.SubComments {
+		result = append(result, comment)
+	}
+
+	return result
+}
+
 type User struct {
 	ID       int    `json:"-"`
 	Name     string `json:"name"`
@@ -98,6 +170,46 @@ func (u *User) SetID(stringID string) error {
 	return nil
 }
 
+type UserWithLID struct {
+	ID       int    `json:"-"`
+	LID      int    `json:"-"`
+	Name     string `json:"name"`
+	Password string `json:"-"`
+}
+
+func (u UserWithLID) GetID() string {
+	return fmt.Sprintf("%d", u.ID)
+}
+
+func (u *UserWithLID) SetID(stringID string) error {
+	id, err := strconv.Atoi(stringID)
+	if err != nil {
+		return err
+	}
+
+	u.ID = id
+
+	return nil
+}
+
+func (u UserWithLID) GetLID() string {
+	if u.LID == 0 {
+		return ""
+	}
+	return fmt.Sprintf("%d", u.ID)
+}
+
+func (u *UserWithLID) SetLID(stringLID string) error {
+	id, err := strconv.Atoi(stringLID)
+	if err != nil {
+		return err
+	}
+
+	u.LID = id
+
+	return nil
+}
+
 type SimplePost struct {
 	ID        string    `json:"-"`
 	Title     string    `json:"title"`
@@ -115,6 +227,21 @@ func (s SimplePost) GetID() string {
 
 func (s *SimplePost) SetID(ID string) error {
 	s.ID = ID
+
+	return nil
+}
+
+type SimplePostWithLID struct {
+	SimplePost
+	LID string `json:"-"`
+}
+
+func (s SimplePostWithLID) GetLID() string {
+	return s.LID
+}
+
+func (s *SimplePostWithLID) SetLID(LID string) error {
+	s.LID = LID
 
 	return nil
 }
@@ -270,6 +397,161 @@ func (c *Post) SetReferencedStructs(references []UnmarshalIdentifier) error {
 	return nil
 }
 
+type PostWithLID struct {
+	ID            int              `json:"-"`
+	LID           int              `json:"-"`
+	Title         string           `json:"title"`
+	Comments      []CommentWithLID `json:"-"`
+	CommentsIDs   []int            `json:"-"`
+	CommentsEmpty bool             `json:"-"`
+	Author        *UserWithLID     `json:"-"`
+	AuthorID      sql.NullInt64    `json:"-"`
+	AuthorEmpty   bool             `json:"-"`
+}
+
+func (c PostWithLID) GetID() string {
+	return fmt.Sprintf("%d", c.ID)
+}
+
+func (c PostWithLID) GetLID() string {
+	return fmt.Sprintf("%d", c.LID)
+}
+
+func (c *PostWithLID) SetID(stringID string) error {
+	id, err := strconv.Atoi(stringID)
+	if err != nil {
+		return err
+	}
+
+	c.ID = id
+
+	return nil
+}
+
+func (c *PostWithLID) SetLID(stringLID string) error {
+	lid, err := strconv.Atoi(stringLID)
+	if err != nil {
+		return err
+	}
+
+	c.LID = lid
+
+	return nil
+}
+
+func (c PostWithLID) GetReferences() []Reference {
+	return []Reference{
+		{
+			Type:        "commentWithLIDs",
+			Name:        "comments",
+			IsNotLoaded: c.CommentsEmpty,
+		},
+		{
+			Type:        "userWithLIDs",
+			Name:        "author",
+			IsNotLoaded: c.AuthorEmpty,
+		},
+	}
+}
+
+func (c *PostWithLID) SetToOneReferenceID(name, ID string) error {
+	if name == "author" {
+		// Ignore empty author relationships
+		if ID != "" {
+			intID, err := strconv.ParseInt(ID, 10, 64)
+			if err != nil {
+				return err
+			}
+			c.AuthorID = sql.NullInt64{Valid: true, Int64: intID}
+		}
+
+		return nil
+	}
+
+	return errors.New("There is no to-one relationship named " + name)
+}
+
+func (c *PostWithLID) SetToManyReferenceIDs(name string, IDs []string) error {
+	if name == "comments" {
+		commentsIDs := []int{}
+
+		for _, ID := range IDs {
+			intID, err := strconv.ParseInt(ID, 10, 64)
+			if err != nil {
+				return err
+			}
+
+			commentsIDs = append(commentsIDs, int(intID))
+		}
+
+		c.CommentsIDs = commentsIDs
+
+		return nil
+	}
+
+	return errors.New("There is no to-many relationship named " + name)
+}
+
+func (c *PostWithLID) SetReferencedIDs(ids []ReferenceID) error {
+	for _, reference := range ids {
+		intID, err := strconv.ParseInt(reference.ID, 10, 64)
+		if err != nil {
+			return err
+		}
+
+		switch reference.Name {
+		case "comments":
+			c.CommentsIDs = append(c.CommentsIDs, int(intID))
+		case "author":
+			c.AuthorID = sql.NullInt64{Valid: true, Int64: intID}
+		}
+	}
+
+	return nil
+}
+
+func (c PostWithLID) GetReferencedIDs() []ReferenceID {
+	result := []ReferenceID{}
+
+	if c.Author != nil {
+		authorID := ReferenceID{Type: "userWithLIDs", Name: "author", ID: c.Author.GetID(), LID: c.Author.GetLID()}
+		result = append(result, authorID)
+	} else if c.AuthorID.Valid {
+		authorID := ReferenceID{Type: "userWithLIDs", Name: "author", ID: fmt.Sprintf("%d", c.AuthorID.Int64)}
+		result = append(result, authorID)
+	}
+
+	if len(c.Comments) > 0 {
+		for _, comment := range c.Comments {
+			result = append(result, ReferenceID{Type: "commentWithLIDs", Name: "comments", ID: comment.GetID(), LID: comment.GetLID()})
+		}
+	} else if len(c.CommentsIDs) > 0 {
+		for _, commentID := range c.CommentsIDs {
+			result = append(result, ReferenceID{Type: "commentWithLIDs", Name: "comments", ID: fmt.Sprintf("%d", commentID)})
+		}
+	}
+
+	return result
+}
+
+func (c PostWithLID) GetReferencedStructs() []MarshalIdentifier {
+	result := []MarshalIdentifier{}
+
+	if c.Author != nil {
+		result = append(result, c.Author)
+	}
+
+	for key := range c.Comments {
+		result = append(result, c.Comments[key])
+	}
+
+	return result
+}
+
+func (c *PostWithLID) SetReferencedStructs(references []UnmarshalIdentifier) error {
+	return nil
+}
+
 type AnotherPost struct {
 	ID       int   `json:"-"`
 	AuthorID int   `json:"-"`
@@ -350,6 +632,55 @@ func (q Question) GetReferencedIDs() []ReferenceID {
 }
 
 func (q Question) GetReferencedStructs() []MarshalIdentifier {
+	result := []MarshalIdentifier{}
+
+	if q.InspiringQuestion != nil {
+		result = append(result, *q.InspiringQuestion)
+	}
+
+	return result
+}
+
+type QuestionWithLID struct {
+	ID                  string           `json:"-"`
+	LID                 string           `json:"-"`
+	Text                string           `json:"text"`
+	InspiringQuestionID sql.NullString   `json:"-"`
+	InspiringQuestion   *QuestionWithLID `json:"-"`
+}
+
+func (q QuestionWithLID) GetID() string {
+	return q.ID
+}
+
+func (q QuestionWithLID) GetLID() string {
+	return q.LID
+}
+
+func (q QuestionWithLID) GetReferences() []Reference {
+	return []Reference{
+		{
+			Type: "questionWithLIDs",
+			Name: "inspiringQuestion",
+		},
+	}
+}
+
+func (q QuestionWithLID) GetReferencedIDs() []ReferenceID {
+	result := []ReferenceID{}
+
+	if q.InspiringQuestionID.Valid {
+		lid := ""
+		if q.InspiringQuestion != nil {
+			lid = q.InspiringQuestion.GetLID()
+		}
+		result = append(result, ReferenceID{ID: q.InspiringQuestionID.String, LID: lid, Name: "inspiringQuestion", Type: "questionWithLIDs"})
+	}
+
+	return result
+}
+
+func (q QuestionWithLID) GetReferencedStructs() []MarshalIdentifier {
 	result := []MarshalIdentifier{}
 
 	if q.InspiringQuestion != nil {
