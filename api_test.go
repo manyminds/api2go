@@ -41,8 +41,17 @@ func (i invalid) GetID() string {
 	return "invalid"
 }
 
+func (i invalid) GetLID() string {
+	return "invalid"
+}
+
+func (i invalid) GetName() string {
+	return "invalid"
+}
+
 type Post struct {
 	ID       string     `json:"-"`
+	LID      string     `json:"-"`
 	Title    string     `json:"title"`
 	Value    null.Float `json:"value"`
 	Author   *User      `json:"-"`
@@ -54,8 +63,21 @@ func (p Post) GetID() string {
 	return p.ID
 }
 
+func (p Post) GetLID() string {
+	return p.LID
+}
+
+func (p Post) GetName() string {
+	return "posts"
+}
+
 func (p *Post) SetID(ID string) error {
 	p.ID = ID
+	return nil
+}
+
+func (p *Post) SetLID(ID string) error {
+	p.LID = ID
 	return nil
 }
 
@@ -91,12 +113,12 @@ func (p Post) GetReferencedIDs() []jsonapi.ReferenceID {
 	return result
 }
 
-func (p *Post) SetToOneReferenceID(name, ID string) error {
+func (p *Post) SetToOneReferenceID(name string, ID *jsonapi.RelationshipData) error {
 	if name == "author" {
-		if ID == "" {
+		if ID == nil {
 			p.Author = nil
 		} else {
-			p.Author = &User{ID: ID}
+			p.Author = &User{ID: ID.ID, LID: ID.LID}
 		}
 
 		return nil
@@ -105,11 +127,11 @@ func (p *Post) SetToOneReferenceID(name, ID string) error {
 	return errors.New("There is no to-one relationship with the name " + name)
 }
 
-func (p *Post) SetToManyReferenceIDs(name string, IDs []string) error {
+func (p *Post) SetToManyReferenceIDs(name string, IDs []jsonapi.RelationshipData) error {
 	if name == "comments" {
 		comments := []Comment{}
 		for _, ID := range IDs {
-			comments = append(comments, Comment{ID: ID})
+			comments = append(comments, Comment{ID: ID.ID, LID: ID.LID})
 		}
 		p.Comments = comments
 
@@ -119,7 +141,7 @@ func (p *Post) SetToManyReferenceIDs(name string, IDs []string) error {
 	if name == "bananas" {
 		bananas := []Banana{}
 		for _, ID := range IDs {
-			bananas = append(bananas, Banana{ID: ID})
+			bananas = append(bananas, Banana{ID: ID.ID, LID: ID.LID})
 		}
 		p.Bananas = bananas
 
@@ -187,6 +209,7 @@ func (p Post) GetReferencedStructs() []jsonapi.MarshalIdentifier {
 
 type Comment struct {
 	ID    string `json:"-"`
+	LID   string `json:"-"`
 	Value string `json:"value"`
 }
 
@@ -194,8 +217,17 @@ func (c Comment) GetID() string {
 	return c.ID
 }
 
+func (c Comment) GetLID() string {
+	return c.LID
+}
+
+func (c Comment) GetName() string {
+	return "comments"
+}
+
 type Banana struct {
 	ID   string `jnson:"-"`
+	LID  string `jnson:"-"`
 	Name string
 }
 
@@ -203,14 +235,31 @@ func (b Banana) GetID() string {
 	return b.ID
 }
 
+func (b Banana) GetLID() string {
+	return b.LID
+}
+
+func (b Banana) GetName() string {
+	return "bananas"
+}
+
 type User struct {
 	ID   string `json:"-"`
+	LID  string `json:"-"`
 	Name string `json:"name"`
 	Info string `json:"info"`
 }
 
 func (u User) GetID() string {
 	return u.ID
+}
+
+func (u User) GetLID() string {
+	return u.LID
+}
+
+func (u User) GetName() string {
+	return "users"
 }
 
 type fixtureSource struct {

@@ -117,6 +117,7 @@ type Meta map[string]interface{}
 type Data struct {
 	Type          string                  `json:"type"`
 	ID            string                  `json:"id"`
+	LID           string                  `json:"lid,omitempty"`
 	Attributes    json.RawMessage         `json:"attributes"`
 	Relationships map[string]Relationship `json:"relationships,omitempty"`
 	Links         Links                   `json:"links,omitempty"`
@@ -166,4 +167,5 @@ func (c *RelationshipDataContainer) MarshalJSON() ([]byte, error) {
 type RelationshipData struct {
 	Type string `json:"type"`
 	ID   string `json:"id"`
+	LID   string `json:"lid,omitempty"`
 }

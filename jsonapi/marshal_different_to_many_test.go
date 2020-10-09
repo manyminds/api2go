@@ -7,11 +7,20 @@ import (
 
 type ManyParent struct {
 	ID      string `json:"-"`
+	LID     string `json:"-"`
 	Content string `json:"content"`
 }
 
 func (m ManyParent) GetID() string {
 	return m.ID
+}
+
+func (m ManyParent) GetLID() string {
+	return m.LID
+}
+
+func (m ManyParent) GetName() string {
+	return "many-parents"
 }
 
 func (m ManyParent) GetReferences() []Reference {
@@ -71,7 +80,7 @@ var _ = Describe("Marshalling toMany relations with the same name and different 
             			]
           			}
         		},
-        		"type": "manyParents"
+        		"type": "many-parents"
       		}
     	}`))
 	})

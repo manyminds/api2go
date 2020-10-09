@@ -54,6 +54,7 @@ func (s *PublishStatus) UnmarshalJSON(data []byte) error {
 
 type EnumPost struct {
 	ID     string        `json:"-"`
+	LID    string        `json:"-"`
 	Title  string        `json:"title"`
 	Status PublishStatus `json:"status"`
 }
@@ -62,8 +63,22 @@ func (e EnumPost) GetID() string {
 	return e.ID
 }
 
+func (e EnumPost) GetLID() string {
+	return e.LID
+}
+
+func (e EnumPost) GetName() string {
+	return "enum-posts"
+}
+
 func (e *EnumPost) SetID(ID string) error {
 	e.ID = ID
+
+	return nil
+}
+
+func (e *EnumPost) SetLID(ID string) error {
+	e.LID = ID
 
 	return nil
 }
@@ -71,7 +86,7 @@ func (e *EnumPost) SetID(ID string) error {
 var _ = Describe("Custom enum types", func() {
 	status := StatusPublished
 	statusValue := "published"
-	singleJSON := []byte(`{"data":{"id": "1", "type": "enumPosts", "attributes": {"title":"First Post","status":"published"}}}`)
+	singleJSON := []byte(`{"data":{"id": "1", "type": "enum-posts", "attributes": {"title":"First Post","status":"published"}}}`)
 	firstPost := EnumPost{ID: "1", Title: "First Post", Status: StatusPublished}
 
 	Context("When marshaling objects including enumes", func() {

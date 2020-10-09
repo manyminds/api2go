@@ -8,19 +8,35 @@ import (
 )
 
 type Book struct {
-	ID       string      `json:"-"`
-	Author   *StupidUser `json:"-"`
-	AuthorID string      `json:"-"`
-	Pages    []Page      `json:"-"`
-	PagesIDs []string    `json:"-"`
+	ID        string      `json:"-"`
+	LID       string      `json:"-"`
+	Author    *StupidUser `json:"-"`
+	AuthorID  string      `json:"-"`
+	AuthorLID string      `json:"-"`
+	Pages     []Page      `json:"-"`
+	PagesIDs  []string    `json:"-"`
 }
 
 func (b Book) GetID() string {
 	return b.ID
 }
 
+func (b Book) GetLID() string {
+	return b.LID
+}
+
+func (b Book) GetName() string {
+	return "books"
+}
+
 func (b *Book) SetID(ID string) error {
 	b.ID = ID
+
+	return nil
+}
+
+func (b *Book) SetLID(ID string) error {
+	b.LID = ID
 
 	return nil
 }
@@ -60,9 +76,10 @@ func (b Book) GetReferencedIDs() []ReferenceID {
 	return result
 }
 
-func (b *Book) SetToOneReferenceID(name, ID string) error {
+func (b *Book) SetToOneReferenceID(name string, ID *RelationshipData) error {
 	if name == "author" {
-		b.AuthorID = ID
+		b.AuthorID = ID.ID
+		b.AuthorLID = ID.LID
 
 		return nil
 	}
@@ -70,9 +87,12 @@ func (b *Book) SetToOneReferenceID(name, ID string) error {
 	return errors.New("There is no to-one relationship with name " + name)
 }
 
-func (b *Book) SetToManyReferenceIDs(name string, IDs []string) error {
+func (b *Book) SetToManyReferenceIDs(name string, IDs []RelationshipData) error {
 	if name == "pages" {
-		b.PagesIDs = IDs
+		b.PagesIDs = make([]string, 0, len(IDs))
+		for _, id := range IDs {
+			b.PagesIDs = append(b.PagesIDs, id.ID)
+		}
 
 		return nil
 	}
@@ -103,6 +123,14 @@ func (s StupidUser) GetID() string {
 	return s.ID
 }
 
+func (s StupidUser) GetLID() string {
+	return ""
+}
+
+func (s StupidUser) GetName() string {
+	return "stupid-users"
+}
+
 type Page struct {
 	ID      string `json:"-"`
 	Content string `json:"content"`
@@ -110,6 +138,14 @@ type Page struct {
 
 func (p Page) GetID() string {
 	return p.ID
+}
+
+func (p Page) GetLID() string {
+	return ""
+}
+
+func (p Page) GetName() string {
+	return "pages"
 }
 
 var _ = Describe("Test for the public api of this package", func() {
@@ -166,7 +202,7 @@ var _ = Describe("Test for the public api of this package", func() {
 				"attributes": {
 					"name" : "Terry Pratchett"
 				},
-				"type" : "stupidUsers"
+				"type" : "stupid-users"
 			},
 			{
 				"attributes": {

@@ -1231,9 +1231,10 @@ func handleError(err error, w http.ResponseWriter, r *http.Request, contentType 
 func processRelationshipsData(data interface{}, linkName string, target interface{}) error {
 	hasOne, ok := data.(map[string]interface{})
 	if ok {
-		hasOneID, ok := hasOne["id"].(string)
-		if !ok {
-			return fmt.Errorf("data object must have a field id for %s", linkName)
+		hasOneID, okID := hasOne["id"].(string)
+		hasOneLID, okLID := hasOne["lid"].(string)
+		if !okID && !okLID {
+			return fmt.Errorf("data object must have a field id or lid for %s", linkName)
 		}
 
 		target, ok := target.(jsonapi.UnmarshalToOneRelations)
@@ -1241,7 +1242,7 @@ func processRelationshipsData(data interface{}, linkName string, target interfac
 			return errors.New("target struct must implement interface UnmarshalToOneRelations")
 		}
 
-		err := target.SetToOneReferenceID(linkName, hasOneID)
+		err := target.SetToOneReferenceID(linkName, &jsonapi.RelationshipData{ID: hasOneID, LID: hasOneLID})
 		if err != nil {
 			return err
 		}
@@ -1252,7 +1253,7 @@ func processRelationshipsData(data interface{}, linkName string, target interfac
 			return errors.New("target struct must implement interface UnmarshalToOneRelations")
 		}
 
-		err := target.SetToOneReferenceID(linkName, "")
+		err := target.SetToOneReferenceID(linkName, nil)
 		if err != nil {
 			return err
 		}
@@ -1267,22 +1268,23 @@ func processRelationshipsData(data interface{}, linkName string, target interfac
 			return errors.New("target struct must implement interface UnmarshalToManyRelations")
 		}
 
-		hasManyIDs := []string{}
+		hasManyRelations := make([]jsonapi.RelationshipData, 0, len(hasMany))
 
 		for _, entry := range hasMany {
 			data, ok := entry.(map[string]interface{})
 			if !ok {
 				return fmt.Errorf("entry in data array must be an object for %s", linkName)
 			}
-			dataID, ok := data["id"].(string)
-			if !ok {
-				return fmt.Errorf("all data objects must have a field id for %s", linkName)
+			dataID, okID := data["id"].(string)
+			dataLID, okLID := data["lid"].(string)
+			if !okID && !okLID{
+				return fmt.Errorf("all data objects must have a field id or lid for %s", linkName)
 			}
 
-			hasManyIDs = append(hasManyIDs, dataID)
+			hasManyRelations = append(hasManyRelations, jsonapi.RelationshipData{ID: dataID, LID: dataLID})
 		}
 
-		err := target.SetToManyReferenceIDs(linkName, hasManyIDs)
+		err := target.SetToManyReferenceIDs(linkName, hasManyRelations)
 		if err != nil {
 			return err
 		}

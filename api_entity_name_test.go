@@ -11,6 +11,7 @@ import (
 
 type BaguetteTaste struct {
 	ID    string `json:"-"`
+	LID   string `json:"-"`
 	Taste string `json:"taste"`
 }
 
@@ -18,8 +19,17 @@ func (s BaguetteTaste) GetID() string {
 	return s.ID
 }
 
+func (s BaguetteTaste) GetLID() string {
+	return s.LID
+}
+
 func (s *BaguetteTaste) SetID(ID string) error {
 	s.ID = ID
+	return nil
+}
+
+func (s *BaguetteTaste) SetLID(ID string) error {
+	s.LID = ID
 	return nil
 }
 

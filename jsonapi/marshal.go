@@ -26,12 +26,15 @@ const (
 // Note: The implementation of this interface is mandatory.
 type MarshalIdentifier interface {
 	GetID() string
+	GetLID() string
+	EntityNamer
 }
 
 // ReferenceID contains all necessary information in order to reference another
 // struct in JSON API.
 type ReferenceID struct {
 	ID           string
+	LID          string
 	Type         string
 	Name         string
 	Relationship RelationshipType
@@ -245,6 +248,7 @@ func marshalData(element MarshalIdentifier, data *Data, information ServerInform
 
 	data.Attributes = attributes
 	data.ID = element.GetID()
+	data.LID = element.GetLID()
 	data.Type = getStructType(element)
 
 	if information != nil {
@@ -327,12 +331,14 @@ func getStructRelationships(relationer MarshalLinkedRelations, information Serve
 				container.DataArray = append(container.DataArray, RelationshipData{
 					Type: referenceID.Type,
 					ID:   referenceID.ID,
+					LID:  referenceID.LID,
 				})
 			}
 		} else {
 			container.DataObject = &RelationshipData{
 				Type: referenceIDs[0].Type,
 				ID:   referenceIDs[0].ID,
+				LID:  referenceIDs[0].LID,
 			}
 		}
 

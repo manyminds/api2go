@@ -14,6 +14,7 @@ var _ = Describe("JSONAPI Struct tests", func() {
 				"data": {
 					"type": "test",
 					"id": "1",
+					"lid": "2",
 					"attributes": {"foo": "bar"},
 					"relationships": {
 						"author": {
@@ -26,6 +27,7 @@ var _ = Describe("JSONAPI Struct tests", func() {
 			expectedData := &Data{
 				Type:       "test",
 				ID:         "1",
+				LID:        "2",
 				Attributes: json.RawMessage([]byte(`{"foo": "bar"}`)),
 				Relationships: map[string]Relationship{
 					"author": {
@@ -56,8 +58,8 @@ var _ = Describe("JSONAPI Struct tests", func() {
 						"relationships": {
 							"comments": {
 								"data": [
-									{"type": "comments", "id": "1"},
-									{"type": "comments", "id": "2"}
+									{"type": "comments", "id": "1", "lid": "3"},
+									{"type": "comments", "id": "2", "lid": "4"}
 								]
 							}
 						}
@@ -76,10 +78,12 @@ var _ = Describe("JSONAPI Struct tests", func() {
 								{
 									Type: "comments",
 									ID:   "1",
+									LID:  "3",
 								},
 								{
 									Type: "comments",
 									ID:   "2",
+									LID:  "4",
 								},
 							},
 						},
