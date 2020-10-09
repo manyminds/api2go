@@ -1,6 +1,7 @@
 package api2go
 
 import (
+	"github.com/manyminds/api2go/jsonapi"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -11,15 +12,17 @@ import (
 
 type BaguetteTaste struct {
 	ID    string `json:"-"`
+	LID   string `json:"-"`
 	Taste string `json:"taste"`
 }
 
-func (s BaguetteTaste) GetID() string {
-	return s.ID
+func (s BaguetteTaste) GetID() jsonapi.Identifier {
+	return jsonapi.Identifier{ID: s.ID, LID: s.LID}
 }
 
-func (s *BaguetteTaste) SetID(ID string) error {
-	s.ID = ID
+func (s *BaguetteTaste) SetID(ID jsonapi.Identifier) error {
+	s.ID = ID.ID
+	s.LID = ID.LID
 	return nil
 }
 

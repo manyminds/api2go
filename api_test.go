@@ -37,12 +37,17 @@ func (m *requestURLResolver) SetRequest(r http.Request) {
 
 type invalid string
 
-func (i invalid) GetID() string {
+func (i invalid) GetID() jsonapi.Identifier {
+	return jsonapi.Identifier{ID: "invalid", LID: "invalid"}
+}
+
+func (i invalid) GetName() string {
 	return "invalid"
 }
 
 type Post struct {
 	ID       string     `json:"-"`
+	LID      string     `json:"-"`
 	Title    string     `json:"title"`
 	Value    null.Float `json:"value"`
 	Author   *User      `json:"-"`
@@ -50,12 +55,17 @@ type Post struct {
 	Bananas  []Banana   `json:"-"`
 }
 
-func (p Post) GetID() string {
-	return p.ID
+func (p Post) GetID() jsonapi.Identifier {
+	return jsonapi.Identifier{ID: p.ID, LID: p.LID}
 }
 
-func (p *Post) SetID(ID string) error {
-	p.ID = ID
+func (p Post) GetName() string {
+	return "posts"
+}
+
+func (p *Post) SetID(ID jsonapi.Identifier) error {
+	p.ID = ID.ID
+	p.LID = ID.LID
 	return nil
 }
 
@@ -79,24 +89,24 @@ func (p Post) GetReferences() []jsonapi.Reference {
 func (p Post) GetReferencedIDs() []jsonapi.ReferenceID {
 	result := []jsonapi.ReferenceID{}
 	if p.Author != nil {
-		result = append(result, jsonapi.ReferenceID{ID: p.Author.GetID(), Name: "author", Type: "users"})
+		result = append(result, jsonapi.ReferenceID{ID: p.Author.GetID().ID, Name: "author", Type: "users"})
 	}
 	for _, comment := range p.Comments {
-		result = append(result, jsonapi.ReferenceID{ID: comment.GetID(), Name: "comments", Type: "comments"})
+		result = append(result, jsonapi.ReferenceID{ID: comment.GetID().ID, Name: "comments", Type: "comments"})
 	}
 	for _, banana := range p.Bananas {
-		result = append(result, jsonapi.ReferenceID{ID: banana.GetID(), Name: "bananas", Type: "bananas"})
+		result = append(result, jsonapi.ReferenceID{ID: banana.GetID().ID, Name: "bananas", Type: "bananas"})
 	}
 
 	return result
 }
 
-func (p *Post) SetToOneReferenceID(name, ID string) error {
+func (p *Post) SetToOneReferenceID(name string, ID *jsonapi.Identifier) error {
 	if name == "author" {
-		if ID == "" {
+		if ID == nil {
 			p.Author = nil
 		} else {
-			p.Author = &User{ID: ID}
+			p.Author = &User{ID: ID.ID, LID: ID.LID}
 		}
 
 		return nil
@@ -105,11 +115,11 @@ func (p *Post) SetToOneReferenceID(name, ID string) error {
 	return errors.New("There is no to-one relationship with the name " + name)
 }
 
-func (p *Post) SetToManyReferenceIDs(name string, IDs []string) error {
+func (p *Post) SetToManyReferenceIDs(name string, IDs []jsonapi.Identifier) error {
 	if name == "comments" {
 		comments := []Comment{}
 		for _, ID := range IDs {
-			comments = append(comments, Comment{ID: ID})
+			comments = append(comments, Comment{ID: ID.ID, LID: ID.LID})
 		}
 		p.Comments = comments
 
@@ -119,7 +129,7 @@ func (p *Post) SetToManyReferenceIDs(name string, IDs []string) error {
 	if name == "bananas" {
 		bananas := []Banana{}
 		for _, ID := range IDs {
-			bananas = append(bananas, Banana{ID: ID})
+			bananas = append(bananas, Banana{ID: ID.ID, LID: ID.LID})
 		}
 		p.Bananas = bananas
 
@@ -150,7 +160,7 @@ func (p *Post) DeleteToManyIDs(name string, IDs []string) error {
 		for _, ID := range IDs {
 			// find and delete the comment with ID
 			for pos, comment := range p.Comments {
-				if comment.GetID() == ID {
+				if comment.GetID().ID == ID {
 					p.Comments = append(p.Comments[:pos], p.Comments[pos+1:]...)
 				}
 			}
@@ -161,7 +171,7 @@ func (p *Post) DeleteToManyIDs(name string, IDs []string) error {
 		for _, ID := range IDs {
 			// find and delete the comment with ID
 			for pos, banana := range p.Bananas {
-				if banana.GetID() == ID {
+				if banana.GetID().ID == ID {
 					p.Bananas = append(p.Bananas[:pos], p.Bananas[pos+1:]...)
 				}
 			}
@@ -187,30 +197,45 @@ func (p Post) GetReferencedStructs() []jsonapi.MarshalIdentifier {
 
 type Comment struct {
 	ID    string `json:"-"`
+	LID   string `json:"-"`
 	Value string `json:"value"`
 }
 
-func (c Comment) GetID() string {
-	return c.ID
+func (c Comment) GetID() jsonapi.Identifier {
+	return jsonapi.Identifier{ID: c.ID, LID: c.LID}
+}
+
+func (c Comment) GetName() string {
+	return "comments"
 }
 
 type Banana struct {
 	ID   string `jnson:"-"`
+	LID  string `jnson:"-"`
 	Name string
 }
 
-func (b Banana) GetID() string {
-	return b.ID
+func (b Banana) GetID() jsonapi.Identifier {
+	return jsonapi.Identifier{ID: b.ID, LID: b.LID}
+}
+
+func (b Banana) GetName() string {
+	return "bananas"
 }
 
 type User struct {
 	ID   string `json:"-"`
+	LID  string `json:"-"`
 	Name string `json:"name"`
 	Info string `json:"info"`
 }
 
-func (u User) GetID() string {
-	return u.ID
+func (u User) GetID() jsonapi.Identifier {
+	return jsonapi.Identifier{ID: u.ID, LID: u.LID}
+}
+
+func (u User) GetName() string {
+	return "users"
 }
 
 type fixtureSource struct {
@@ -934,7 +959,7 @@ var _ = Describe("RestHandler", func() {
 				}
 			}
 			`, "/v1/posts/1", "PATCH")
-				Expect(target.Author.GetID()).To(Equal("2"))
+				Expect(target.Author.GetID().ID).To(Equal("2"))
 			})
 
 			It("Patch can delete to-one relationships", func() {
@@ -975,7 +1000,7 @@ var _ = Describe("RestHandler", func() {
 				}
 			}
 			`, "/v1/posts/1", "PATCH")
-				Expect(target.Comments[0].GetID()).To(Equal("2"))
+				Expect(target.Comments[0].GetID().ID).To(Equal("2"))
 			})
 
 			It("Patch can delete to-many relationships", func() {
@@ -1004,7 +1029,7 @@ var _ = Describe("RestHandler", func() {
 				}
 			}`, "/v1/posts/1/relationships/author", "PATCH")
 				target := source.posts["1"]
-				Expect(target.Author.GetID()).To(Equal("2"))
+				Expect(target.Author.GetID().ID).To(Equal("2"))
 			})
 
 			It("Relationship PATCH route updates to-many", func() {
@@ -1016,7 +1041,7 @@ var _ = Describe("RestHandler", func() {
 			}`, "/v1/posts/1/relationships/comments", "PATCH")
 				target := source.posts["1"]
 				Expect(target.Comments).To(HaveLen(1))
-				Expect(target.Comments[0].GetID()).To(Equal("2"))
+				Expect(target.Comments[0].GetID().ID).To(Equal("2"))
 			})
 
 			It("Relationship POST route adds to-many elements", func() {
