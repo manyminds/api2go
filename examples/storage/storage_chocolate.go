@@ -19,7 +19,7 @@ func (c byID) Swap(i, j int) {
 }
 
 func (c byID) Less(i, j int) bool {
-	return c[i].GetID() < c[j].GetID()
+	return c[i].GetID().ID < c[j].GetID().ID
 }
 
 // NewChocolateStorage initializes the storage

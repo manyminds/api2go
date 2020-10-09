@@ -8,20 +8,26 @@ import (
 )
 
 type Book struct {
-	ID       string      `json:"-"`
-	Author   *StupidUser `json:"-"`
-	AuthorID string      `json:"-"`
-	Pages    []Page      `json:"-"`
-	PagesIDs []string    `json:"-"`
+	ID        string      `json:"-"`
+	LID       string      `json:"-"`
+	Author    *StupidUser `json:"-"`
+	AuthorID  string      `json:"-"`
+	AuthorLID string      `json:"-"`
+	Pages     []Page      `json:"-"`
+	PagesIDs  []string    `json:"-"`
 }
 
-func (b Book) GetID() string {
-	return b.ID
+func (b Book) GetID() Identifier {
+	return Identifier{ID: b.ID, LID: b.LID}
 }
 
-func (b *Book) SetID(ID string) error {
-	b.ID = ID
+func (b Book) GetName() string {
+	return "books"
+}
 
+func (b *Book) SetID(ID Identifier) error {
+	b.ID = ID.ID
+	b.LID = ID.LID
 	return nil
 }
 
@@ -42,16 +48,20 @@ func (b Book) GetReferencedIDs() []ReferenceID {
 	result := []ReferenceID{}
 
 	if b.Author != nil {
+		id := b.Author.GetID()
 		result = append(result, ReferenceID{
-			ID:   b.Author.GetID(),
+			ID:   id.ID,
+			LID:  id.LID,
 			Name: "author",
 			Type: "stupidUsers",
 		})
 	}
 
 	for _, page := range b.Pages {
+		id := page.GetID()
 		result = append(result, ReferenceID{
-			ID:   page.GetID(),
+			ID:   id.ID,
+			LID:  id.LID,
 			Name: "pages",
 			Type: "pages",
 		})
@@ -60,9 +70,10 @@ func (b Book) GetReferencedIDs() []ReferenceID {
 	return result
 }
 
-func (b *Book) SetToOneReferenceID(name, ID string) error {
+func (b *Book) SetToOneReferenceID(name string, ID *Identifier) error {
 	if name == "author" {
-		b.AuthorID = ID
+		b.AuthorID = ID.ID
+		b.AuthorLID = ID.LID
 
 		return nil
 	}
@@ -70,9 +81,12 @@ func (b *Book) SetToOneReferenceID(name, ID string) error {
 	return errors.New("There is no to-one relationship with name " + name)
 }
 
-func (b *Book) SetToManyReferenceIDs(name string, IDs []string) error {
+func (b *Book) SetToManyReferenceIDs(name string, IDs []Identifier) error {
 	if name == "pages" {
-		b.PagesIDs = IDs
+		b.PagesIDs = make([]string, 0, len(IDs))
+		for _, id := range IDs {
+			b.PagesIDs = append(b.PagesIDs, id.ID)
+		}
 
 		return nil
 	}
@@ -99,8 +113,12 @@ type StupidUser struct {
 	Name string `json:"name"`
 }
 
-func (s StupidUser) GetID() string {
-	return s.ID
+func (s StupidUser) GetID() Identifier {
+	return Identifier{ID: s.ID, LID: ""}
+}
+
+func (s StupidUser) GetName() string {
+	return "stupid-users"
 }
 
 type Page struct {
@@ -108,8 +126,12 @@ type Page struct {
 	Content string `json:"content"`
 }
 
-func (p Page) GetID() string {
-	return p.ID
+func (p Page) GetID() Identifier {
+	return Identifier{ID: p.ID, LID: ""}
+}
+
+func (p Page) GetName() string {
+	return "pages"
 }
 
 var _ = Describe("Test for the public api of this package", func() {
@@ -166,7 +188,7 @@ var _ = Describe("Test for the public api of this package", func() {
 				"attributes": {
 					"name" : "Terry Pratchett"
 				},
-				"type" : "stupidUsers"
+				"type" : "stupid-users"
 			},
 			{
 				"attributes": {

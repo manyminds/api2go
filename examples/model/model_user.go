@@ -8,7 +8,8 @@ import (
 
 // User is a generic database user
 type User struct {
-	ID string `json:"-"`
+	ID  string `json:"-"`
+	LID string `json:"-"`
 	//rename the username field to user-name.
 	Username      string       `json:"user-name"`
 	PasswordHash  string       `json:"-"`
@@ -18,13 +19,19 @@ type User struct {
 }
 
 // GetID to satisfy jsonapi.MarshalIdentifier interface
-func (u User) GetID() string {
-	return u.ID
+func (u User) GetID() jsonapi.Identifier {
+	return jsonapi.Identifier{ID: u.ID, LID: u.LID}
+}
+
+// GetName to satisfy jsonapi.MarshalIdentifier interface
+func (u User) GetName() string {
+	return "users"
 }
 
 // SetID to satisfy jsonapi.UnmarshalIdentifier interface
-func (u *User) SetID(id string) error {
-	u.ID = id
+func (u *User) SetID(ID jsonapi.Identifier) error {
+	u.ID = ID.ID
+	u.LID = ID.LID
 	return nil
 }
 
@@ -63,9 +70,12 @@ func (u User) GetReferencedStructs() []jsonapi.MarshalIdentifier {
 }
 
 // SetToManyReferenceIDs sets the sweets reference IDs and satisfies the jsonapi.UnmarshalToManyRelations interface
-func (u *User) SetToManyReferenceIDs(name string, IDs []string) error {
+func (u *User) SetToManyReferenceIDs(name string, IDs []jsonapi.Identifier) error {
 	if name == "sweets" {
-		u.ChocolatesIDs = IDs
+		u.ChocolatesIDs = make([]string, 0, len(IDs))
+		for _, id := range IDs {
+			u.ChocolatesIDs = append(u.ChocolatesIDs, id.ID)
+		}
 		return nil
 	}
 

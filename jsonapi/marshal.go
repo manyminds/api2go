@@ -25,13 +25,21 @@ const (
 //
 // Note: The implementation of this interface is mandatory.
 type MarshalIdentifier interface {
-	GetID() string
+	GetID() Identifier
+	EntityNamer
+}
+
+type Identifier struct {
+	ID   string `json:"id"`
+	LID  string `json:"lid,omitempty"`
+	Name string `json:"type"`
 }
 
 // ReferenceID contains all necessary information in order to reference another
 // struct in JSON API.
 type ReferenceID struct {
 	ID           string
+	LID          string
 	Type         string
 	Name         string
 	Relationship RelationshipType
@@ -217,7 +225,7 @@ func filterDuplicates(input []MarshalIdentifier, information ServerInformation) 
 			alreadyIncluded[structType] = make(map[string]bool)
 		}
 
-		if !alreadyIncluded[structType][referencedStruct.GetID()] {
+		if !alreadyIncluded[structType][referencedStruct.GetID().ID] {
 			var data Data
 			err := marshalData(referencedStruct, &data, information)
 			if err != nil {
@@ -225,7 +233,7 @@ func filterDuplicates(input []MarshalIdentifier, information ServerInformation) 
 			}
 
 			includedElements = append(includedElements, data)
-			alreadyIncluded[structType][referencedStruct.GetID()] = true
+			alreadyIncluded[structType][referencedStruct.GetID().ID] = true
 		}
 	}
 
@@ -244,7 +252,9 @@ func marshalData(element MarshalIdentifier, data *Data, information ServerInform
 	}
 
 	data.Attributes = attributes
-	data.ID = element.GetID()
+	identifier := element.GetID()
+	data.ID = identifier.ID
+	data.LID = identifier.LID
 	data.Type = getStructType(element)
 
 	if information != nil {
@@ -322,17 +332,19 @@ func getStructRelationships(relationer MarshalLinkedRelations, information Serve
 
 		if isToMany(referenceIDs[0].Relationship, referenceIDs[0].Name) {
 			// multiple elements in links
-			container.DataArray = []RelationshipData{}
+			container.DataArray = []Identifier{}
 			for _, referenceID := range referenceIDs {
-				container.DataArray = append(container.DataArray, RelationshipData{
-					Type: referenceID.Type,
+				container.DataArray = append(container.DataArray, Identifier{
+					Name: referenceID.Type,
 					ID:   referenceID.ID,
+					LID:  referenceID.LID,
 				})
 			}
 		} else {
-			container.DataObject = &RelationshipData{
-				Type: referenceIDs[0].Type,
+			container.DataObject = &Identifier{
+				Name: referenceIDs[0].Type,
 				ID:   referenceIDs[0].ID,
+				LID:  referenceIDs[0].LID,
 			}
 		}
 
@@ -363,7 +375,7 @@ func getStructRelationships(relationer MarshalLinkedRelations, information Serve
 
 		// Plural empty relationships need an empty array and empty to-one need a null in the json
 		if !reference.IsNotLoaded && isToMany(reference.Relationship, reference.Name) {
-			container.DataArray = []RelationshipData{}
+			container.DataArray = []Identifier{}
 		}
 
 		links := getLinksForServerInformation(relationer, name, information)
@@ -399,7 +411,7 @@ func getLinkBaseURL(element MarshalIdentifier, information ServerInformation) st
 		prefix += "/" + namespace
 	}
 
-	return fmt.Sprintf("%s/%s/%s", prefix, structType, element.GetID())
+	return fmt.Sprintf("%s/%s/%s", prefix, structType, element.GetID().ID)
 }
 
 func getLinksForServerInformation(relationer MarshalLinkedRelations, name string, information ServerInformation) Links {

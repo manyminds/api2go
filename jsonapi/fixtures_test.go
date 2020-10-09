@@ -15,8 +15,12 @@ type Magic struct {
 	ID MagicID `json:"-"`
 }
 
-func (m Magic) GetID() string {
-	return m.ID.String()
+func (m Magic) GetID() Identifier {
+	return Identifier{ID: m.ID.String()}
+}
+
+func (m Magic) GetName() string {
+	return "magics"
 }
 
 type MagicID string
@@ -27,22 +31,39 @@ func (m MagicID) String() string {
 
 type Comment struct {
 	ID               int       `json:"-"`
+	LID              int       `json:"-"`
 	Text             string    `json:"text"`
 	SubComments      []Comment `json:"-"`
 	SubCommentsEmpty bool      `json:"-"`
 }
 
-func (c Comment) GetID() string {
-	return fmt.Sprintf("%d", c.ID)
+func (c Comment) GetID() Identifier {
+	id := Identifier{ID: fmt.Sprintf("%d", c.ID)}
+	if c.LID != 0 {
+		id.LID = fmt.Sprintf("%d", c.LID)
+	}
+	return id
 }
 
-func (c *Comment) SetID(stringID string) error {
-	id, err := strconv.Atoi(stringID)
-	if err != nil {
-		return err
-	}
+func (c Comment) GetName() string {
+	return "comments"
+}
 
-	c.ID = id
+func (c *Comment) SetID(ID Identifier) error {
+	if ID.ID != "" {
+		id, err := strconv.Atoi(ID.ID)
+		if err != nil {
+			return err
+		}
+		c.ID = id
+	}
+	if ID.LID != "" {
+		lid, err := strconv.Atoi(ID.LID)
+		if err != nil {
+			return err
+		}
+		c.LID = lid
+	}
 
 	return nil
 }
@@ -61,7 +82,8 @@ func (c Comment) GetReferencedIDs() []ReferenceID {
 	result := []ReferenceID{}
 
 	for _, comment := range c.SubComments {
-		commentID := ReferenceID{Type: "comments", Name: "comments", ID: comment.GetID()}
+		id := comment.GetID()
+		commentID := ReferenceID{Type: "comments", Name: "comments", ID: id.ID, LID: id.LID}
 		result = append(result, commentID)
 	}
 
@@ -80,27 +102,41 @@ func (c Comment) GetReferencedStructs() []MarshalIdentifier {
 
 type User struct {
 	ID       int    `json:"-"`
+	LID      int    `json:"-"`
 	Name     string `json:"name"`
 	Password string `json:"-"`
 }
 
-func (u User) GetID() string {
-	return fmt.Sprintf("%d", u.ID)
+func (u User) GetID() Identifier {
+	id := Identifier{ID: fmt.Sprintf("%d", u.ID)}
+	if u.LID != 0 {
+		id.LID = fmt.Sprintf("%d", u.LID)
+	}
+	return id
 }
 
-func (u *User) SetID(stringID string) error {
-	id, err := strconv.Atoi(stringID)
+func (u User) GetName() string {
+	return "users"
+}
+
+func (u *User) SetID(ID Identifier) error {
+	id, err := strconv.Atoi(ID.ID)
 	if err != nil {
 		return err
 	}
-
 	u.ID = id
+	lid, err := strconv.Atoi(ID.LID)
+	if err != nil {
+		return err
+	}
+	u.LID = lid
 
 	return nil
 }
 
 type SimplePost struct {
 	ID        string    `json:"-"`
+	LID       string    `json:"-"`
 	Title     string    `json:"title"`
 	Text      string    `json:"text"`
 	Internal  string    `json:"-"`
@@ -110,12 +146,22 @@ type SimplePost struct {
 	topSecret string
 }
 
-func (s SimplePost) GetID() string {
-	return s.ID
+func (s SimplePost) GetID() Identifier {
+	return Identifier{ID: s.ID, LID: s.LID}
 }
 
-func (s *SimplePost) SetID(ID string) error {
-	s.ID = ID
+func (s SimplePost) GetName() string {
+	return "simple-posts"
+}
+
+func (s *SimplePost) SetID(ID Identifier) error {
+	s.ID = ID.ID
+	s.LID = ID.LID
+	return nil
+}
+
+func (s *SimplePost) SetLID(ID string) error {
+	s.LID = ID
 
 	return nil
 }
@@ -124,36 +170,68 @@ type ErrorIDPost struct {
 	Error error
 }
 
-func (s ErrorIDPost) GetID() string {
-	return ""
+func (s ErrorIDPost) GetID() Identifier {
+	return Identifier{ID: "", LID: ""}
 }
 
-func (s *ErrorIDPost) SetID(ID string) error {
+func (s *ErrorIDPost) SetID(ID Identifier) error {
 	return s.Error
 }
 
 type Post struct {
 	ID            int           `json:"-"`
+	LID           int           `json:"-"`
 	Title         string        `json:"title"`
 	Comments      []Comment     `json:"-"`
 	CommentsIDs   []int         `json:"-"`
+	CommentsLIDs  []int         `json:"-"`
 	CommentsEmpty bool          `json:"-"`
 	Author        *User         `json:"-"`
 	AuthorID      sql.NullInt64 `json:"-"`
+	AuthorLID     sql.NullInt64 `json:"-"`
 	AuthorEmpty   bool          `json:"-"`
 }
 
-func (c Post) GetID() string {
-	return fmt.Sprintf("%d", c.ID)
+func (c Post) GetID() Identifier {
+	id := Identifier{ID: fmt.Sprintf("%d", c.ID)}
+	if c.LID != 0 {
+		id.LID = fmt.Sprintf("%d", c.LID)
+	}
+	return id
 }
 
-func (c *Post) SetID(stringID string) error {
-	id, err := strconv.Atoi(stringID)
+func (c Post) GetName() string {
+	return "posts"
+}
+
+func (c *Post) SetID(ID Identifier) error {
+	if ID.ID != "" {
+		id, err := strconv.Atoi(ID.ID)
+		if err != nil {
+			return err
+		}
+		c.ID = id
+	}
+	if ID.LID != "" {
+		lid, err := strconv.Atoi(ID.LID)
+		if err != nil {
+			return err
+		}
+		c.LID = lid
+	}
+
+	return nil
+}
+
+func (c *Post) SetLID(stringID string) error {
+	if stringID == "" {
+		return nil
+	}
+	var err error
+	c.LID, err = strconv.Atoi(stringID)
 	if err != nil {
 		return err
 	}
-
-	c.ID = id
 
 	return nil
 }
@@ -173,15 +251,24 @@ func (c Post) GetReferences() []Reference {
 	}
 }
 
-func (c *Post) SetToOneReferenceID(name, ID string) error {
+func (c *Post) SetToOneReferenceID(name string, ID *Identifier) error {
 	if name == "author" {
 		// Ignore empty author relationships
-		if ID != "" {
-			intID, err := strconv.ParseInt(ID, 10, 64)
-			if err != nil {
-				return err
+		if ID != nil {
+			if ID.ID != "" {
+				intID, err := strconv.ParseInt(ID.ID, 10, 64)
+				if err != nil {
+					return err
+				}
+				c.AuthorID = sql.NullInt64{Valid: true, Int64: intID}
 			}
-			c.AuthorID = sql.NullInt64{Valid: true, Int64: intID}
+			if ID.LID != "" {
+				intLID, err := strconv.ParseInt(ID.LID, 10, 64)
+				if err != nil {
+					return err
+				}
+				c.AuthorLID = sql.NullInt64{Valid: true, Int64: intLID}
+			}
 		}
 
 		return nil
@@ -190,20 +277,32 @@ func (c *Post) SetToOneReferenceID(name, ID string) error {
 	return errors.New("There is no to-one relationship named " + name)
 }
 
-func (c *Post) SetToManyReferenceIDs(name string, IDs []string) error {
+func (c *Post) SetToManyReferenceIDs(name string, IDs []Identifier) error {
 	if name == "comments" {
-		commentsIDs := []int{}
+		var commentsIDs []int
+		var commentsLIDs []int
 
 		for _, ID := range IDs {
-			intID, err := strconv.ParseInt(ID, 10, 64)
-			if err != nil {
-				return err
-			}
+			if ID.ID != "" {
+				intID, err := strconv.ParseInt(ID.ID, 10, 64)
+				if err != nil {
+					return err
+				}
 
-			commentsIDs = append(commentsIDs, int(intID))
+				commentsIDs = append(commentsIDs, int(intID))
+			}
+			if ID.LID != "" {
+				intLID, err := strconv.ParseInt(ID.LID, 10, 64)
+				if err != nil {
+					return err
+				}
+
+				commentsLIDs = append(commentsLIDs, int(intLID))
+			}
 		}
 
 		c.CommentsIDs = commentsIDs
+		c.CommentsLIDs = commentsLIDs
 
 		return nil
 	}
@@ -233,7 +332,8 @@ func (c Post) GetReferencedIDs() []ReferenceID {
 	result := []ReferenceID{}
 
 	if c.Author != nil {
-		authorID := ReferenceID{Type: "users", Name: "author", ID: c.Author.GetID()}
+		id := c.Author.GetID()
+		authorID := ReferenceID{Type: "users", Name: "author", ID: id.ID, LID: id.LID}
 		result = append(result, authorID)
 	} else if c.AuthorID.Valid {
 		authorID := ReferenceID{Type: "users", Name: "author", ID: fmt.Sprintf("%d", c.AuthorID.Int64)}
@@ -242,7 +342,8 @@ func (c Post) GetReferencedIDs() []ReferenceID {
 
 	if len(c.Comments) > 0 {
 		for _, comment := range c.Comments {
-			result = append(result, ReferenceID{Type: "comments", Name: "comments", ID: comment.GetID()})
+			id := comment.GetID()
+			result = append(result, ReferenceID{Type: "comments", Name: "comments", ID: id.ID, LID: id.LID})
 		}
 	} else if len(c.CommentsIDs) > 0 {
 		for _, commentID := range c.CommentsIDs {
@@ -273,12 +374,21 @@ func (c *Post) SetReferencedStructs(references []UnmarshalIdentifier) error {
 
 type AnotherPost struct {
 	ID       int   `json:"-"`
+	LID      int   `json:"-"`
 	AuthorID int   `json:"-"`
 	Author   *User `json:"-"`
 }
 
-func (p AnotherPost) GetID() string {
-	return fmt.Sprintf("%d", p.ID)
+func (p AnotherPost) GetID() Identifier {
+	id := Identifier{ID: fmt.Sprintf("%d", p.ID)}
+	if p.LID != 0 {
+		id.LID = fmt.Sprintf("%d", p.LID)
+	}
+	return id
+}
+
+func (p AnotherPost) GetName() string {
+	return "another-posts"
 }
 
 func (p AnotherPost) GetReferences() []Reference {
@@ -302,22 +412,32 @@ func (p AnotherPost) GetReferencedIDs() []ReferenceID {
 
 type ZeroPost struct {
 	ID    string     `json:"-"`
+	LID   string     `json:"-"`
 	Title string     `json:"title"`
 	Value zero.Float `json:"value"`
 }
 
-func (z ZeroPost) GetID() string {
-	return z.ID
+func (z ZeroPost) GetID() Identifier {
+	return Identifier{ID: z.ID, LID: z.LID}
+}
+
+func (z ZeroPost) GetName() string {
+	return "zero-posts"
 }
 
 type ZeroPostPointer struct {
 	ID    string      `json:"-"`
+	LID   string      `json:"-"`
 	Title string      `json:"title"`
 	Value *zero.Float `json:"value"`
 }
 
-func (z ZeroPostPointer) GetID() string {
-	return z.ID
+func (z ZeroPostPointer) GetID() Identifier {
+	return Identifier{ID: z.ID, LID: z.LID}
+}
+
+func (z ZeroPostPointer) GetName() string {
+	return "zero-post-pointers"
 }
 
 type Question struct {
@@ -327,8 +447,12 @@ type Question struct {
 	InspiringQuestion   *Question      `json:"-"`
 }
 
-func (q Question) GetID() string {
-	return q.ID
+func (q Question) GetID() Identifier {
+	return Identifier{ID: q.ID, LID: ""}
+}
+
+func (q Question) GetName() string {
+	return "questions"
 }
 
 func (q Question) GetReferences() []Reference {
@@ -362,17 +486,39 @@ func (q Question) GetReferencedStructs() []MarshalIdentifier {
 
 type Identity struct {
 	ID     int64    `json:"-"`
+	LID    int64    `json:"-"`
 	Scopes []string `json:"scopes"`
 }
 
-func (i Identity) GetID() string {
-	return fmt.Sprintf("%d", i.ID)
+func (i Identity) GetID() Identifier {
+	id := Identifier{ID: fmt.Sprintf("%d", i.ID)}
+	if i.LID != 0 {
+		id.LID = fmt.Sprintf("%d", i.LID)
+	}
+	return id
 }
 
-func (i *Identity) SetID(ID string) error {
-	var err error
-	i.ID, err = strconv.ParseInt(ID, 10, 64)
-	return err
+func (i Identity) GetName() string {
+	return "identities"
+}
+
+func (i *Identity) SetID(ID Identifier) error {
+	if ID.ID != "" {
+		id, err := strconv.Atoi(ID.ID)
+		if err != nil {
+			return err
+		}
+		i.ID = int64(id)
+	}
+	if ID.LID != "" {
+		lid, err := strconv.Atoi(ID.LID)
+		if err != nil {
+			return err
+		}
+		i.LID = int64(lid)
+	}
+
+	return nil
 }
 
 type Unicorn struct {
@@ -380,24 +526,31 @@ type Unicorn struct {
 	Scopes    []string `json:"scopes"`
 }
 
-func (u Unicorn) GetID() string {
-	return "magicalUnicorn"
+func (u Unicorn) GetID() Identifier {
+	return Identifier{ID: "magicalUnicorn", LID: ""}
+}
+
+func (u Unicorn) GetName() string {
+	return "unicorns"
 }
 
 type NumberPost struct {
 	ID             string `json:"-"`
+	LID            string `json:"-"`
 	Title          string
 	Number         int64
 	UnsignedNumber uint64
 }
 
-func (n *NumberPost) SetID(ID string) error {
-	n.ID = ID
+func (n *NumberPost) SetID(ID Identifier) error {
+	n.ID = ID.ID
+	n.LID = ID.LID
 	return nil
 }
 
 type SQLNullPost struct {
 	ID     string      `json:"-"`
+	LID    string      `json:"-"`
 	Title  zero.String `json:"title"`
 	Likes  zero.Int    `json:"likes"`
 	Rating zero.Float  `json:"rating"`
@@ -405,26 +558,29 @@ type SQLNullPost struct {
 	Today  zero.Time   `json:"today"`
 }
 
-func (s SQLNullPost) GetID() string {
-	return s.ID
+func (s SQLNullPost) GetID() Identifier {
+	return Identifier{ID: s.ID, LID: s.LID}
 }
 
-func (s *SQLNullPost) SetID(ID string) error {
-	s.ID = ID
+func (s *SQLNullPost) SetID(ID Identifier) error {
+	s.ID = ID.ID
+	s.LID = ID.LID
 	return nil
 }
 
 type RenamedPostWithEmbedding struct {
 	Embedded SQLNullPost
 	ID       string `json:"-"`
+	LID      string `json:"-"`
 	Another  string `json:"another"`
 	Field    string `json:"foo"`
 	Other    string `json:"bar-bar"`
 	Ignored  string `json:"-"`
 }
 
-func (p *RenamedPostWithEmbedding) SetID(ID string) error {
-	p.ID = ID
+func (p *RenamedPostWithEmbedding) SetID(ID Identifier) error {
+	p.ID = ID.ID
+	p.LID = ID.LID
 	return nil
 }
 
@@ -436,8 +592,8 @@ type RenamedComment struct {
 	Data string
 }
 
-func (r RenamedComment) GetID() string {
-	return "666"
+func (r RenamedComment) GetID() Identifier {
+	return Identifier{ID: "666", LID: ""}
 }
 
 func (r RenamedComment) GetName() string {
@@ -479,11 +635,11 @@ func (i PrefixServerInformation) GetPrefix() string {
 
 type CustomLinksPost struct{}
 
-func (n CustomLinksPost) GetID() string {
-	return "someID"
+func (n CustomLinksPost) GetID() Identifier {
+	return Identifier{ID: "someID", LID: ""}
 }
 
-func (n *CustomLinksPost) SetID(ID string) error {
+func (n *CustomLinksPost) SetID(ID Identifier) error {
 	return nil
 }
 
@@ -506,11 +662,11 @@ func (n CustomLinksPost) GetCustomLinks(base string) Links {
 
 type CustomResourceMetaPost struct{}
 
-func (n CustomResourceMetaPost) GetID() string {
-	return "someID"
+func (n CustomResourceMetaPost) GetID() Identifier {
+	return Identifier{ID: "someID", LID: ""}
 }
 
-func (n *CustomResourceMetaPost) SetID(ID string) error {
+func (n *CustomResourceMetaPost) SetID(ID Identifier) error {
 	return nil
 }
 
@@ -524,11 +680,11 @@ func (n CustomResourceMetaPost) Meta() Meta {
 
 type CustomMetaPost struct{}
 
-func (n CustomMetaPost) GetID() string {
-	return "someID"
+func (n CustomMetaPost) GetID() Identifier {
+	return Identifier{ID: "someID", LID: ""}
 }
 
-func (n *CustomMetaPost) SetID(ID string) error {
+func (n *CustomMetaPost) SetID(ID Identifier) error {
 	return nil
 }
 
@@ -562,11 +718,11 @@ func (n CustomMetaPost) GetCustomMeta(linkURL string) map[string]Meta {
 
 type NoRelationshipPosts struct{}
 
-func (n NoRelationshipPosts) GetID() string {
-	return "someID"
+func (n NoRelationshipPosts) GetID() Identifier {
+	return Identifier{ID: "someID", LID: ""}
 }
 
-func (n *NoRelationshipPosts) SetID(ID string) error {
+func (n *NoRelationshipPosts) SetID(ID Identifier) error {
 	return nil
 }
 
@@ -576,11 +732,11 @@ func (n NoRelationshipPosts) GetName() string {
 
 type ErrorRelationshipPosts struct{}
 
-func (e ErrorRelationshipPosts) GetID() string {
-	return "errorID"
+func (e ErrorRelationshipPosts) GetID() Identifier {
+	return Identifier{ID: "errorID", LID: ""}
 }
 
-func (e *ErrorRelationshipPosts) SetID(ID string) error {
+func (e *ErrorRelationshipPosts) SetID(ID Identifier) error {
 	return nil
 }
 
@@ -588,25 +744,31 @@ func (e ErrorRelationshipPosts) GetName() string {
 	return "posts"
 }
 
-func (e ErrorRelationshipPosts) SetToOneReferenceID(name, ID string) error {
+func (e ErrorRelationshipPosts) SetToOneReferenceID(name string, ID *Identifier) error {
 	return errors.New("this never works")
 }
 
-func (e ErrorRelationshipPosts) SetToManyReferenceIDs(name string, IDs []string) error {
+func (e ErrorRelationshipPosts) SetToManyReferenceIDs(name string, IDs []Identifier) error {
 	return errors.New("this also never works")
 }
 
 type Image struct {
 	ID    string      `json:"-"`
+	LID   string      `json:"-"`
 	Ports []ImagePort `json:"image-ports"`
 }
 
-func (i Image) GetID() string {
-	return i.ID
+func (i Image) GetID() Identifier {
+	return Identifier{ID: i.ID, LID: i.LID}
 }
 
-func (i *Image) SetID(ID string) error {
-	i.ID = ID
+func (i Image) GetName() string {
+	return "images"
+}
+
+func (i *Image) SetID(ID Identifier) error {
+	i.ID = ID.ID
+	i.LID = ID.LID
 	return nil
 }
 
@@ -622,8 +784,12 @@ type Article struct {
 	Relationship RelationshipType `json:"-"`
 }
 
-func (a Article) GetID() string {
-	return "id"
+func (a Article) GetID() Identifier {
+	return Identifier{ID: "id", LID: ""}
+}
+
+func (a Article) GetName() string {
+	return "articles"
 }
 
 func (a Article) GetReferences() []Reference {
@@ -645,8 +811,8 @@ type DeepDedendencies struct {
 	Relationships []DeepDedendencies `json:"-"`
 }
 
-func (d DeepDedendencies) GetID() string {
-	return d.ID
+func (d DeepDedendencies) GetID() Identifier {
+	return Identifier{ID: d.ID, LID: ""}
 }
 
 func (DeepDedendencies) GetName() string {
@@ -685,4 +851,8 @@ type SimplePostWithMetadata struct {
 
 func (p *SimplePostWithMetadata) SetResourceMeta(r json.RawMessage) error {
 	return json.Unmarshal(r, &p.ResourceMetadata)
+}
+
+func (p SimplePostWithMetadata) GetName() string {
+	return "simplePostWithMetadatas"
 }

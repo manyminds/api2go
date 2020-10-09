@@ -14,16 +14,22 @@ import (
 
 type SomeData struct {
 	ID         string `json:"-"`
+	LID        string `json:"-"`
 	Data       string `json:"data"`
 	CustomerID string `json:"customerId"`
 }
 
-func (s SomeData) GetID() string {
-	return s.ID
+func (s SomeData) GetID() jsonapi.Identifier {
+	return jsonapi.Identifier{ID: s.ID, LID: s.LID}
 }
 
-func (s *SomeData) SetID(ID string) error {
-	s.ID = ID
+func (s SomeData) GetName() string {
+	return "some-datas"
+}
+
+func (s *SomeData) SetID(ID jsonapi.Identifier) error {
+	s.ID = ID.ID
+	s.LID = ID.LID
 	return nil
 }
 
@@ -120,22 +126,22 @@ var _ = Describe("Test interface api type casting", func() {
 	})
 
 	It("FindAll returns 404 for simple CRUD", func() {
-		req, err := http.NewRequest("GET", "/v1/someDatas", nil)
+		req, err := http.NewRequest("GET", "/v1/some-datas", nil)
 		Expect(err).ToNot(HaveOccurred())
 		api.Handler().ServeHTTP(rec, req)
 		Expect(rec.Code).To(Equal(http.StatusNotFound))
 	})
 
 	It("Works for a normal FindOne", func() {
-		req, err := http.NewRequest("GET", "/v1/someDatas/12345", nil)
+		req, err := http.NewRequest("GET", "/v1/some-datas/12345", nil)
 		Expect(err).ToNot(HaveOccurred())
 		api.Handler().ServeHTTP(rec, req)
 		Expect(rec.Code).To(Equal(http.StatusOK))
 	})
 
 	It("Post works with lowercase renaming", func() {
-		reqBody := strings.NewReader(`{"data": {"attributes":{"customerId": "2" }, "type": "someDatas"}}`)
-		req, err := http.NewRequest("POST", "/v1/someDatas", reqBody)
+		reqBody := strings.NewReader(`{"data": {"attributes":{"customerId": "2" }, "type": "some-datas"}}`)
+		req, err := http.NewRequest("POST", "/v1/some-datas", reqBody)
 		Expect(err).To(BeNil())
 		api.Handler().ServeHTTP(rec, req)
 		Expect(rec.Code).To(Equal(http.StatusCreated))
@@ -161,7 +167,7 @@ var _ = Describe("Test return code behavior", func() {
 		post := func(payload SomeData) {
 			m, err := jsonapi.Marshal(payload)
 			Expect(err).ToNot(HaveOccurred())
-			req, err := http.NewRequest("POST", "/v1/someDatas", strings.NewReader(string(m)))
+			req, err := http.NewRequest("POST", "/v1/some-datas", strings.NewReader(string(m)))
 			Expect(err).ToNot(HaveOccurred())
 			api.Handler().ServeHTTP(rec, req)
 		}
@@ -193,7 +199,7 @@ var _ = Describe("Test return code behavior", func() {
 			var err HTTPError
 			json.Unmarshal(rec.Body.Bytes(), &err)
 			Expect(err.Errors[0]).To(Equal(Error{
-				Title:  "invalid status code 418 from resource someDatas for method Create",
+				Title:  "invalid status code 418 from resource some-datas for method Create",
 				Status: strconv.Itoa(http.StatusInternalServerError)}))
 		})
 
@@ -218,7 +224,7 @@ var _ = Describe("Test return code behavior", func() {
 		patch := func(payload SomeData) {
 			m, err := jsonapi.Marshal(payload)
 			Expect(err).ToNot(HaveOccurred())
-			req, err := http.NewRequest("PATCH", "/v1/someDatas/12345", strings.NewReader(string(m)))
+			req, err := http.NewRequest("PATCH", "/v1/some-datas/12345", strings.NewReader(string(m)))
 			Expect(err).ToNot(HaveOccurred())
 			api.Handler().ServeHTTP(rec, req)
 		}
@@ -250,7 +256,7 @@ var _ = Describe("Test return code behavior", func() {
 			var err HTTPError
 			json.Unmarshal(rec.Body.Bytes(), &err)
 			Expect(err.Errors[0]).To(Equal(Error{
-				Title:  "invalid status code 418 from resource someDatas for method Update",
+				Title:  "invalid status code 418 from resource some-datas for method Update",
 				Status: strconv.Itoa(http.StatusInternalServerError)}))
 		})
 
@@ -268,7 +274,7 @@ var _ = Describe("Test return code behavior", func() {
 
 	Context("Delete", func() {
 		delete := func(ID string) {
-			req, err := http.NewRequest("DELETE", "/v1/someDatas/"+ID, nil)
+			req, err := http.NewRequest("DELETE", "/v1/some-datas/"+ID, nil)
 			Expect(err).ToNot(HaveOccurred())
 			api.Handler().ServeHTTP(rec, req)
 		}
@@ -318,7 +324,7 @@ var _ = Describe("Test partial CRUD implementation : Creator", func() {
 		post := func(payload SomeData) {
 			m, err := jsonapi.Marshal(payload)
 			Expect(err).ToNot(HaveOccurred())
-			req, err := http.NewRequest("POST", "/v1/someDatas", strings.NewReader(string(m)))
+			req, err := http.NewRequest("POST", "/v1/some-datas", strings.NewReader(string(m)))
 			Expect(err).ToNot(HaveOccurred())
 			api.Handler().ServeHTTP(rec, req)
 		}
@@ -336,17 +342,17 @@ var _ = Describe("Test partial CRUD implementation : Creator", func() {
 			// Test PATCH
 			m, err := jsonapi.Marshal(payload)
 			Expect(err).ToNot(HaveOccurred())
-			reqPatch, errPatch := http.NewRequest("PATCH", "/v1/someDatas/12345", strings.NewReader(string(m)))
+			reqPatch, errPatch := http.NewRequest("PATCH", "/v1/some-datas/12345", strings.NewReader(string(m)))
 			Expect(errPatch).ToNot(HaveOccurred())
 			api.Handler().ServeHTTP(rec, reqPatch)
 			Expect(rec.Code).To(Equal(http.StatusNotFound))
 			// Test DELETE
-			reqDelete, errDelete := http.NewRequest("DELETE", "/v1/someDatas/12345", nil)
+			reqDelete, errDelete := http.NewRequest("DELETE", "/v1/some-datas/12345", nil)
 			Expect(errDelete).ToNot(HaveOccurred())
 			api.Handler().ServeHTTP(rec, reqDelete)
 			Expect(rec.Code).To(Equal(http.StatusNotFound))
 			// Test GET item
-			reqRead, errRead := http.NewRequest("GET", "/v1/someDatas/12345", nil)
+			reqRead, errRead := http.NewRequest("GET", "/v1/some-datas/12345", nil)
 			Expect(errRead).ToNot(HaveOccurred())
 			api.Handler().ServeHTTP(rec, reqRead)
 			Expect(rec.Code).To(Equal(http.StatusNotFound))
@@ -373,7 +379,7 @@ var _ = Describe("Test partial CRUD implementation : Updater", func() {
 		patch := func(payload SomeData) {
 			m, err := jsonapi.Marshal(payload)
 			Expect(err).ToNot(HaveOccurred())
-			req, err := http.NewRequest("PATCH", "/v1/someDatas/12345", strings.NewReader(string(m)))
+			req, err := http.NewRequest("PATCH", "/v1/some-datas/12345", strings.NewReader(string(m)))
 			Expect(err).ToNot(HaveOccurred())
 			api.Handler().ServeHTTP(rec, req)
 		}
@@ -391,17 +397,17 @@ var _ = Describe("Test partial CRUD implementation : Updater", func() {
 			// Test POST
 			m, err := jsonapi.Marshal(payload)
 			Expect(err).ToNot(HaveOccurred())
-			reqPost, errPost := http.NewRequest("POST", "/v1/someDatas", strings.NewReader(string(m)))
+			reqPost, errPost := http.NewRequest("POST", "/v1/some-datas", strings.NewReader(string(m)))
 			Expect(errPost).ToNot(HaveOccurred())
 			api.Handler().ServeHTTP(rec, reqPost)
 			Expect(rec.Code).To(Equal(http.StatusMethodNotAllowed))
 			// Test DELETE
-			reqDelete, errDelete := http.NewRequest("DELETE", "/v1/someDatas/12345", nil)
+			reqDelete, errDelete := http.NewRequest("DELETE", "/v1/some-datas/12345", nil)
 			Expect(errDelete).ToNot(HaveOccurred())
 			api.Handler().ServeHTTP(rec, reqDelete)
 			Expect(rec.Code).To(Equal(http.StatusMethodNotAllowed))
 			// Test GET item
-			reqRead, errRead := http.NewRequest("GET", "/v1/someDatas/12345", nil)
+			reqRead, errRead := http.NewRequest("GET", "/v1/some-datas/12345", nil)
 			Expect(errRead).ToNot(HaveOccurred())
 			api.Handler().ServeHTTP(rec, reqRead)
 			Expect(rec.Code).To(Equal(http.StatusMethodNotAllowed))
@@ -426,7 +432,7 @@ var _ = Describe("Test partial CRUD implementation : Deleter", func() {
 
 	Context("Delete", func() {
 		delete := func() {
-			req, err := http.NewRequest("DELETE", "/v1/someDatas/1234", nil)
+			req, err := http.NewRequest("DELETE", "/v1/some-datas/1234", nil)
 			Expect(err).ToNot(HaveOccurred())
 			api.Handler().ServeHTTP(rec, req)
 		}
@@ -440,17 +446,17 @@ var _ = Describe("Test partial CRUD implementation : Deleter", func() {
 			// Test POST
 			m, err := jsonapi.Marshal(payload)
 			Expect(err).ToNot(HaveOccurred())
-			reqPost, errPost := http.NewRequest("POST", "/v1/someDatas", strings.NewReader(string(m)))
+			reqPost, errPost := http.NewRequest("POST", "/v1/some-datas", strings.NewReader(string(m)))
 			Expect(errPost).ToNot(HaveOccurred())
 			api.Handler().ServeHTTP(rec, reqPost)
 			Expect(rec.Code).To(Equal(http.StatusMethodNotAllowed))
 			// Test PATCH
-			reqPatch, errPatch := http.NewRequest("PATCH", "/v1/someDatas/12345", strings.NewReader(string(m)))
+			reqPatch, errPatch := http.NewRequest("PATCH", "/v1/some-datas/12345", strings.NewReader(string(m)))
 			Expect(errPatch).ToNot(HaveOccurred())
 			api.Handler().ServeHTTP(rec, reqPatch)
 			Expect(rec.Code).To(Equal(http.StatusMethodNotAllowed))
 			// Test GET item
-			reqRead, errRead := http.NewRequest("GET", "/v1/someDatas/12345", nil)
+			reqRead, errRead := http.NewRequest("GET", "/v1/some-datas/12345", nil)
 			Expect(errRead).ToNot(HaveOccurred())
 			api.Handler().ServeHTTP(rec, reqRead)
 			Expect(rec.Code).To(Equal(http.StatusMethodNotAllowed))

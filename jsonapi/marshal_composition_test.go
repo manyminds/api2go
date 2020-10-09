@@ -12,6 +12,10 @@ type TaggedPost struct {
 	Tag string `json:"tag"`
 }
 
+func (p TaggedPost) GetName() string {
+	return "tagged-posts"
+}
+
 var _ = Describe("Embedded struct types", func() {
 	created, _ := time.Parse(time.RFC3339, "2014-11-10T16:30:48.823Z")
 	post := TaggedPost{
@@ -25,7 +29,7 @@ var _ = Describe("Embedded struct types", func() {
 			Expect(err).To(BeNil())
 			Expect(i).To(MatchJSON(`{
 				"data": {
-					"type":"taggedPosts",
+					"type":"tagged-posts",
 					"id":"first",
 					"attributes": {
 						"title":"First Post",
@@ -43,7 +47,7 @@ var _ = Describe("Embedded struct types", func() {
 	Context("When unmarshaling objects with struct composition", func() {
 		postJSON := `{
 			"data": {
-				"type": "taggedPosts",
+				"type": "tagged-posts",
 				"id": "first",
 				"attributes": {
 					"title": "First Post",

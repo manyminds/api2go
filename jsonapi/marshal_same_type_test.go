@@ -7,14 +7,19 @@ import (
 
 type Node struct {
 	ID                string   `json:"-"`
+	LID               string   `json:"-"`
 	Content           string   `json:"content"`
 	MotherID          string   `json:"-"`
 	ChildIDs          []string `json:"-"`
 	AbandonedChildIDs []string `json:"-"`
 }
 
-func (n *Node) GetID() string {
-	return n.ID
+func (n Node) GetID() Identifier {
+	return Identifier{ID: n.ID, LID: n.LID}
+}
+
+func (n Node) GetName() string {
+	return "nodes"
 }
 
 func (n *Node) GetReferences() []Reference {
