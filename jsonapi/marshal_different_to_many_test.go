@@ -15,10 +15,6 @@ func (m ManyParent) GetID() Identifier {
 	return Identifier{ID: m.ID, LID: m.LID}
 }
 
-func (m ManyParent) GetName() string {
-	return "many-parents"
-}
-
 func (m ManyParent) GetReferences() []Reference {
 	return []Reference{
 		{
@@ -76,7 +72,7 @@ var _ = Describe("Marshalling toMany relations with the same name and different 
             			]
           			}
         		},
-        		"type": "many-parents"
+        		"type": "manyParents"
       		}
     	}`))
 	})

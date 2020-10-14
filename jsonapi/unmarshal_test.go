@@ -22,7 +22,7 @@ var _ = Describe("Unmarshal", func() {
 		singlePostJSON := []byte(`{
 			"data": {
 				"id": "1",
-				"type": "simple-posts",
+				"type": "simplePosts",
 				"attributes": {
 					"title": "First Post",
 					"text": "Lipsum",
@@ -35,7 +35,7 @@ var _ = Describe("Unmarshal", func() {
 			"data": [
 				{
 					"id": "1",
-					"type": "simple-posts",
+					"type": "simplePosts",
 					"attributes": {
 						"title": "First Post",
 						"text": "Lipsum",
@@ -69,7 +69,7 @@ var _ = Describe("Unmarshal", func() {
 				{
 					"id": "2",
 					"lid": "2",
-					"type": "simple-posts",
+					"type": "simplePosts",
 					"attributes": {
 						"title": "Second Post",
 						"text": "Foobar!",
@@ -193,7 +193,7 @@ var _ = Describe("Unmarshal", func() {
 						"text": "blubb",
 						"internal": "1337"
 					},
-					"type": "simple-posts"
+					"type": "simplePosts"
 				}
 			}`), &post)
 			Expect(err).ShouldNot(HaveOccurred())
@@ -207,7 +207,7 @@ var _ = Describe("Unmarshal", func() {
 						"text": "Gopher",
 						"size": "blubb"
 					},
-					"type": "simple-posts"
+					"type": "simplePosts"
 				}
 			}`), &post)
 			Expect(err).To(HaveOccurred())
@@ -225,7 +225,7 @@ var _ = Describe("Unmarshal", func() {
 						"text": "` + firstPost.Text + `!",
 						"created-date": "` + t.Format(time.RFC1123) + `"
 					},
-					"type": "simple-posts"
+					"type": "simplePosts"
 				}
 			}`)
 			var post SimplePost
@@ -237,7 +237,7 @@ var _ = Describe("Unmarshal", func() {
 		It("empty attributes is OK", func() {
 			json := []byte(`{
 				"data": [{
-					"type": "simple-posts"
+					"type": "simplePosts"
 				}]
 			}`)
 			var posts []SimplePost
@@ -359,7 +359,7 @@ var _ = Describe("Unmarshal", func() {
 			"data": {
 				"id": "1",
 				"lid": "1",
-				"type": "simple-posts",
+				"type": "simplePosts",
 				"attributes": {
 					"title": "First Post",
 					"text": "Lipsum",
@@ -373,7 +373,7 @@ var _ = Describe("Unmarshal", func() {
 				{
 					"id": "1",
 					"lid": "1",
-					"type": "simple-posts",
+					"type": "simplePosts",
 					"attributes": {
 						"title": "First Post",
 						"text": "Lipsum",
@@ -382,7 +382,7 @@ var _ = Describe("Unmarshal", func() {
 				},
 				{
 					"id": "2",
-					"type": "simple-posts",
+					"type": "simplePosts",
 					"attributes": {
 						"title": "Second Post",
 						"text": "Foobar!",
@@ -753,7 +753,7 @@ var _ = Describe("Unmarshal", func() {
 			postJSON := []byte(`{
 				"data": {
 					"id": "1",
-					"type": "simple-posts",
+					"type": "simplePosts",
 					"attributes": {
 						"title": "Nice Title",
 						"text": null
@@ -773,7 +773,7 @@ var _ = Describe("Unmarshal", func() {
 			postJSON := []byte(`
 			{
 				"data": {
-					"type": "simple-posts",
+					"type": "simplePosts",
 					"attributes": {
 						"title": "Nice Title"
 					}

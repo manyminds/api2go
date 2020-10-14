@@ -18,10 +18,6 @@ func (n Node) GetID() Identifier {
 	return Identifier{ID: n.ID, LID: n.LID}
 }
 
-func (n Node) GetName() string {
-	return "nodes"
-}
-
 func (n *Node) GetReferences() []Reference {
 	return []Reference{
 		{

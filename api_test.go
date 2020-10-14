@@ -41,10 +41,6 @@ func (i invalid) GetID() jsonapi.Identifier {
 	return jsonapi.Identifier{ID: "invalid", LID: "invalid"}
 }
 
-func (i invalid) GetName() string {
-	return "invalid"
-}
-
 type Post struct {
 	ID       string     `json:"-"`
 	LID      string     `json:"-"`
@@ -57,10 +53,6 @@ type Post struct {
 
 func (p Post) GetID() jsonapi.Identifier {
 	return jsonapi.Identifier{ID: p.ID, LID: p.LID}
-}
-
-func (p Post) GetName() string {
-	return "posts"
 }
 
 func (p *Post) SetID(ID jsonapi.Identifier) error {
@@ -205,10 +197,6 @@ func (c Comment) GetID() jsonapi.Identifier {
 	return jsonapi.Identifier{ID: c.ID, LID: c.LID}
 }
 
-func (c Comment) GetName() string {
-	return "comments"
-}
-
 type Banana struct {
 	ID   string `jnson:"-"`
 	LID  string `jnson:"-"`
@@ -217,10 +205,6 @@ type Banana struct {
 
 func (b Banana) GetID() jsonapi.Identifier {
 	return jsonapi.Identifier{ID: b.ID, LID: b.LID}
-}
-
-func (b Banana) GetName() string {
-	return "bananas"
 }
 
 type User struct {
@@ -232,10 +216,6 @@ type User struct {
 
 func (u User) GetID() jsonapi.Identifier {
 	return jsonapi.Identifier{ID: u.ID, LID: u.LID}
-}
-
-func (u User) GetName() string {
-	return "users"
 }
 
 type fixtureSource struct {

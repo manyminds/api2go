@@ -21,10 +21,6 @@ func (b Book) GetID() Identifier {
 	return Identifier{ID: b.ID, LID: b.LID}
 }
 
-func (b Book) GetName() string {
-	return "books"
-}
-
 func (b *Book) SetID(ID Identifier) error {
 	b.ID = ID.ID
 	b.LID = ID.LID
@@ -117,10 +113,6 @@ func (s StupidUser) GetID() Identifier {
 	return Identifier{ID: s.ID, LID: ""}
 }
 
-func (s StupidUser) GetName() string {
-	return "stupid-users"
-}
-
 type Page struct {
 	ID      string `json:"-"`
 	Content string `json:"content"`
@@ -128,10 +120,6 @@ type Page struct {
 
 func (p Page) GetID() Identifier {
 	return Identifier{ID: p.ID, LID: ""}
-}
-
-func (p Page) GetName() string {
-	return "pages"
 }
 
 var _ = Describe("Test for the public api of this package", func() {
@@ -188,7 +176,7 @@ var _ = Describe("Test for the public api of this package", func() {
 				"attributes": {
 					"name" : "Terry Pratchett"
 				},
-				"type" : "stupid-users"
+				"type" : "stupidUsers"
 			},
 			{
 				"attributes": {

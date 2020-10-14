@@ -58,7 +58,7 @@ var _ = Describe("Marshalling", func() {
 			Expect(err).To(BeNil())
 			Expect(i).To(MatchJSON(`{
 				"data": {
-					"type": "simple-posts",
+					"type": "simplePosts",
 					"id": "first",
 					"attributes": {
 						"title": "First Post",
@@ -98,7 +98,7 @@ var _ = Describe("Marshalling", func() {
 			Expect(i).To(MatchJSON(`{
 				"data": [
 					{
-						"type": "simple-posts",
+						"type": "simplePosts",
 						"id": "first",
 						"attributes": {
 							"title": "First Post",
@@ -109,7 +109,7 @@ var _ = Describe("Marshalling", func() {
 						}
 					},
 					{
-						"type": "simple-posts",
+						"type": "simplePosts",
 						"id": "second",
 						"attributes": {
 							"title": "Second Post",
@@ -138,7 +138,7 @@ var _ = Describe("Marshalling", func() {
 			Expect(i).To(MatchJSON(`{
 				"data": [
 					{
-						"type": "simple-posts",
+						"type": "simplePosts",
 						"id": "first",
 						"attributes": {
 							"title": "First Post",
@@ -158,7 +158,7 @@ var _ = Describe("Marshalling", func() {
 			Expect(i).To(MatchJSON(`{
 				"data": [
 					{
-						"type": "simple-posts",
+						"type": "simplePosts",
 						"id": "first",
 						"attributes": {
 							"title": "First Post",
@@ -169,7 +169,7 @@ var _ = Describe("Marshalling", func() {
 						}
 					},
 					{
-						"type": "simple-posts",
+						"type": "simplePosts",
 						"id": "second",
 						"attributes": {
 							"title": "Second Post",
@@ -254,7 +254,7 @@ var _ = Describe("Marshalling", func() {
 			Expect(err).To(BeNil())
 			Expect(i).To(MatchJSON(`{
 				"data": {
-					"type": "simple-posts",
+					"type": "simplePosts",
 					"id": "first",
 					"lid": "same_as_id",
 					"attributes": {
@@ -274,7 +274,7 @@ var _ = Describe("Marshalling", func() {
 			Expect(i).To(MatchJSON(`{
 				"data": [
 					{
-              			"type": "simple-posts",
+              			"type": "simplePosts",
 						"id": "first",
 						"lid": "same_as_id",
 						"attributes": {
@@ -286,7 +286,7 @@ var _ = Describe("Marshalling", func() {
 						}
 					},
 					{
-              			"type": "simple-posts",
+              			"type": "simplePosts",
 						"id": "second",
 						"attributes": {
 							"title": "Second Post",
@@ -897,7 +897,7 @@ var _ = Describe("Marshalling", func() {
 			Expect(err).To(BeNil())
 			Expect(i).To(MatchJSON(`{
 				"data": {
-					"type": "another-posts",
+					"type": "anotherPosts",
 					"id": "1",
 					"attributes": {},
 					"relationships": {
@@ -1024,7 +1024,7 @@ var _ = Describe("Marshalling", func() {
 			Expect(err).To(BeNil())
 			Expect(marshalled).To(MatchJSON(`{
 				"data": {
-					"type": "zero-posts",
+					"type": "zeroPosts",
 					"id": "1",
 					"attributes": {
 						"title": "test",
@@ -1040,7 +1040,7 @@ var _ = Describe("Marshalling", func() {
 			Expect(err).To(BeNil())
 			Expect(marshalled).To(MatchJSON(`{
 				"data": {
-					"type": "zero-post-pointers",
+					"type": "zeroPostPointers",
 					"id": "1",
 					"attributes": {
 						"title": "test",
@@ -1282,17 +1282,17 @@ var _ = Describe("Marshalling", func() {
 
 	Context("Test getStructTypes method", func() {
 		comment := Comment{ID: 100, Text: "some text"}
-		It("should work with normal value", func() {
+		It("should work with normal value with name in id", func() {
 			result := getStructType(comment)
 			Expect(result).To(Equal("comments"))
 		})
 
-		It("should work with pointer to value", func() {
+		It("should work with pointer to value with name in id", func() {
 			result := getStructType(&comment)
 			Expect(result).To(Equal("comments"))
 		})
 
-		It("checks for EntityNamer interface", func() {
+		It("checks for MarshalIdentifier interface", func() {
 			result := getStructType(RenamedComment{"something"})
 			Expect(result).To(Equal("renamed-comments"))
 		})
