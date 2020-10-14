@@ -17,17 +17,13 @@ type BaguetteTaste struct {
 }
 
 func (s BaguetteTaste) GetID() jsonapi.Identifier {
-	return jsonapi.Identifier{ID: s.ID, LID: s.LID}
+	return jsonapi.Identifier{ID: s.ID, LID: s.LID, Name: "baguette-tastes"}
 }
 
 func (s *BaguetteTaste) SetID(ID jsonapi.Identifier) error {
 	s.ID = ID.ID
 	s.LID = ID.LID
 	return nil
-}
-
-func (s BaguetteTaste) GetName() string {
-	return "baguette-tastes"
 }
 
 type BaguetteResource struct{}
@@ -72,7 +68,7 @@ func (s BaguetteResource) Update(obj interface{}, req Request) (Responder, error
 	}, nil
 }
 
-var _ = Describe("Test route renaming with EntityNamer interface", func() {
+var _ = Describe("Test route renaming with Identifier name", func() {
 	var (
 		api  *API
 		rec  *httptest.ResponseRecorder

@@ -63,10 +63,6 @@ func (e EnumPost) GetID() Identifier {
 	return Identifier{ID: e.ID, LID: e.LID}
 }
 
-func (e EnumPost) GetName() string {
-	return "enum-posts"
-}
-
 func (e *EnumPost) SetID(ID Identifier) error {
 	e.ID = ID.ID
 	e.LID = ID.LID
@@ -76,7 +72,7 @@ func (e *EnumPost) SetID(ID Identifier) error {
 var _ = Describe("Custom enum types", func() {
 	status := StatusPublished
 	statusValue := "published"
-	singleJSON := []byte(`{"data":{"id": "1", "type": "enum-posts", "attributes": {"title":"First Post","status":"published"}}}`)
+	singleJSON := []byte(`{"data":{"id": "1", "type": "enumPosts", "attributes": {"title":"First Post","status":"published"}}}`)
 	firstPost := EnumPost{ID: "1", Title: "First Post", Status: StatusPublished}
 
 	Context("When marshaling objects including enumes", func() {

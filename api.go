@@ -217,10 +217,9 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source interfac
 		name = resourceType.Elem().Name()
 	}
 
-	// check if EntityNamer interface is implemented and use that as name
-	entityName, ok := prototype.(jsonapi.EntityNamer)
-	if ok {
-		name = entityName.GetName()
+	identifier := prototype.GetID()
+	if identifier.Name != "" {
+		name = identifier.Name
 	} else {
 		name = jsonapi.Jsonify(jsonapi.Pluralize(name))
 	}
