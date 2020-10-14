@@ -15,11 +15,6 @@ func (c Chocolate) GetID() jsonapi.Identifier {
 	return jsonapi.Identifier{ID: c.ID, LID: c.LID}
 }
 
-// GetName to satisfy jsonapi.MarshalIdentifier interface
-func (c Chocolate) GetName() string {
-	return "chocolates"
-}
-
 // SetID to satisfy jsonapi.UnmarshalIdentifier interface
 func (c *Chocolate) SetID(ID jsonapi.Identifier) error {
 	c.ID = ID.ID

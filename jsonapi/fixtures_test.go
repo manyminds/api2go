@@ -19,10 +19,6 @@ func (m Magic) GetID() Identifier {
 	return Identifier{ID: m.ID.String()}
 }
 
-func (m Magic) GetName() string {
-	return "magics"
-}
-
 type MagicID string
 
 func (m MagicID) String() string {
@@ -43,10 +39,6 @@ func (c Comment) GetID() Identifier {
 		id.LID = fmt.Sprintf("%d", c.LID)
 	}
 	return id
-}
-
-func (c Comment) GetName() string {
-	return "comments"
 }
 
 func (c *Comment) SetID(ID Identifier) error {
@@ -115,10 +107,6 @@ func (u User) GetID() Identifier {
 	return id
 }
 
-func (u User) GetName() string {
-	return "users"
-}
-
 func (u *User) SetID(ID Identifier) error {
 	id, err := strconv.Atoi(ID.ID)
 	if err != nil {
@@ -148,10 +136,6 @@ type SimplePost struct {
 
 func (s SimplePost) GetID() Identifier {
 	return Identifier{ID: s.ID, LID: s.LID}
-}
-
-func (s SimplePost) GetName() string {
-	return "simple-posts"
 }
 
 func (s *SimplePost) SetID(ID Identifier) error {
@@ -198,10 +182,6 @@ func (c Post) GetID() Identifier {
 		id.LID = fmt.Sprintf("%d", c.LID)
 	}
 	return id
-}
-
-func (c Post) GetName() string {
-	return "posts"
 }
 
 func (c *Post) SetID(ID Identifier) error {
@@ -387,10 +367,6 @@ func (p AnotherPost) GetID() Identifier {
 	return id
 }
 
-func (p AnotherPost) GetName() string {
-	return "another-posts"
-}
-
 func (p AnotherPost) GetReferences() []Reference {
 	return []Reference{
 		{
@@ -421,10 +397,6 @@ func (z ZeroPost) GetID() Identifier {
 	return Identifier{ID: z.ID, LID: z.LID}
 }
 
-func (z ZeroPost) GetName() string {
-	return "zero-posts"
-}
-
 type ZeroPostPointer struct {
 	ID    string      `json:"-"`
 	LID   string      `json:"-"`
@@ -436,10 +408,6 @@ func (z ZeroPostPointer) GetID() Identifier {
 	return Identifier{ID: z.ID, LID: z.LID}
 }
 
-func (z ZeroPostPointer) GetName() string {
-	return "zero-post-pointers"
-}
-
 type Question struct {
 	ID                  string         `json:"-"`
 	Text                string         `json:"text"`
@@ -449,10 +417,6 @@ type Question struct {
 
 func (q Question) GetID() Identifier {
 	return Identifier{ID: q.ID, LID: ""}
-}
-
-func (q Question) GetName() string {
-	return "questions"
 }
 
 func (q Question) GetReferences() []Reference {
@@ -498,10 +462,6 @@ func (i Identity) GetID() Identifier {
 	return id
 }
 
-func (i Identity) GetName() string {
-	return "identities"
-}
-
 func (i *Identity) SetID(ID Identifier) error {
 	if ID.ID != "" {
 		id, err := strconv.Atoi(ID.ID)
@@ -530,16 +490,16 @@ func (u Unicorn) GetID() Identifier {
 	return Identifier{ID: "magicalUnicorn", LID: ""}
 }
 
-func (u Unicorn) GetName() string {
-	return "unicorns"
-}
-
 type NumberPost struct {
 	ID             string `json:"-"`
 	LID            string `json:"-"`
 	Title          string
 	Number         int64
 	UnsignedNumber uint64
+}
+
+func (n NumberPost) GetID() Identifier{
+	return Identifier{ID: n.ID, LID: n.LID}
 }
 
 func (n *NumberPost) SetID(ID Identifier) error {
@@ -559,7 +519,7 @@ type SQLNullPost struct {
 }
 
 func (s SQLNullPost) GetID() Identifier {
-	return Identifier{ID: s.ID, LID: s.LID}
+	return Identifier{ID: s.ID, LID: s.LID, Name: "sqlNullPosts"}
 }
 
 func (s *SQLNullPost) SetID(ID Identifier) error {
@@ -578,14 +538,14 @@ type RenamedPostWithEmbedding struct {
 	Ignored  string `json:"-"`
 }
 
+func (p RenamedPostWithEmbedding) GetID() Identifier {
+	return Identifier{ID: p.ID, LID: p.LID}
+}
+
 func (p *RenamedPostWithEmbedding) SetID(ID Identifier) error {
 	p.ID = ID.ID
 	p.LID = ID.LID
 	return nil
-}
-
-func (s SQLNullPost) GetName() string {
-	return "sqlNullPosts"
 }
 
 type RenamedComment struct {
@@ -593,11 +553,7 @@ type RenamedComment struct {
 }
 
 func (r RenamedComment) GetID() Identifier {
-	return Identifier{ID: "666", LID: ""}
-}
-
-func (r RenamedComment) GetName() string {
-	return "renamed-comments"
+	return Identifier{ID: "666", LID: "", Name: "renamed-comments"}
 }
 
 type CompleteServerInformation struct{}
@@ -636,15 +592,11 @@ func (i PrefixServerInformation) GetPrefix() string {
 type CustomLinksPost struct{}
 
 func (n CustomLinksPost) GetID() Identifier {
-	return Identifier{ID: "someID", LID: ""}
+	return Identifier{ID: "someID", LID: "", Name: "posts"}
 }
 
 func (n *CustomLinksPost) SetID(ID Identifier) error {
 	return nil
-}
-
-func (n CustomLinksPost) GetName() string {
-	return "posts"
 }
 
 func (n CustomLinksPost) GetCustomLinks(base string) Links {
@@ -663,15 +615,11 @@ func (n CustomLinksPost) GetCustomLinks(base string) Links {
 type CustomResourceMetaPost struct{}
 
 func (n CustomResourceMetaPost) GetID() Identifier {
-	return Identifier{ID: "someID", LID: ""}
+	return Identifier{ID: "someID", LID: "", Name: "posts"}
 }
 
 func (n *CustomResourceMetaPost) SetID(ID Identifier) error {
 	return nil
-}
-
-func (n CustomResourceMetaPost) GetName() string {
-	return "posts"
 }
 
 func (n CustomResourceMetaPost) Meta() Meta {
@@ -681,15 +629,11 @@ func (n CustomResourceMetaPost) Meta() Meta {
 type CustomMetaPost struct{}
 
 func (n CustomMetaPost) GetID() Identifier {
-	return Identifier{ID: "someID", LID: ""}
+	return Identifier{ID: "someID", LID: "", Name: "posts"}
 }
 
 func (n *CustomMetaPost) SetID(ID Identifier) error {
 	return nil
-}
-
-func (n CustomMetaPost) GetName() string {
-	return "posts"
 }
 
 func (n CustomMetaPost) GetReferences() []Reference {
@@ -719,29 +663,21 @@ func (n CustomMetaPost) GetCustomMeta(linkURL string) map[string]Meta {
 type NoRelationshipPosts struct{}
 
 func (n NoRelationshipPosts) GetID() Identifier {
-	return Identifier{ID: "someID", LID: ""}
+	return Identifier{ID: "someID", LID: "", Name: "posts"}
 }
 
 func (n *NoRelationshipPosts) SetID(ID Identifier) error {
 	return nil
 }
 
-func (n NoRelationshipPosts) GetName() string {
-	return "posts"
-}
-
 type ErrorRelationshipPosts struct{}
 
 func (e ErrorRelationshipPosts) GetID() Identifier {
-	return Identifier{ID: "errorID", LID: ""}
+	return Identifier{ID: "errorID", LID: "", Name: "posts"}
 }
 
 func (e *ErrorRelationshipPosts) SetID(ID Identifier) error {
 	return nil
-}
-
-func (e ErrorRelationshipPosts) GetName() string {
-	return "posts"
 }
 
 func (e ErrorRelationshipPosts) SetToOneReferenceID(name string, ID *Identifier) error {
@@ -760,10 +696,6 @@ type Image struct {
 
 func (i Image) GetID() Identifier {
 	return Identifier{ID: i.ID, LID: i.LID}
-}
-
-func (i Image) GetName() string {
-	return "images"
 }
 
 func (i *Image) SetID(ID Identifier) error {
@@ -788,10 +720,6 @@ func (a Article) GetID() Identifier {
 	return Identifier{ID: "id", LID: ""}
 }
 
-func (a Article) GetName() string {
-	return "articles"
-}
-
 func (a Article) GetReferences() []Reference {
 	return []Reference{{Type: a.Type, Name: a.Name, Relationship: a.Relationship}}
 }
@@ -812,11 +740,7 @@ type DeepDedendencies struct {
 }
 
 func (d DeepDedendencies) GetID() Identifier {
-	return Identifier{ID: d.ID, LID: ""}
-}
-
-func (DeepDedendencies) GetName() string {
-	return "deep"
+	return Identifier{ID: d.ID, LID: "", Name: "deep"}
 }
 
 func (d DeepDedendencies) GetReferences() []Reference {

@@ -23,11 +23,6 @@ func (u User) GetID() jsonapi.Identifier {
 	return jsonapi.Identifier{ID: u.ID, LID: u.LID}
 }
 
-// GetName to satisfy jsonapi.MarshalIdentifier interface
-func (u User) GetName() string {
-	return "users"
-}
-
 // SetID to satisfy jsonapi.UnmarshalIdentifier interface
 func (u *User) SetID(ID jsonapi.Identifier) error {
 	u.ID = ID.ID

@@ -26,7 +26,6 @@ const (
 // Note: The implementation of this interface is mandatory.
 type MarshalIdentifier interface {
 	GetID() Identifier
-	EntityNamer
 }
 
 type Identifier struct {
@@ -220,12 +219,13 @@ func filterDuplicates(input []MarshalIdentifier, information ServerInformation) 
 
 	for _, referencedStruct := range input {
 		structType := getStructType(referencedStruct)
+		id := referencedStruct.GetID()
 
 		if alreadyIncluded[structType] == nil {
 			alreadyIncluded[structType] = make(map[string]bool)
 		}
 
-		if !alreadyIncluded[structType][referencedStruct.GetID().ID] {
+		if !alreadyIncluded[structType][id.ID] {
 			var data Data
 			err := marshalData(referencedStruct, &data, information)
 			if err != nil {
@@ -233,7 +233,7 @@ func filterDuplicates(input []MarshalIdentifier, information ServerInformation) 
 			}
 
 			includedElements = append(includedElements, data)
-			alreadyIncluded[structType][referencedStruct.GetID().ID] = true
+			alreadyIncluded[structType][id.ID] = true
 		}
 	}
 
@@ -405,13 +405,12 @@ func getStructRelationships(relationer MarshalLinkedRelations, information Serve
 func getLinkBaseURL(element MarshalIdentifier, information ServerInformation) string {
 	prefix := strings.Trim(information.GetBaseURL(), "/")
 	namespace := strings.Trim(information.GetPrefix(), "/")
-	structType := getStructType(element)
 
 	if namespace != "" {
 		prefix += "/" + namespace
 	}
 
-	return fmt.Sprintf("%s/%s/%s", prefix, structType, element.GetID().ID)
+	return fmt.Sprintf("%s/%s/%s", prefix, getStructType(element), element.GetID().ID)
 }
 
 func getLinksForServerInformation(relationer MarshalLinkedRelations, name string, information ServerInformation) Links {
@@ -458,9 +457,9 @@ func marshalStruct(data MarshalIdentifier, information ServerInformation) (*Docu
 }
 
 func getStructType(data interface{}) string {
-	entityName, ok := data.(EntityNamer)
-	if ok {
-		return entityName.GetName()
+	identifier, ok := data.(MarshalIdentifier)
+	if ok && identifier.GetID().Name != "" {
+		return identifier.GetID().Name
 	}
 
 	reflectType := reflect.TypeOf(data)
