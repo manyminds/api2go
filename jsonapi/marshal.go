@@ -214,7 +214,7 @@ func marshalSlice(data interface{}, information ServerInformation) (*Document, e
 }
 
 func filterDuplicates(input []MarshalIdentifier, information ServerInformation) ([]Data, error) {
-	alreadyIncluded := map[string]map[string]bool{}
+	alreadyIncluded := map[string]map[Identifier]bool{}
 	includedElements := []Data{}
 
 	for _, referencedStruct := range input {
@@ -222,10 +222,10 @@ func filterDuplicates(input []MarshalIdentifier, information ServerInformation) 
 		id := referencedStruct.GetID()
 
 		if alreadyIncluded[structType] == nil {
-			alreadyIncluded[structType] = make(map[string]bool)
+			alreadyIncluded[structType] = make(map[Identifier]bool)
 		}
 
-		if !alreadyIncluded[structType][id.ID] {
+		if !alreadyIncluded[structType][id] {
 			var data Data
 			err := marshalData(referencedStruct, &data, information)
 			if err != nil {
@@ -233,7 +233,7 @@ func filterDuplicates(input []MarshalIdentifier, information ServerInformation) 
 			}
 
 			includedElements = append(includedElements, data)
-			alreadyIncluded[structType][id.ID] = true
+			alreadyIncluded[structType][id] = true
 		}
 	}
 
