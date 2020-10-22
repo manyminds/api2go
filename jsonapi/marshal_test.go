@@ -1093,6 +1093,65 @@ var _ = Describe("Marshalling", func() {
 			}`))
 		})
 
+		It("Correctly marshalls the same dependencies with different local id", func() {
+			comment := Comment{ID: 1, Text: "comment", SubComments: []Comment{{LID: 1, Text: "sub comment one"}, {LID: 2, Text: "sub comment two"}}}
+			marshalled, err := Marshal(comment)
+			Expect(err).To(BeNil())
+			Expect(marshalled).To(MatchJSON(`{
+        "data": {
+          "type": "comments",
+          "id": "1",
+          "attributes": {
+            "text": "comment"
+          },
+          "relationships": {
+            "comments": {
+              "data": [
+                {
+                  "id": "0",
+                  "lid": "1",
+                  "type": "comments"
+                },
+                {
+                  "id": "0",
+                  "lid": "2",
+                  "type": "comments"
+                }
+              ]
+            }
+          }
+        },
+        "included": [
+          {
+            "type": "comments",
+            "id": "0",
+            "lid": "1",
+            "attributes": {
+              "text": "sub comment one"
+            },
+            "relationships": {
+              "comments": {
+                "data": []
+              }
+            }
+          },
+          {
+            "type": "comments",
+            "id": "0",
+            "lid": "2",
+            "attributes": {
+              "text": "sub comment two"
+            },
+            "relationships": {
+              "comments": {
+                "data": []
+              }
+            }
+          }
+        ]
+      }`))
+		})
+
 		It("Does not marshall same dependencies multiple times for slice", func() {
 			marshalled, err := Marshal([]Question{question3, question2})
 			Expect(err).To(BeNil())
