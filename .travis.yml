@@ -7,7 +7,6 @@ go:
   - "1.13"
   - "1.14"
   - "1.15"
- 
 
 sudo: false
 
@@ -18,9 +17,6 @@ install:
   - go get -u github.com/modocache/gover
   - go get -u github.com/mattn/goveralls
     # optional dependencies
-  - go get -u github.com/gin-gonic/gin
-  - go get -u github.com/gorilla/mux
-  - go get -u github.com/labstack/echo
 
 script:
   - ginkgo -r -cover --randomizeAllSpecs --randomizeSuites --failOnPending --trace --race --progress

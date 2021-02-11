@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"gopkg.in/guregu/null.v2/zero"
+	"gopkg.in/guregu/null.v3/zero"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

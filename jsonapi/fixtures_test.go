@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	"gopkg.in/guregu/null.v2/zero"
+	"gopkg.in/guregu/null.v3/zero"
 )
 
 type Magic struct {
