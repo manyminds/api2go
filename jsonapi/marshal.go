@@ -199,7 +199,7 @@ func marshalSlice(data interface{}, information ServerInformation) (*Document, e
 		DataArray: dataElements,
 	}
 
-	if includedElements != nil && len(includedElements) > 0 {
+	if len(includedElements) > 0 {
 		result.Included = includedElements
 	}
 
