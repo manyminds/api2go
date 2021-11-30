@@ -1,3 +1,4 @@
+//go:build echo && !gingonic && !gorillamux
 // +build echo,!gingonic,!gorillamux
 
 package routing_test
