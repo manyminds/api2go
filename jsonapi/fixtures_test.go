@@ -2,6 +2,7 @@ package jsonapi
 
 import (
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
@@ -675,4 +676,13 @@ func (d DeepDedendencies) GetReferencedStructs() []MarshalIdentifier {
 	}
 
 	return structs
+}
+
+type SimplePostWithMetadata struct {
+	SimplePost
+	ResourceMetadata map[string]interface{}
+}
+
+func (p *SimplePostWithMetadata) SetResourceMeta(r json.RawMessage) error {
+	return json.Unmarshal(r, &p.ResourceMetadata)
 }

@@ -25,6 +25,12 @@ type UnmarshalToManyRelations interface {
 	SetToManyReferenceIDs(name string, IDs []string) error
 }
 
+// The UnmarshalResourceMeta interface must be implemented to unmarshal meta fields inside of data containers
+type UnmarshalResourceMeta interface {
+	MarshalIdentifier
+	SetResourceMeta(json.RawMessage) error
+}
+
 // The EditToManyRelations interface can be optionally implemented to add and
 // delete to-many relationships on a already unmarshalled struct. These methods
 // are used by our API for the to-many relationship update routes.
@@ -171,6 +177,15 @@ func setDataIntoTarget(data *Data, target interface{}) error {
 
 	if err := castedTarget.SetID(data.ID); err != nil {
 		return err
+	}
+
+	if data.Meta != nil {
+		if m, ok := target.(UnmarshalResourceMeta); ok {
+			err = m.SetResourceMeta(data.Meta)
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	return setRelationshipIDs(data.Relationships, castedTarget)
