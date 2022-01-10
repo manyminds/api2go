@@ -769,4 +769,40 @@ var _ = Describe("Unmarshal", func() {
 			Expect(target.Today.Valid).To(Equal(false))
 		})
 	})
+
+	Context("when unmarshaling resources with meta", func() {
+		It("unmarshal resource level meta", func() {
+			expectedPost := SimplePostWithMetadata{
+				SimplePost: SimplePost{
+					ID:    "1",
+					Title: "First Post",
+					Text:  "Lipsum",
+				},
+				ResourceMetadata: map[string]interface{}{
+					"user-agent": "Lorem ipsum 1.0",
+					"post-count": 10.0,
+				},
+			}
+			postJSON := []byte(`{
+			"data": {
+				"id": "1",
+				"type": "simplePostWithMetadatas",
+				"meta": {
+					"user-agent": "Lorem ipsum 1.0",
+					"post-count": 10
+				},
+				"attributes": {
+					"title": "First Post",
+					"text": "Lipsum"
+				}
+			}
+		}`)
+			var simplePostWithMetadata SimplePostWithMetadata
+			err := Unmarshal(postJSON, &simplePostWithMetadata)
+			Expect(err).To(BeNil())
+			Expect(expectedPost.SimplePost).To(Equal(simplePostWithMetadata.SimplePost))
+			Expect(expectedPost.ResourceMetadata["user-agent"]).To(Equal(simplePostWithMetadata.ResourceMetadata["user-agent"]))
+			Expect(expectedPost.ResourceMetadata["post-count"]).To(Equal(simplePostWithMetadata.ResourceMetadata["post-count"]))
+		})
+	})
 })
