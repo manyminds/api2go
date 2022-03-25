@@ -32,6 +32,7 @@ var _ = Describe("api2go with gingonic router adapter", func() {
 		contextKey   = "userID"
 		contextValue *string
 		apiContext   api2go.APIContext
+		userStorage  *storage.UserStorage
 	)
 
 	BeforeSuite(func() {
@@ -50,7 +51,7 @@ var _ = Describe("api2go with gingonic router adapter", func() {
 			return &apiContext
 		})
 
-		userStorage := storage.NewUserStorage()
+		userStorage = storage.NewUserStorage()
 		chocStorage := storage.NewChocolateStorage()
 		api.AddResource(model.User{}, resource.UserResource{ChocStorage: chocStorage, UserStorage: userStorage})
 
@@ -161,6 +162,53 @@ var _ = Describe("api2go with gingonic router adapter", func() {
 			gg.ServeHTTP(rec, req)
 			Expect(rec.Code).To(Equal(http.StatusNotFound))
 			Expect(string(rec.Body.Bytes())).To(MatchJSON(expected))
+		})
+	})
+
+	Context("PaginatedFindAll Test", func() {
+		It("will create links data without double slashes", func() {
+
+			userStorage.Insert(model.User{ID: "1", Username: "Bender Bending Rodriguez"})
+			userStorage.Insert(model.User{ID: "2", Username: "Calculon"})
+
+			req, err := http.NewRequest("GET", "/api/users?page[offset]=0&page[limit]=1", nil)
+
+			Expect(err).To(BeNil())
+
+			gg.ServeHTTP(rec, req)
+
+			expectedResult := `
+			{
+				"links": {
+					"last": "/api/users?page[limit]=1\u0026page[offset]=1",
+					"next": "/api/users?page[limit]=1\u0026page[offset]=1"
+				},
+				"data": [
+					{
+						"type": "users",
+						"id": "2",
+						"attributes": {
+							"user-name": "Bender Bending Rodriguez"
+						},
+						"relationships": {
+							"sweets": {
+								"links": {
+									"related": "/api/users/2/sweets",
+									"self": "/api/users/2/relationships/sweets"
+								},
+								"data": []
+							}
+						}
+					}
+				],
+				"meta": {
+					"author": "The api2go examples crew",
+					"license": "wtfpl",
+					"license-url": "http://www.wtfpl.net"
+				}
+			}`
+
+			Expect(string(rec.Body.Bytes())).To(MatchJSON(expectedResult))
 		})
 	})
 
