@@ -77,7 +77,7 @@ func (p paginationQueryParams) getLinks(r *http.Request, count uint, info inform
 
 	params := r.URL.Query()
 	prefix := ""
-	baseURL := info.GetBaseURL()
+	baseURL := strings.Trim(info.GetBaseURL(), "/")
 	if baseURL != "" {
 		prefix = baseURL
 	}
