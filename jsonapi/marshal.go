@@ -393,13 +393,13 @@ func getStructRelationships(relationer MarshalLinkedRelations, information Serve
 func getLinkBaseURL(element MarshalIdentifier, information ServerInformation) string {
 	prefix := strings.Trim(information.GetBaseURL(), "/")
 	namespace := strings.Trim(information.GetPrefix(), "/")
-	structType := getStructType(element)
+	routeName := getRouteName(element)
 
 	if namespace != "" {
 		prefix += "/" + namespace
 	}
 
-	return fmt.Sprintf("%s/%s/%s", prefix, structType, element.GetID())
+	return fmt.Sprintf("%s/%s/%s", prefix, routeName, element.GetID())
 }
 
 func getLinksForServerInformation(relationer MarshalLinkedRelations, name string, information ServerInformation) Links {
@@ -457,4 +457,12 @@ func getStructType(data interface{}) string {
 	}
 
 	return Pluralize(Jsonify(reflectType.Name()))
+}
+
+func getRouteName(data interface{}) string {
+	routeName, ok := data.(RouteNamer)
+	if ok {
+		return routeName.GetRouteName()
+	}
+	return getStructType(data)
 }

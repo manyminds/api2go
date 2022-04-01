@@ -244,6 +244,12 @@ func (api *API) addResource(prototype jsonapi.MarshalIdentifier, source interfac
 		return info
 	}
 
+	// check if EntityNamer interface is implemented and use that as name
+	routeName, ok := prototype.(jsonapi.RouteNamer)
+	if ok {
+		name = routeName.GetRouteName()
+	}
+
 	prefix := strings.Trim(api.info.prefix, "/")
 	baseURL := "/" + name
 	if prefix != "" {
