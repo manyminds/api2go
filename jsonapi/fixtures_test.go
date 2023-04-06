@@ -498,7 +498,7 @@ type NumberPost struct {
 	UnsignedNumber uint64
 }
 
-func (n NumberPost) GetID() Identifier{
+func (n NumberPost) GetID() Identifier {
 	return Identifier{ID: n.ID, LID: n.LID}
 }
 

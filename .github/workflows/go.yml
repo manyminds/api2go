@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        go: [ '1.17', '1.15', '1.14', '1.13' ]
+        go: [ '1.18', '1.19', '1.20' ]
     name: Go ${{ matrix.go }} tests
     steps:
     - uses: actions/checkout@v2
@@ -24,9 +24,12 @@ jobs:
       run: |
         go get -t -d -v ./...
         go get github.com/onsi/ginkgo/ginkgo
+        go install github.com/onsi/ginkgo/ginkgo
         go get -u golang.org/x/lint/golint
         go get -u github.com/modocache/gover
+        go install github.com/modocache/gover
         go get -u github.com/mattn/goveralls
+        go install github.com/mattn/goveralls
     - name: Run tests
       run: |
         ginkgo -r -cover --randomizeAllSpecs --randomizeSuites --failOnPending --trace --race --progress

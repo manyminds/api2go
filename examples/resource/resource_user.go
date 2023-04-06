@@ -152,7 +152,7 @@ func (s UserResource) Delete(id string, r api2go.Request) (api2go.Responder, err
 	return &Response{Code: http.StatusNoContent}, err
 }
 
-//Update stores all changes on the user
+// Update stores all changes on the user
 func (s UserResource) Update(obj interface{}, r api2go.Request) (api2go.Responder, error) {
 	user, ok := obj.(model.User)
 	if !ok {
