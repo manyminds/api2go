@@ -12,6 +12,10 @@ type TaggedPost struct {
 	Tag string `json:"tag"`
 }
 
+func (t TaggedPost) GetID() Identifier {
+	return Identifier{ID: t.ID, LID: t.LID}
+}
+
 var _ = Describe("Embedded struct types", func() {
 	created, _ := time.Parse(time.RFC3339, "2014-11-10T16:30:48.823Z")
 	post := TaggedPost{

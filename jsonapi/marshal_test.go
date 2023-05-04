@@ -24,7 +24,7 @@ var _ = Describe("Marshalling", func() {
 		})
 
 		It("marshals single object without relationships", func() {
-			user := User{ID: 100, Name: "Nino", Password: "babymaus"}
+			user := User{ID: 100, LID: 0, Name: "Nino", Password: "babymaus"}
 			i, err := Marshal(user)
 			Expect(err).To(BeNil())
 			Expect(i).To(MatchJSON(`{
@@ -218,6 +218,86 @@ var _ = Describe("Marshalling", func() {
 			_, err := Marshal(comment)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(Equal("MarshalIdentifier must not be nil"))
+		})
+	})
+
+	Context("When marshaling simple objects with local id", func() {
+		var (
+			firstPost, secondPost SimplePost
+			created               time.Time
+		)
+
+		BeforeEach(func() {
+			created, _ = time.Parse(time.RFC3339, "2014-11-10T16:30:48.823Z")
+			firstPost = SimplePost{ID: "first", Title: "First Post", Text: "Lipsum", Created: created, LID: "same_as_id"}
+			secondPost = SimplePost{ID: "second", Title: "Second Post", Text: "Getting more advanced!", Created: created, Updated: created, LID: ""}
+		})
+
+		It("marshals single object without relationships", func() {
+			user := User{ID: 100, Name: "Nino", Password: "babymaus", LID: 100}
+			i, err := Marshal(user)
+			Expect(err).To(BeNil())
+			Expect(i).To(MatchJSON(`{
+				"data": {
+					"type": "users",
+					"id": "100",
+					"lid": "100",
+					"attributes": {
+						"name": "Nino"
+					}
+				}
+			}`))
+		})
+
+		It("marshals single object", func() {
+			i, err := Marshal(firstPost)
+			Expect(err).To(BeNil())
+			Expect(i).To(MatchJSON(`{
+				"data": {
+					"type": "simplePosts",
+					"id": "first",
+					"lid": "same_as_id",
+					"attributes": {
+						"title": "First Post",
+						"text": "Lipsum",
+						"created-date": "2014-11-10T16:30:48.823Z",
+						"updated-date": "0001-01-01T00:00:00Z",
+						"size": 0
+					}
+				}
+			}`))
+		})
+
+		It("marshals collections object", func() {
+			i, err := Marshal([]SimplePost{firstPost, secondPost})
+			Expect(err).To(BeNil())
+			Expect(i).To(MatchJSON(`{
+				"data": [
+					{
+              			"type": "simplePosts",
+						"id": "first",
+						"lid": "same_as_id",
+						"attributes": {
+							"title": "First Post",
+							"text": "Lipsum",
+							"size": 0,
+							"created-date": "2014-11-10T16:30:48.823Z",
+							"updated-date": "0001-01-01T00:00:00Z"
+						}
+					},
+					{
+              			"type": "simplePosts",
+						"id": "second",
+						"attributes": {
+							"title": "Second Post",
+							"text": "Getting more advanced!",
+							"size": 0,
+							"created-date": "2014-11-10T16:30:48.823Z",
+							"updated-date": "2014-11-10T16:30:48.823Z"
+						}
+					}
+				]
+			}`))
 		})
 	})
 
@@ -590,8 +670,8 @@ var _ = Describe("Marshalling", func() {
 			comment1SubComment1 := Comment{ID: 3, Text: "No you are wrong!", SubCommentsEmpty: true}
 			comment1SubComment2 := Comment{ID: 4, Text: "Nah, he's right!", SubCommentsEmpty: true}
 			comment1 := Comment{ID: 1, Text: "First!", SubComments: []Comment{comment1SubComment1, comment1SubComment2}}
-			comment2 := Comment{ID: 2, Text: "Second!", SubCommentsEmpty: true}
-			author := User{ID: 1, Name: "Test Author"}
+			comment2 := Comment{ID: 2, LID: 2, Text: "Second!", SubCommentsEmpty: true}
+			author := User{ID: 1, LID: 1, Name: "Test Author"}
 			post1 := Post{ID: 1, Title: "Foobar", Comments: []Comment{comment1, comment2}, Author: &author}
 
 			i, err := MarshalWithURLs(post1, CompleteServerInformation{})
@@ -612,7 +692,8 @@ var _ = Describe("Marshalling", func() {
 							},
 							"data": {
 								"type": "users",
-								"id": "1"
+								"id": "1",
+								"lid": "1"
 							}
 						},
 						"comments": {
@@ -627,7 +708,8 @@ var _ = Describe("Marshalling", func() {
 							},
 							{
 								"type": "comments",
-								"id": "2"
+								"id": "2",
+								"lid": "2"
 							}
 							]
 						}
@@ -637,6 +719,7 @@ var _ = Describe("Marshalling", func() {
 				{
 					"type": "users",
 					"id": "1",
+					"lid": "1",
 					"attributes": {
 						"name": "Test Author"
 					}
@@ -669,6 +752,7 @@ var _ = Describe("Marshalling", func() {
 				{
 					"type": "comments",
 					"id": "2",
+					"lid": "2",
 					"attributes": {
 						"text": "Second!"
 					},
@@ -1009,6 +1093,65 @@ var _ = Describe("Marshalling", func() {
 			}`))
 		})
 
+		It("Correctly marshalls the same dependencies with different local id", func() {
+			comment := Comment{ID: 1, Text: "comment", SubComments: []Comment{{LID: 1, Text: "sub comment one"}, {LID: 2, Text: "sub comment two"}}}
+			marshalled, err := Marshal(comment)
+			Expect(err).To(BeNil())
+			Expect(marshalled).To(MatchJSON(`{
+        "data": {
+          "type": "comments",
+          "id": "1",
+          "attributes": {
+            "text": "comment"
+          },
+          "relationships": {
+            "comments": {
+              "data": [
+                {
+                  "id": "0",
+                  "lid": "1",
+                  "type": "comments"
+                },
+                {
+                  "id": "0",
+                  "lid": "2",
+                  "type": "comments"
+                }
+              ]
+            }
+          }
+        },
+        "included": [
+          {
+            "type": "comments",
+            "id": "0",
+            "lid": "1",
+            "attributes": {
+              "text": "sub comment one"
+            },
+            "relationships": {
+              "comments": {
+                "data": []
+              }
+            }
+          },
+          {
+            "type": "comments",
+            "id": "0",
+            "lid": "2",
+            "attributes": {
+              "text": "sub comment two"
+            },
+            "relationships": {
+              "comments": {
+                "data": []
+              }
+            }
+          }
+        ]
+      }`))
+		})
+
 		It("Does not marshall same dependencies multiple times for slice", func() {
 			marshalled, err := Marshal([]Question{question3, question2})
 			Expect(err).To(BeNil())
@@ -1145,13 +1288,30 @@ var _ = Describe("Marshalling", func() {
 	})
 
 	Context("Slice fields", func() {
-		It("Marshalls the slice field correctly", func() {
-			marshalled, err := Marshal(Identity{1234, []string{"user_global"}})
+		It("Marshalls the slice field correctly without lid", func() {
+			marshalled, err := Marshal(Identity{1234, 0, []string{"user_global"}})
 			Expect(err).To(BeNil())
 			Expect(marshalled).To(MatchJSON(`{
 				"data": {
 					"type": "identities",
 					"id": "1234",
+					"attributes": {
+						"scopes": [
+						"user_global"
+						]
+					}
+				}
+			}`))
+		})
+
+		It("Marshalls the slice field correctly with lid", func() {
+			marshalled, err := Marshal(Identity{1234, 1, []string{"user_global"}})
+			Expect(err).To(BeNil())
+			Expect(marshalled).To(MatchJSON(`{
+				"data": {
+					"type": "identities",
+					"id": "1234",
+					"lid": "1",
 					"attributes": {
 						"scopes": [
 						"user_global"
@@ -1181,17 +1341,17 @@ var _ = Describe("Marshalling", func() {
 
 	Context("Test getStructTypes method", func() {
 		comment := Comment{ID: 100, Text: "some text"}
-		It("should work with normal value", func() {
+		It("should work with normal value with name in id", func() {
 			result := getStructType(comment)
 			Expect(result).To(Equal("comments"))
 		})
 
-		It("should work with pointer to value", func() {
+		It("should work with pointer to value with name in id", func() {
 			result := getStructType(&comment)
 			Expect(result).To(Equal("comments"))
 		})
 
-		It("checks for EntityNamer interface", func() {
+		It("checks for MarshalIdentifier interface", func() {
 			result := getStructType(RenamedComment{"something"})
 			Expect(result).To(Equal("renamed-comments"))
 		})
@@ -1214,9 +1374,9 @@ var _ = Describe("Marshalling", func() {
 			links := getStructRelationships(post, nil)
 			Expect(links["author"]).To(Equal(Relationship{
 				Data: &RelationshipDataContainer{
-					DataObject: &RelationshipData{
+					DataObject: &Identifier{
 						ID:   "1",
-						Type: "users",
+						Name: "users",
 					},
 				},
 			}))
@@ -1226,10 +1386,11 @@ var _ = Describe("Marshalling", func() {
 			links := getStructRelationships(post, nil)
 			Expect(links["comments"]).To(Equal(Relationship{
 				Data: &RelationshipDataContainer{
-					DataArray: []RelationshipData{
+					DataArray: []Identifier{
 						{
 							ID:   "1",
-							Type: "comments",
+							Name: "comments",
+							LID:  "",
 						},
 					},
 				},
@@ -1240,9 +1401,9 @@ var _ = Describe("Marshalling", func() {
 			links := getStructRelationships(post, CompleteServerInformation{})
 			Expect(links["author"]).To(Equal(Relationship{
 				Data: &RelationshipDataContainer{
-					DataObject: &RelationshipData{
+					DataObject: &Identifier{
 						ID:   "1",
-						Type: "users",
+						Name: "users",
 					},
 				},
 				Links: Links{
@@ -1256,9 +1417,9 @@ var _ = Describe("Marshalling", func() {
 			links := getStructRelationships(post, BaseURLServerInformation{})
 			Expect(links["author"]).To(Equal(Relationship{
 				Data: &RelationshipDataContainer{
-					DataObject: &RelationshipData{
+					DataObject: &Identifier{
 						ID:   "1",
-						Type: "users",
+						Name: "users",
 					},
 				},
 				Links: Links{
@@ -1272,9 +1433,9 @@ var _ = Describe("Marshalling", func() {
 			links := getStructRelationships(post, PrefixServerInformation{})
 			Expect(links["author"]).To(Equal(Relationship{
 				Data: &RelationshipDataContainer{
-					DataObject: &RelationshipData{
+					DataObject: &Identifier{
 						ID:   "1",
-						Type: "users",
+						Name: "users",
 					},
 				},
 				Links: Links{

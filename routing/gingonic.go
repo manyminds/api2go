@@ -30,7 +30,7 @@ func (g ginRouter) Handle(protocol, route string, handler HandlerFunc) {
 	g.router.Handle(protocol, route, wrappedCallback)
 }
 
-//Gin creates a new api2go router to use with the gin framework
+// Gin creates a new api2go router to use with the gin framework
 func Gin(g *gin.Engine) Routeable {
 	return &ginRouter{router: g}
 }

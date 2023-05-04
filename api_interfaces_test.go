@@ -14,16 +14,18 @@ import (
 
 type SomeData struct {
 	ID         string `json:"-"`
+	LID        string `json:"-"`
 	Data       string `json:"data"`
 	CustomerID string `json:"customerId"`
 }
 
-func (s SomeData) GetID() string {
-	return s.ID
+func (s SomeData) GetID() jsonapi.Identifier {
+	return jsonapi.Identifier{ID: s.ID, LID: s.LID}
 }
 
-func (s *SomeData) SetID(ID string) error {
-	s.ID = ID
+func (s *SomeData) SetID(ID jsonapi.Identifier) error {
+	s.ID = ID.ID
+	s.LID = ID.LID
 	return nil
 }
 

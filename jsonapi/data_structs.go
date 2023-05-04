@@ -117,6 +117,7 @@ type Meta map[string]interface{}
 type Data struct {
 	Type          string                  `json:"type"`
 	ID            string                  `json:"id"`
+	LID           string                  `json:"lid,omitempty"`
 	Attributes    json.RawMessage         `json:"attributes"`
 	Relationships map[string]Relationship `json:"relationships,omitempty"`
 	Links         Links                   `json:"links,omitempty"`
@@ -133,8 +134,8 @@ type Relationship struct {
 // A RelationshipDataContainer is used to marshal and unmarshal single relationship
 // objects and arrays of relationship objects.
 type RelationshipDataContainer struct {
-	DataObject *RelationshipData
-	DataArray  []RelationshipData
+	DataObject *Identifier
+	DataArray  []Identifier
 }
 
 // UnmarshalJSON unmarshals the JSON-encoded data to the DataObject field if the
@@ -160,10 +161,4 @@ func (c *RelationshipDataContainer) MarshalJSON() ([]byte, error) {
 		return json.Marshal(c.DataArray)
 	}
 	return json.Marshal(c.DataObject)
-}
-
-// RelationshipData represents one specific reference ID.
-type RelationshipData struct {
-	Type string `json:"type"`
-	ID   string `json:"id"`
 }

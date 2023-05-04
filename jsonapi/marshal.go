@@ -25,13 +25,20 @@ const (
 //
 // Note: The implementation of this interface is mandatory.
 type MarshalIdentifier interface {
-	GetID() string
+	GetID() Identifier
+}
+
+type Identifier struct {
+	ID   string `json:"id"`
+	LID  string `json:"lid,omitempty"`
+	Name string `json:"type"`
 }
 
 // ReferenceID contains all necessary information in order to reference another
 // struct in JSON API.
 type ReferenceID struct {
 	ID           string
+	LID          string
 	Type         string
 	Name         string
 	Relationship RelationshipType
@@ -207,17 +214,18 @@ func marshalSlice(data interface{}, information ServerInformation) (*Document, e
 }
 
 func filterDuplicates(input []MarshalIdentifier, information ServerInformation) ([]Data, error) {
-	alreadyIncluded := map[string]map[string]bool{}
+	alreadyIncluded := map[string]map[Identifier]bool{}
 	includedElements := []Data{}
 
 	for _, referencedStruct := range input {
 		structType := getStructType(referencedStruct)
+		id := referencedStruct.GetID()
 
 		if alreadyIncluded[structType] == nil {
-			alreadyIncluded[structType] = make(map[string]bool)
+			alreadyIncluded[structType] = make(map[Identifier]bool)
 		}
 
-		if !alreadyIncluded[structType][referencedStruct.GetID()] {
+		if !alreadyIncluded[structType][id] {
 			var data Data
 			err := marshalData(referencedStruct, &data, information)
 			if err != nil {
@@ -225,7 +233,7 @@ func filterDuplicates(input []MarshalIdentifier, information ServerInformation) 
 			}
 
 			includedElements = append(includedElements, data)
-			alreadyIncluded[structType][referencedStruct.GetID()] = true
+			alreadyIncluded[structType][id] = true
 		}
 	}
 
@@ -244,7 +252,9 @@ func marshalData(element MarshalIdentifier, data *Data, information ServerInform
 	}
 
 	data.Attributes = attributes
-	data.ID = element.GetID()
+	identifier := element.GetID()
+	data.ID = identifier.ID
+	data.LID = identifier.LID
 	data.Type = getStructType(element)
 
 	if information != nil {
@@ -322,17 +332,19 @@ func getStructRelationships(relationer MarshalLinkedRelations, information Serve
 
 		if isToMany(referenceIDs[0].Relationship, referenceIDs[0].Name) {
 			// multiple elements in links
-			container.DataArray = []RelationshipData{}
+			container.DataArray = []Identifier{}
 			for _, referenceID := range referenceIDs {
-				container.DataArray = append(container.DataArray, RelationshipData{
-					Type: referenceID.Type,
+				container.DataArray = append(container.DataArray, Identifier{
+					Name: referenceID.Type,
 					ID:   referenceID.ID,
+					LID:  referenceID.LID,
 				})
 			}
 		} else {
-			container.DataObject = &RelationshipData{
-				Type: referenceIDs[0].Type,
+			container.DataObject = &Identifier{
+				Name: referenceIDs[0].Type,
 				ID:   referenceIDs[0].ID,
+				LID:  referenceIDs[0].LID,
 			}
 		}
 
@@ -363,7 +375,7 @@ func getStructRelationships(relationer MarshalLinkedRelations, information Serve
 
 		// Plural empty relationships need an empty array and empty to-one need a null in the json
 		if !reference.IsNotLoaded && isToMany(reference.Relationship, reference.Name) {
-			container.DataArray = []RelationshipData{}
+			container.DataArray = []Identifier{}
 		}
 
 		links := getLinksForServerInformation(relationer, name, information)
@@ -393,13 +405,12 @@ func getStructRelationships(relationer MarshalLinkedRelations, information Serve
 func getLinkBaseURL(element MarshalIdentifier, information ServerInformation) string {
 	prefix := strings.Trim(information.GetBaseURL(), "/")
 	namespace := strings.Trim(information.GetPrefix(), "/")
-	structType := getStructType(element)
 
 	if namespace != "" {
 		prefix += "/" + namespace
 	}
 
-	return fmt.Sprintf("%s/%s/%s", prefix, structType, element.GetID())
+	return fmt.Sprintf("%s/%s/%s", prefix, getStructType(element), element.GetID().ID)
 }
 
 func getLinksForServerInformation(relationer MarshalLinkedRelations, name string, information ServerInformation) Links {
@@ -446,9 +457,9 @@ func marshalStruct(data MarshalIdentifier, information ServerInformation) (*Docu
 }
 
 func getStructType(data interface{}) string {
-	entityName, ok := data.(EntityNamer)
-	if ok {
-		return entityName.GetName()
+	identifier, ok := data.(MarshalIdentifier)
+	if ok && identifier.GetID().Name != "" {
+		return identifier.GetID().Name
 	}
 
 	reflectType := reflect.TypeOf(data)
